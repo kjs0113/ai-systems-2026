@@ -26,7 +26,6 @@
 - **Astro 5** + **Starlight 0.32** — 정적 문서 사이트
 - **MDX** 콘텐츠 (Aside, Steps, Badge, Card 등 Starlight 컴포넌트)
 - **Space Grotesk** + **Pretendard Variable** 폰트
-- **STAIxBWLB** 다크 디자인 시스템 (blue/cyan/orange 팔레트)
 - **GitHub Actions** → GitHub Pages 자동 배포
 
 ---
