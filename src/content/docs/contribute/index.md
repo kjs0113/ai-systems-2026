@@ -25,14 +25,14 @@ git clone https://github.com/[YOUR_USERNAME]/ai-systems-2026.git
 cd ai-systems-2026
 
 # 3. 의존성 설치
-npm install
+pnpm install
 
 # 4. 개발 서버 실행
-npm run dev
+pnpm run dev
 # → http://localhost:4321
 
 # 5. 수정 후 빌드 확인 (PR 전 필수!)
-npm run build
+pnpm run build
 ```
 
 ## PR 생성 과정

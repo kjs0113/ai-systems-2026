@@ -11,7 +11,7 @@ description: AI 시스템 2026 강의에서 사용하는 핵심 도구 목록과
 
 ```bash
 # 설치
-npm install -g @anthropic-ai/claude-code
+pnpm add -g @anthropic-ai/claude-code
 
 # 기본 사용
 claude "Python 계산기를 만들어줘"
@@ -47,7 +47,7 @@ claude /loop --stop
 
 ```bash
 # 설치
-npm install -g @google/gemini-cli
+pnpm add -g @google/gemini-cli
 
 # 대화형 실행
 gemini
@@ -70,7 +70,7 @@ OpenAI의 터미널 기반 코딩 에이전트. 내장 샌드박스로 안전한
 
 ```bash
 # 설치
-npm install -g @openai/codex
+pnpm add -g @openai/codex
 
 # 기본 사용
 codex "Python 계산기를 만들어줘"

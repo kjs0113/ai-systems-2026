@@ -22,9 +22,9 @@ export default defineConfig({
         baseUrl: 'https://github.com/halla-ai/ai-systems-2026/edit/main/',
       },
       lastUpdated: true,
-      social: {
-        github: 'https://github.com/halla-ai/ai-systems-2026',
-      },
+      social: [
+        { icon: 'github', label: 'GitHub', href: 'https://github.com/halla-ai/ai-systems-2026' },
+      ],
       customCss: ['./src/styles/custom.css'],
       sidebar: [
         {

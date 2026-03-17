@@ -23,7 +23,7 @@
 
 ## 기술 스택
 
-- **Astro 5** + **Starlight 0.32** — 정적 문서 사이트
+- **Astro 6** + **Starlight 0.38** — 정적 문서 사이트
 - **MDX** 콘텐츠 (Aside, Steps, Badge, Card 등 Starlight 컴포넌트)
 - **Space Grotesk** + **Pretendard Variable** 폰트
 - **GitHub Actions** → GitHub Pages 자동 배포
@@ -33,7 +33,7 @@
 ## 로컬 개발
 
 ```bash
-make install   # 의존성 설치 (npm ci)
+make install   # 의존성 설치 (pnpm install --frozen-lockfile)
 make dev       # 개발 서버 localhost:4321
 make build     # 정적 빌드 → dist/
 make preview   # 빌드 결과 미리보기

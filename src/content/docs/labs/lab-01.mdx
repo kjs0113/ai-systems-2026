@@ -29,7 +29,7 @@ import { Steps, Aside, Tabs, TabItem, Badge } from '@astrojs/starlight/component
 
    ```bash
    node --version  # v20.x.x 이상
-   npm --version   # 10.x.x 이상
+   pnpm --version  # 10.x.x 이상
    ```
 
    Node.js가 없다면 [nodejs.org](https://nodejs.org)에서 설치.
@@ -39,19 +39,19 @@ import { Steps, Aside, Tabs, TabItem, Badge } from '@astrojs/starlight/component
    <Tabs>
      <TabItem label="Claude Code (권장)">
        ```bash
-       npm install -g @anthropic-ai/claude-code
+       pnpm add -g @anthropic-ai/claude-code
        claude --version
        ```
      </TabItem>
      <TabItem label="Gemini CLI">
        ```bash
-       npm install -g @google/gemini-cli
+       pnpm add -g @google/gemini-cli
        gemini --version
        ```
      </TabItem>
      <TabItem label="Codex CLI">
        ```bash
-       npm install -g @openai/codex
+       pnpm add -g @openai/codex
        codex --version
        ```
      </TabItem>
@@ -176,8 +176,8 @@ import { Steps, Aside, Tabs, TabItem, Badge } from '@astrojs/starlight/component
    # GitHub에서 Fork 후
    git clone https://github.com/[YOUR_USERNAME]/ai-systems-2026.git
    cd ai-systems-2026
-   npm install
-   npm run dev  # 로컬 사이트 확인
+   pnpm install
+   pnpm run dev  # 로컬 사이트 확인
    ```
 </Steps>
 

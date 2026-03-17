@@ -12,7 +12,7 @@ import { Tabs, TabItem, Aside, Card, CardGrid } from '@astrojs/starlight/compone
 | 항목 | Claude Code | Gemini CLI | Codex CLI | OpenCode |
 |------|------------|-----------|-----------|----------|
 | **개발사** | Anthropic | Google | OpenAI | 커뮤니티 (오픈소스) |
-| **설치** | `npm i -g @anthropic-ai/claude-code` | `npm i -g @google/gemini-cli` | `npm i -g @openai/codex` | `brew install opencode` |
+| **설치** | `pnpm add -g @anthropic-ai/claude-code` | `pnpm add -g @google/gemini-cli` | `pnpm add -g @openai/codex` | `brew install opencode` |
 | **실행** | `claude "prompt"` | `gemini` (대화형) | `codex "prompt"` | `opencode` (TUI) |
 | **헤드리스** | `claude --print --no-color` | pipe 지원 | `codex --approval-mode full-auto` | `opencode serve` (API) |
 | **MCP 지원** | 완전 지원 | 지원 | 미지원 | 제한적 |
@@ -26,19 +26,19 @@ import { Tabs, TabItem, Aside, Card, CardGrid } from '@astrojs/starlight/compone
 <Tabs>
   <TabItem label="Claude Code (권장)">
     ```bash
-    npm install -g @anthropic-ai/claude-code
+    pnpm add -g @anthropic-ai/claude-code
     claude --version
     ```
   </TabItem>
   <TabItem label="Gemini CLI">
     ```bash
-    npm install -g @google/gemini-cli
+    pnpm add -g @google/gemini-cli
     gemini --version
     ```
   </TabItem>
   <TabItem label="Codex CLI">
     ```bash
-    npm install -g @openai/codex
+    pnpm add -g @openai/codex
     codex --version
     ```
   </TabItem>

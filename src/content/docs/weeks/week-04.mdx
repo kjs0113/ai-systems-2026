@@ -254,7 +254,7 @@ claude /loop "check for failing tests and fix them" --every 2h --for 3d
   </TabItem>
   <TabItem label="의존성 모니터링">
     ```bash
-    claude /loop "run npm audit. If any high or critical vulnerabilities exist,
+    claude /loop "run pnpm audit. If any high or critical vulnerabilities exist,
     create a branch, update the affected packages, run the test suite, and
     open a PR if tests pass. Include the vulnerability details in the PR body."
     --every 4h --for 3d

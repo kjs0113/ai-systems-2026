@@ -13,14 +13,14 @@ git clone https://github.com/[YOUR_USERNAME]/ai-systems-2026.git
 cd ai-systems-2026
 
 # 3. 의존성 설치
-npm install
+pnpm install
 
 # 4. 개발 서버 실행
-npm run dev
+pnpm run dev
 # → http://localhost:4321 에서 미리보기
 
 # 5. 수정 후 빌드 확인
-npm run build
+pnpm run build
 ```
 
 ## 과제 제출 방법
@@ -45,7 +45,7 @@ assignments/
 ## PR 규칙
 
 - `main` 브랜치로 PR 보내기
-- PR 전 `npm run build` 성공 확인 필수
+- PR 전 `pnpm run build` 성공 확인 필수
 - 커밋 메시지는 한국어 가능: `feat: 1주차 강의노트 보충 설명 추가`
 
 ## 오류 신고

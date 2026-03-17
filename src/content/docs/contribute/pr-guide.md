@@ -7,7 +7,7 @@ description: Pull Request 생성부터 머지까지 — 단계별 가이드
 
 PR을 보내기 전 다음을 확인하세요:
 
-- [ ] `npm run build`가 성공적으로 완료됨
+- [ ] `pnpm run build`가 성공적으로 완료됨
 - [ ] 마크다운 문법 오류 없음
 - [ ] 한국어 맞춤법 검토 완료
 - [ ] 이미지/링크 경로 정상 동작 확인
@@ -71,6 +71,6 @@ git push origin [브랜치명]
 
 | 실수 | 해결 |
 |------|------|
-| 빌드 실패 | `npm run build` 로컬 실행 후 오류 확인 |
+| 빌드 실패 | `pnpm run build` 로컬 실행 후 오류 확인 |
 | 브랜치가 main보다 뒤처짐 | `git pull upstream main` 후 rebase |
 | 과제 경로 오류 | `assignments/lab-XX/[학번]/` 형식 재확인 |
