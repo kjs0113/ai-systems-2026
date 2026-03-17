@@ -56,7 +56,7 @@ Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
 **해결 방법 (CMD 기준)**
 
 ```cmd
-set ANTHROPIC_API_KEY=your_api_key
+set OPENAI_API_KEY=your_api_key
 ```
 
 ---
