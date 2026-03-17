@@ -38,5 +38,4 @@ node_modules
 # Claude Code
 .omc/
 .omx/
-.claude/CLAUDE.local.md
-.claude/settings.local.json
+.claude/
