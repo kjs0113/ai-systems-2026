@@ -4,6 +4,19 @@
 
 ---
 
+## 0. 실제 하드웨어 점검 결과 (Practicum Step 1)
+
+DGX 서버에서 `nvidia-smi mig -lgi` 명령을 수행한 결과입니다.
+
+```bash
+a202321006@dgx02:~/workspace/ai-systems-2026$ nvidia-smi mig -lgi
+No MIG-enabled devices found.
+```
+
+**참고 사항:** 현재 사용 중인 `dgx02` 서버의 GPU에 MIG 모드가 활성화되어 있지 않거나 인스턴스가 생성되지 않아 하드웨어 정보를 직접 획득할 수 없었습니다. 따라서 실습의 나머지 단계(MCP 서버 구현 및 검증)는 서버에 구현된 **Mock Data(가상 데이터) 모드**를 활용하여 정상적으로 수행되었습니다.
+
+---
+
 ## 1. MIG 프로파일 분할 분석 (Req 1)
 
 DGX H100 (80GB HBM3) 환경에서 수강생 30명을 수용하기 위한 두 가지 전략을 비교합니다.
