@@ -97,6 +97,9 @@ Upon completing this course, students will be able to:
 - Karpathy, A. (2025). *autoresearch: Automated ML Research*
 - Zhang, A. et al. (2025). *Recursive LM: Language Models that Call Themselves*
 - Snell, C. et al. (2024). *Scaling LLM Test-Time Compute Optimally*
+- Hong, S. et al. (2024). *MetaGPT: Meta Programming for Multi-Agent Collaborative Framework* (ICLR 2024)
+- Qian, C. et al. (2024). *ChatDev: Communicative Agents for Software Development* (ACL 2024)
+- Damani, S. et al. (2025). *Towards a Science of Scaling Agent Systems* (DeepMind + MIT)
 
 ### Online Resources
 - [Model Context Protocol Official Docs](https://modelcontextprotocol.io)
@@ -104,6 +107,8 @@ Upon completing this course, students will be able to:
 - [DeepSeek-Coder-V2 Paper](https://arxiv.org/abs/2406.11931)
 - [Gemini CLI Docs](https://github.com/google-gemini/gemini-cli) — Google's AI coding CLI
 - [Codex CLI Docs](https://github.com/openai/codex) — OpenAI's terminal coding agent
+- [A2A Protocol Specification](https://google.github.io/A2A/) — Google's Agent-to-Agent communication standard
+- [SWE-Bench](https://www.swebench.com/) — Agent coding benchmark
 
 ## Prerequisites
 

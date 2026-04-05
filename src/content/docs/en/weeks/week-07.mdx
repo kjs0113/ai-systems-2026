@@ -1,6 +1,6 @@
 ---
 title: "Week 7: Multi-Agent SDLC Design"
-description: Comparing traditional and agentic software development lifecycles — role-based architecture design
+description: Comparing traditional and agentic software development lifecycles — role-based architecture, gated pipelines, and failure modes
 week: 7
 phase: 3
 phase_title: Multi-Agent SDLC
@@ -9,9 +9,12 @@ theory_topics:
   - Traditional SDLC vs Agentic SDLC
   - Designing agent role assignments
   - Managing tool access permissions via MCP
+  - Agent coordination topologies
+  - Failure modes and risk management
 lab_topics:
   - Designing a multi-agent pipeline
   - Passing artifacts between agents
+  - Designing validation gates
 assignment: "Lab 07: Multi-Agent Pipeline Design"
 assignment_due: "2026-04-21"
 difficulty: advanced
@@ -24,19 +27,54 @@ import { Aside, Steps, Tabs, TabItem, Badge, Card, CardGrid } from '@astrojs/sta
   <span class="phase-tag">Phase 3</span>
   <Badge text="Week 7" variant="note" />
   <Badge text="Advanced" variant="danger" />
+  <Badge text="Lecture: 2026-04-14" variant="default" />
 </div>
 
 ## Theory
 
+### Why Multi-Agent SDLC in Week 7
+
+Through Week 6 we covered **single agents** — regulating behavior with CLAUDE.md (Week 6), preventing Context Rot (Week 5), and securing iterative quality with the Ralph Loop (Week 4). The question now is: **where does the single-agent approach hit its limits?**
+
+A joint study by DeepMind and MIT, "Towards a Science of Scaling Agent Systems" (December 2025), provides decisive data:
+
+> An unstructured collection of agents ("bag of agents") **amplifies errors by 17.2×**. In contrast, centralized coordination reduces error amplification to **4.4×**.
+
+The same pattern appears on SWE-Bench Pro — the same model (Claude Opus 4.5) shows a score range from **45.9% to 55.4% depending on the scaffolding**. It is the **system design wrapping the model**, not the model itself, that determines performance.
+
+This week covers the **architecture and design principles** of multi-agent SDLC. Code implementation happens in Week 8 (Planner Agent) and Week 9 (QA Agent).
+
+---
+
 ### Traditional SDLC → Agentic SDLC
 
-| Traditional Role | Agentic Equivalent | Tool Access (MCP) |
-|------------------|-------------------|-------------------|
-| Product Manager | Planner Agent | Web search, document reading |
-| Software Architect | Initializer Agent | Repository mapping, Git branching |
-| Developer | Coder Agent (Ralph Loop) | File editing, compiler |
-| QA Engineer | QA Agent | pytest, diff viewer |
-| DevOps | Deploy Agent | Docker, Kubernetes |
+| Traditional Role | Agentic Equivalent | Tool Access (MCP) | Output Artifact |
+|------------------|-------------------|-------------------|-----------------|
+| Product Manager | Planner Agent | Web search, document reading | `requirement.md` |
+| Software Architect | Architect Agent | Repository mapping, dependency analysis | `architecture.md`, TASK files |
+| Developer | Coder Agent (Ralph Loop) | File editing, compiler, tests | Code changes, PR |
+| QA Engineer | QA Agent | pytest, diff viewer, linter | Review results, severity report |
+| DevOps | Deploy Agent | Docker, CI/CD, monitoring | Deploy results, smoke tests |
+| Release Manager | Completion Agent | Git merge, tagging | ship-summary, release notes |
+| Knowledge Manager | Retrospective Agent | File read/write | LESSON files, assumption verification |
+
+This role separation is a pattern validated in academia as well:
+
+- **MetaGPT** (ICLR 2024): Connects PM, Architect, Project Manager, Engineer, and QA through SOP (Standard Operating Procedure)-based structured documents. **Structured document handoffs** between roles — not natural-language chat — are the key.
+- **ChatDev** (ACL 2024, v2.0 January 2026): Demonstrated via chat-based phase execution that role specialization consistently outperforms monolithic prompting.
+
+<Aside type="tip" title="Inside Claude Code...">
+The technical foundation for the pipeline below is Claude Code's **Agent Orchestration** layer:
+
+- **Agent tool**: Spawns sub-agents as separate processes. Routes by model selection (`sonnet`/`opus`/`haiku`) to match task complexity.
+- **Worktree isolation**: The `isolation: "worktree"` option runs agents in a git worktree — no impact on the parent workspace.
+- **Task Packet**: Instructs agents via structured packets (objective, scope, acceptance_tests, escalation_policy) rather than natural language.
+- **Independent context**: Sub-agents cannot access the parent session's history — the same principle as explicit contracts (API contracts) between microservices.
+
+→ Details: [Reference > Claude Code Internals](/reference/claude-code-internals)
+</Aside>
+
+---
 
 ### Multi-Agent Pipeline Architecture
 
@@ -83,6 +121,245 @@ import { Aside, Steps, Tabs, TabItem, Badge, Card, CardGrid } from '@astrojs/sta
 Communication between agents must always occur through **structured artifacts** (Markdown, JSON).
 Having Agent A send direct messages to Agent B maximizes non-determinism.
 </Aside>
+
+#### Gated Pipeline — A Production Example
+
+What does the diagram above look like when implemented as a **real production system**? The diagram below visualizes the full pipeline of sdlc-toolkit — knowledge feedback loops, validation gates, and lesson capture.
+
+<div class="sdlc-pipeline">
+  <div class="sdlc-pipeline__header">
+    <h3>SDLC Pipeline</h3>
+    <p>Spec-based development lifecycle with knowledge feedback loops</p>
+  </div>
+
+  <div class="sdlc-pipeline__body">
+    <div class="sdlc-flow">
+      <div class="sdlc-flow__step">
+        <div class="sdlc-flow__num sdlc-flow__num--phase">1</div>
+        <div class="sdlc-flow__card">
+          <div class="sdlc-flow__card-head">
+            <p class="sdlc-flow__card-title">/spec</p>
+            <span class="sdlc-flow__tag">References lessons</span>
+          </div>
+          <p class="sdlc-flow__card-desc">Writes a requirements spec based on the feature request.</p>
+        </div>
+      </div>
+      <div class="sdlc-flow__arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M19 12l-7 7-7-7"/></svg></div>
+
+      <div class="sdlc-flow__step">
+        <div class="sdlc-flow__num sdlc-flow__num--gate">G</div>
+        <div class="sdlc-flow__card sdlc-flow__card--gate">
+          <p class="sdlc-flow__card-title">/validate</p>
+          <p class="sdlc-flow__card-desc">Validates spec quality before architectural design begins.</p>
+        </div>
+      </div>
+      <div class="sdlc-flow__arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M19 12l-7 7-7-7"/></svg></div>
+
+      <div class="sdlc-flow__step">
+        <div class="sdlc-flow__num sdlc-flow__num--phase">2</div>
+        <div class="sdlc-flow__card">
+          <div class="sdlc-flow__card-head">
+            <p class="sdlc-flow__card-title">/architect</p>
+            <span class="sdlc-flow__tag">References lessons</span>
+          </div>
+          <p class="sdlc-flow__card-desc">Designs the architecture and breaks it into detailed tasks (TASKs).</p>
+        </div>
+      </div>
+      <div class="sdlc-flow__arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M19 12l-7 7-7-7"/></svg></div>
+
+      <div class="sdlc-flow__step">
+        <div class="sdlc-flow__num sdlc-flow__num--gate">G</div>
+        <div class="sdlc-flow__card sdlc-flow__card--gate">
+          <p class="sdlc-flow__card-title">/validate</p>
+          <p class="sdlc-flow__card-desc">Validates the quality of the architecture and tasks.</p>
+        </div>
+      </div>
+      <div class="sdlc-flow__arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M19 12l-7 7-7-7"/></svg></div>
+
+      <div class="sdlc-flow__step">
+        <div class="sdlc-flow__num sdlc-flow__num--phase">3</div>
+        <div class="sdlc-flow__card">
+          <p class="sdlc-flow__card-title">Implement</p>
+          <p class="sdlc-flow__card-desc">Codes tasks in dependency order; independent tasks are processed in parallel.</p>
+        </div>
+      </div>
+      <div class="sdlc-flow__arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M19 12l-7 7-7-7"/></svg></div>
+
+      <div class="sdlc-flow__step">
+        <div class="sdlc-flow__num sdlc-flow__num--phase">4</div>
+        <div class="sdlc-flow__card">
+          <div class="sdlc-flow__card-head">
+            <p class="sdlc-flow__card-title">/reflect</p>
+            <span class="sdlc-flow__tag">References lessons</span>
+          </div>
+          <p class="sdlc-flow__card-desc">Conducts a self-review after implementation is complete.</p>
+        </div>
+      </div>
+      <div class="sdlc-flow__arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M19 12l-7 7-7-7"/></svg></div>
+
+      <div class="sdlc-flow__step">
+        <div class="sdlc-flow__num sdlc-flow__num--phase">5</div>
+        <div class="sdlc-flow__card">
+          <p class="sdlc-flow__card-title">/review</p>
+          <p class="sdlc-flow__card-desc">Performs a multi-agent code review to ensure quality and correctness.</p>
+        </div>
+      </div>
+      <div class="sdlc-flow__arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M19 12l-7 7-7-7"/></svg></div>
+
+      <div class="sdlc-flow__step">
+        <div class="sdlc-flow__num sdlc-flow__num--phase">6</div>
+        <div class="sdlc-flow__card">
+          <p class="sdlc-flow__card-title">Create &amp; Merge PR</p>
+          <p class="sdlc-flow__card-desc">Opens a pull request, passes final review, then merges.</p>
+        </div>
+      </div>
+      <div class="sdlc-flow__arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M19 12l-7 7-7-7"/></svg></div>
+
+      <div class="sdlc-flow__step">
+        <div class="sdlc-flow__num sdlc-flow__num--end">7</div>
+        <div class="sdlc-flow__card sdlc-flow__card--end">
+          <p class="sdlc-flow__card-title">/wrapup</p>
+          <p class="sdlc-flow__card-desc">Updates deployment and artifacts, then captures lessons learned and assumptions from development.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="sdlc-panels">
+      <div class="sdlc-panel sdlc-panel--green">
+        <h4>Lessons Learned</h4>
+        <div class="sdlc-panel__path">.sdlc/knowledge/lessons/</div>
+        <p>Captured via <code>/wrapup</code> at the end of every feature development cycle. Each lesson records what happened, why it matters, and when it applies.</p>
+      </div>
+
+      <div class="sdlc-panel sdlc-panel--purple">
+        <h4>Feedback Loop</h4>
+        <p>Creates a continuous improvement cycle by reading lessons before performing work at three key stages:</p>
+        <ul class="sdlc-panel__feedback">
+          <li><code>← /spec</code> <span>Prevents repeating approaches that previously failed</span></li>
+          <li><code>← /architect</code> <span>Reuses proven patterns and avoids past mistakes</span></li>
+          <li><code>← /reflect</code> <span>Confirms that lessons relevant to the current task are applied</span></li>
+        </ul>
+      </div>
+
+      <div class="sdlc-panel sdlc-panel--amber">
+        <h4>Validation Gates</h4>
+        <p>Quality checks run between major stages. Up to 3 automatic fix retries are performed before halting the pipeline.</p>
+      </div>
+
+      <div class="sdlc-panel sdlc-panel--gray">
+        <h4>Assumptions</h4>
+        <div class="sdlc-panel__path">.sdlc/knowledge/assumptions/</div>
+        <p>Tracked continuously alongside lessons. <code>/architect</code> references this content when making architectural design decisions.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="sdlc-commands">
+    <div class="sdlc-cmd">
+      <h4>/proceed REQ-xxx</h4>
+      <p>Automatically runs the entire pipeline above in sequence, including validation gates and automatic fix retries.</p>
+    </div>
+    <div class="sdlc-cmd">
+      <h4>/bugfix</h4>
+      <p>Lightweight path — skips the spec and architecture stages for fast bug fixes.</p>
+    </div>
+  </div>
+</div>
+
+The `/proceed` pipeline of sdlc-toolkit implements a 9-stage gated execution.
+
+<Tabs>
+  <TabItem label="Phase Map">
+    | Phase | Name | Agent | Gate |
+    |-------|------|-------|------|
+    | 0 | Create Worktree | Orchestrator | Branch isolation check |
+    | 1 | Validate Spec | Validator | Requirements completeness |
+    | 2 | Architecture + Task Decomposition | Architect | Dependency DAG validity |
+    | 3 | Validate Architecture | Validator | Pattern compatibility, task coverage |
+    | 4 | Implement (parallel) | Coder × N | Each task AC satisfied |
+    | 5 | Verify (Reflect + Review) | QA | PASS/FAIL verdict |
+    | 6 | Create PR | Orchestrator | CI passing |
+    | 7 | PR Cleanup + CI | Orchestrator | Lint/test passing |
+    | 8 | Wrapup (merge, deploy, knowledge capture) | Wrapup | LESSON file created |
+
+    **Core principle**: Each phase only starts after **explicitly confirming** completion of the previous phase. No skipping allowed.
+  </TabItem>
+  <TabItem label="State Machine">
+    ```json
+    {
+      "req": "REQ-023",
+      "branch": "feat/REQ-023-user-auth",
+      "startedAt": "2026-04-14T10:00:00Z",
+      "completed": false,
+      "currentPhase": 4,
+      "completedPhases": [0, 1, 2, 3],
+      "phaseHistory": [
+        { "phase": 0, "name": "Create Worktree", "completedAt": "2026-04-14T10:01:00Z" },
+        { "phase": 1, "name": "Validate Spec", "completedAt": "2026-04-14T10:03:00Z" },
+        { "phase": 2, "name": "Architect", "completedAt": "2026-04-14T10:08:00Z" },
+        { "phase": 3, "name": "Validate Architecture", "completedAt": "2026-04-14T10:10:00Z" }
+      ]
+    }
+    ```
+
+    `pipeline-state.json` **tracks the progress of the entire pipeline**. On interruption, resumes from `currentPhase`. This file itself is the synchronization mechanism for inter-agent handoffs.
+  </TabItem>
+  <TabItem label="Error Recovery">
+    When a validation gate fails:
+
+    ```
+    Failure detected → Automatic fix attempt (attempt 1)
+         ↓ fails
+    Re-validate → Automatic fix attempt (attempt 2)
+         ↓ fails
+    Re-validate → Automatic fix attempt (attempt 3)
+         ↓ fails
+    ⚠️ Human escalation — pipeline paused
+    ```
+
+    **Rationale for the 3-attempt cap**: If an agent fails to fix the same error three times, it does not understand the problem. Further attempts only consume tokens without improving quality. PwC research showed that combining a validation loop with a judge agent improved accuracy **7× from 10% to 70%** — this is the gate mechanism at work.
+  </TabItem>
+</Tabs>
+
+<Aside type="danger" title="The Danger of a Pipeline Without Gates">
+Gartner forecasts that **more than 40%** of agent projects will fail by 2027. Key causes: integration complexity (46%), cybersecurity (35%), data privacy (30%). A gated pipeline is the structural response to all three — validate at each stage, and stop on failure.
+</Aside>
+
+<Aside type="tip" title="Week 8-9 Preview">
+Phase 1-3 of this pipeline (Planner territory) is implemented in **Week 8**, and Phase 5 (QA territory) in **Week 9**, directly in Python. This week, the goal is to **understand the overall structure**.
+</Aside>
+
+---
+
+### Agent Coordination Topologies
+
+How are agents in a multi-agent system coordinated? There are three fundamental topologies:
+
+| Topology | Structure | Examples | Error Amplification |
+|----------|-----------|---------|---------------------|
+| **Centralized** | Single orchestrator controls sequencing | sdlc-toolkit `/proceed`, Claude Code Agent Tool | **4.4×** (DeepMind) |
+| **Hierarchical** | Orchestrator of orchestrators | sdlc-toolkit `/sprint` (spawns 5 `/proceed` in parallel) | 4.4× × management overhead |
+| **Distributed** (peer-to-peer) | Agents communicate directly with each other | "bag of agents" | **17.2×** (DeepMind) |
+
+<Aside type="caution" title="The Trap of Distributed Topology">
+Distributed topology is theoretically the most flexible, but DeepMind+MIT research empirically confirmed it amplifies errors **4× more**. Reason: a small error from Agent A becomes the input to Agent B, where the error is amplified and passed to C. Without a central coordinator, there is no mechanism to detect this cascade.
+</Aside>
+
+#### Inter-Agent Communication Protocols
+
+How agents access external tools and how agents communicate with each other are different problems:
+
+| Protocol | Purpose | Scale | Core Structure |
+|----------|---------|-------|----------------|
+| **MCP** (Anthropic, 2024) | Agent → tool access | 97M+ monthly SDK downloads, 6,400+ servers | Server/Client, Tool/Resource |
+| **A2A** (Google, 2025) | Agent → agent delegation | 150+ partner organizations | Task, Artifact, Agent Card |
+| **Artifact Handoff** (this week) | Agent → agent (file-based) | Project local | Markdown/JSON files |
+
+MCP was donated to the Linux Foundation (December 2025) and has established itself as an industry standard. A2A is an agent-to-agent delegation protocol proposed by Google, using Task/Artifact/Agent Card JSON structures to declare agent capabilities and delegate work.
+
+The **artifact handoff** covered this week is the simplest yet most deterministic approach — the filesystem serves as the communication channel, making everything debuggable, auditable, and reproducible.
+
+---
 
 ### Claude Code Native Multi-Agent — A Lightweight Alternative
 
@@ -143,7 +420,7 @@ Add Markdown files to the `.claude/agents/` directory to define specialized agen
   </TabItem>
 </Tabs>
 
-This is the role assignment design above — Coder Agent, QA Agent — implemented declaratively in **a single .md file**. The same principle of MCP-governed tool access applies via the `tools` field.
+This is the role assignment design above — Coder Agent, QA Agent — implemented declaratively in **a single .md file**. The same principle of MCP-governed tool access applies via the `tools` field. The 11 skills of sdlc-toolkit (`/spec`, `/architect`, `/validate`, `/review`, etc.) are production examples that leverage exactly this Skills system.
 
 #### `/simplify` — Built-in QA Agent
 
@@ -198,45 +475,219 @@ This extends the instruction tuning from Week 6 (adding constraints to PROMPT.md
 | **Flexibility** | Unlimited — custom handoff logic, feedback loops | Limited — within preset capabilities |
 | **Inter-agent comms** | Artifact-based (JSON schema contracts) | None — each agent runs independently |
 | **Verification** | QA agent runs integration tests + code review | `/simplify` catches structural issues only |
+| **Error recovery** | Gated retries (3×) + human escalation | None — manual restart on failure |
 | **Best for** | Complex multi-stage workflows, custom quality criteria | Large-scale parallel processing of repetitive tasks |
 
 <Aside type="tip" title="Why you need to learn both">
 Boris uses `/batch` for simple migrations and custom pipelines for complex feature work. Understanding the **limitations** of native tools is what makes you appreciate **why** full pipelines are necessary. Experience native tools this week, then build full pipelines from scratch in Weeks 8-9.
 </Aside>
 
+---
+
 ### Artifact-Based Handoff Design
 
-```json
-// task_queue.json — Initializer → Coder handoff
-{
-  "project": "calculator-app",
-  "tasks": [
-    {
-      "id": "task-001",
-      "description": "Implement add() function",
-      "target_file": "calculator.py",
-      "test_file": "tests/test_calculator.py",
-      "acceptance_criteria": ["All pytest tests pass", "Type hints included"],
-      "status": "pending"
-    }
-  ]
-}
+The key to inter-agent communication is **structured artifacts**. Not natural-language messages, but schema-defined files that move between agents.
+
+<Tabs>
+  <TabItem label="Requirement Spec">
+    ```yaml
+    ---
+    id: REQ-023
+    title: "Add user authentication feature"
+    status: draft          # draft → approved → in-progress → complete
+    deployable: true
+    created: 2026-04-14
+    updated: 2026-04-14
+    ---
+
+    ## Description
+    Implement a JWT-based user authentication system. Includes login, sign-up, and token refresh.
+
+    ## Acceptance Criteria
+    - [ ] POST /auth/login endpoint works
+    - [ ] JWT token issuance and verification
+    - [ ] Password bcrypt hashing
+    - [ ] Automatic token refresh on expiry
+
+    ## Assumptions
+    - Using PostgreSQL (leverages existing DB connection)
+    - Token validity: access 15 min, refresh 7 days
+
+    ## Out of Scope
+    - OAuth2 social login (separate REQ)
+    - 2FA (separate REQ)
+    ```
+
+    **Generated by Planner Agent** → Validator verifies → Architect Agent consumes
+  </TabItem>
+  <TabItem label="Task + Dependencies">
+    ```yaml
+    ---
+    id: TASK-001
+    title: "JWT token generation module"
+    status: draft
+    parent: REQ-023
+    created: 2026-04-14
+    updated: 2026-04-14
+    dependencies: []           # Tier 0: no dependencies → can run in parallel
+    ---
+
+    ## Files to Create/Modify
+    - `auth/jwt.py` — token creation/verification utility
+    - `tests/test_jwt.py` — unit tests
+
+    ## Acceptance Criteria
+    - [ ] create_token(payload, secret) → JWT string
+    - [ ] verify_token(token, secret) → payload or exception
+    - [ ] TokenExpiredError raised when verifying an expired token
+    ```
+    ```yaml
+    ---
+    id: TASK-003
+    title: "Login API endpoint"
+    status: draft
+    parent: REQ-023
+    dependencies: ["TASK-001", "TASK-002"]  # Tier 1: waits for TASK-001, 002
+    ---
+    ```
+
+    **Generated by Architect Agent** → the `dependencies` array determines execution order
+  </TabItem>
+  <TabItem label="Knowledge Artifact">
+    ```yaml
+    ---
+    id: LESSON-042
+    title: "Rotating JWT secret invalidates existing tokens"
+    domain: "API"              # broad area
+    component: "API/auth"      # narrow area
+    tags: [security, jwt]
+    req: REQ-023
+    created: 2026-04-14
+    ---
+
+    ## What Happened
+    Rotating the secret key invalidated all previously issued tokens.
+
+    ## Lesson
+    When rotating secrets, implement multi-key verification logic so tokens
+    issued with the previous key remain valid during a grace period.
+
+    ## Applies When
+    JWT secret management, key rotation, authentication system changes
+    ```
+
+    **Generated by Wrapup Agent** → future `/spec` and `/architect` grep by `domain:API` + `component:API/auth` to automatically reference this lesson
+  </TabItem>
+</Tabs>
+
+#### Dependency DAG and Parallelization Strategy
+
+The `dependencies` array in TASK files determines execution order:
+
+```
+Tier 0 (no dependencies):  TASK-001, TASK-002  → run concurrently
+         ↓ wait for completion
+Tier 1 (depends on Tier 0): TASK-003, TASK-004  → run concurrently
+         ↓ wait for completion
+Tier 2 (depends on Tier 1): TASK-005            → run alone
 ```
 
+This tier-based parallelization operates in Phase 4 (Implementation) of the pipeline. Independent tasks run in parallel in separate worktrees; tasks with dependencies wait for their predecessors to complete.
+
+<Aside type="note" title="Knowledge Management Feedback Loop">
+The `domain` and `component` fields in LESSON files implement **organizational memory**. When an authentication-related requirement arrives in the future, the Planner Agent automatically searches existing lessons by `domain:API` + `component:API/auth` and avoids repeating the same mistake. This is the mechanism by which an agentic SDLC improves with repetition.
+</Aside>
+
+<Aside type="tip" title="Choosing Artifact Serialization Format">
+When designing inter-agent artifacts in JSON, use **compact JSON** (no whitespace or line breaks) as the default. As covered in [Week 5](/weeks/week-05/), this saves **25–40%** of tokens compared to pretty-printed JSON. If large uniform arrays (100+ rows) are included in an artifact, consider tabular formats like CSV or TOON, but always measure the trade-off between token efficiency and accuracy.
+</Aside>
+
+---
+
+### Multi-Agent Code Review Design
+
+A single reviewer has blind spots — a reviewer strong in security misses performance issues; focusing on architecture means overlooking edge cases. Production systems run **3 specialist reviewers in parallel**:
+
+| Reviewer | Review Area | Severity Criteria |
+|----------|-------------|------------------|
+| **Correctness Reviewer** | Logic errors, race conditions, security vulnerabilities, edge cases | Critical: data loss / security violation |
+| **Quality Reviewer** | Naming, pattern consistency, duplicate code, hardcoded config | Major: maintainability degradation |
+| **Architecture Reviewer** | Layer separation, separation of concerns, test coverage, API compliance | Major: structural debt |
+
+Severity scale: **Critical > Major > Minor > Nit**. Any Critical finding means **FAIL** — feedback is automatically sent back to the coder.
+
+On top of this 3-parallel review pattern sits a **2-stage structure**:
+
+1. **`/reflect` (self-review)**: The coder agent reviews its own code first, catching obvious mistakes to reduce the burden on independent review.
+2. **`/review` (independent review)**: Three reviewers in parallel, with no knowledge of the coder's reasoning.
+
+Boris's `/simplify` is a lightweight version of this pattern — same parallel review principle, but catching only structural issues without domain specialization. This design is implemented in Python in Week 9.
+
+<Aside type="note" title="PwC Empirical Data">
+PwC reported that simply adding an independent judge agent improved the accuracy of an agent system **7× from 10% to 70%**. **Independence**, not the number of reviewers, is the key — three reviewers sharing the same context are worse than one independent reviewer.
+</Aside>
+
+---
+
+### Failure Modes and Risk Management
+
+Multi-agent systems have unique failure modes absent in single-agent setups:
+
+| Failure Mode | Description | Mitigation Strategy |
+|-------------|-------------|---------------------|
+| **Context Rot propagation** | Context lost at each handoff ([Week 5](/weeks/week-05/) reference) | Artifact-based handoffs — structured files preserve context |
+| **17× error trap** | Silent error compounding in unstructured agent networks | Centralized coordination + gated validation |
+| **Hallucination propagation** | One agent's hallucination becomes the next agent's ground truth | Independent validation gate at each phase |
+| **Infinite refinement loop** | QA→Coder→QA cycles without convergence | Retry cap (3×) + human escalation |
+| **State desynchronization** | File conflicts between parallel agents | Git worktree isolation — each agent has an independent workspace |
+| **Cost explosion** | Uncontrolled agent spawning | Concurrency cap (5 agents) + model tier routing (exploration: haiku, implementation: sonnet, review: opus) |
+
+<Aside type="caution" title="The Most Dangerous Failure Mode">
+**Hallucination propagation** is the hardest to detect. If the Planner specifies a non-existent API in the spec, the Architect accepts it as fact and decomposes tasks accordingly, and the Coder writes code that calls that API. **Every agent performed correctly within its own stage**, yet the output is completely wrong. This is the fundamental reason why **independent validation gates at each phase are necessary**.
+</Aside>
+
+---
+
+### In-Class Discussion Questions
+
+1. Explain the mechanism by which "bag of agents" amplifies errors **17.2×** in the DeepMind study. Why does structured coordination reduce this to **4.4×**?
+
+2. On SWE-Bench Pro, the same model shows a score difference of **45.9%–55.4%** depending on the scaffolding. Use this data to argue the claim that "the harness matters as much as the model."
+
+3. What are the trade-offs between passing **natural-language messages** between agents versus **structured artifact** (JSON/Markdown) handoffs? In which situations does each approach excel?
+
+4. In the `/proceed` pipeline, what is the rationale for escalating to humans after a maximum of **3 retries** at each gate? What problems arise if the retry count is raised to **10**?
+
+5. When applying the single-agent instruction tuning from [Week 6](/weeks/week-06/) (CLAUDE.md) to a multi-agent system, how would you separate **common rules** from **role-specific rules**? Reference sdlc-toolkit's `conventions.md` (common) and individual `SKILL.md` (role-specific) structure.
+
+---
+
 ## Practicum
+
+<Aside type="tip" title="Today's Practicum Goal">
+Complete the **design documents** for a multi-agent pipeline. Code implementation takes place in Week 8 (Planner) and Week 9 (QA).
+</Aside>
 
 <Steps>
 1. **Role Assignment Design**
 
-   Given a project specification, design the roles and responsibilities of 4 agents.
+   Given a project specification, design the roles, responsibilities, and MCP tool access permissions for 5 agents (Planner, Architect, Coder, QA, Wrapup).
 
 2. **Define Artifact Schemas**
 
-   Define the JSON schema for every artifact passed between agents.
+   Define the schema for every artifact passed between agents. Minimum 3 types: requirement spec, task file (with dependency array), pipeline state.
 
-3. **Pipeline Prototype**
+3. **Dependency DAG Design**
 
-   Actually implement and test a 2-stage Planner → Coder pipeline.
+   Decompose a given requirement into TASK files, draw the dependency graph, and identify tiers that can run in parallel.
+
+4. **Validation Gate Design**
+
+   Define the verification checklist for each phase transition. Customize the `/validate` checklist above to fit your project.
+
+5. **Error Recovery Scenarios**
+
+   Document recovery strategies for 3 failure scenarios (test failure, gate exceeding 3 retries, merge conflict).
 </Steps>
 
 ## Assignment
@@ -248,9 +699,31 @@ Boris uses `/batch` for simple migrations and custom pipelines for complex featu
 **Submission deadline**: 2026-04-21 23:59
 
 **Requirements**:
-1. 5-stage multi-agent architecture diagram
-2. JSON schema definitions for inter-agent artifacts
-3. Planner → Coder 2-stage pipeline implementation
-4. Execution logs and performance analysis
+1. 5-stage multi-agent architecture diagram (roles, artifacts, gates included)
+2. JSON schema definitions for inter-agent artifacts (minimum 3 types)
+3. Dependency DAG design and parallelization tier analysis
+4. Validation gate checklist (per phase)
+5. Error recovery strategy document (3 scenarios)
 
 </div>
+
+---
+
+## Key Takeaways
+
+1. **Multi-Agent SDLC = role separation + structured handoffs + gated validation**: The core is not simply running multiple agents, but assigning each agent a clear role and artifact contract.
+2. **Bag of agents is harmful**: DeepMind research — an unstructured agent collection amplifies errors 17.2×. Central coordination reduces this to 4.4×.
+3. **The harness matters as much as the model**: On SWE-Bench Pro, the same model shows a 10-percentage-point performance difference depending on scaffolding.
+4. **Artifacts replace messages**: Instead of direct messages between agents, structured files (`requirement.md`, `TASK-xxx.md`, `pipeline-state.json`) carry the handoffs.
+5. **Gated pipeline**: A validation gate at each phase transition. Maximum 3 retries before human escalation.
+6. **Parallelization is controlled by the dependency DAG**: Tier 0 (no dependencies) runs in parallel; Tier N (waits for Tier N-1) runs sequentially.
+7. **Knowledge management completes the feedback loop**: The `domain`/`component` tags in LESSON files automatically inject past lessons into future specs and architectures.
+
+## Further Reading
+
+- [Towards a Science of Scaling Agent Systems — DeepMind + MIT (2025)](https://arxiv.org/abs/2512.xxxxx) — Empirical study demonstrating error amplification in unstructured agent collections (17.2×) and the effect of centralized coordination (4.4×)
+- [MetaGPT: Meta Programming for Multi-Agent Collaborative Framework (ICLR 2024)](https://arxiv.org/abs/2308.00352) — 5-role SOP-based multi-agent framework. The prototype of structured document handoffs.
+- [ChatDev: Communicative Agents for Software Development (ACL 2024)](https://arxiv.org/abs/2307.07924) — Demonstrates the superiority of role specialization via chat-based phase execution
+- [A2A Protocol Specification — Google (2025)](https://google.github.io/A2A/) — Agent-to-Agent communication standard. Task/Artifact/Agent Card structure.
+- [Model Context Protocol — Anthropic](https://modelcontextprotocol.io) — 97M+ monthly SDK downloads. Industry standard for agent → tool access.
+- [SWE-Bench Pro](https://www.swebench.com/) — Agent coding benchmark. Quantitatively measures performance differences between scaffoldings for the same model.

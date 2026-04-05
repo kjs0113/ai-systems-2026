@@ -18,23 +18,57 @@ difficulty: advanced
 estimated_time: "8 hours"
 ---
 
-import { Aside, Steps, Badge } from '@astrojs/starlight/components';
+import { Aside, Steps, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
 
 <div class="week-meta">
   <span class="phase-tag">Phase 3</span>
   <Badge text="Week 9" variant="note" />
   <Badge text="Advanced" variant="danger" />
+  <Badge text="Lecture: 2026-04-28" variant="default" />
 </div>
 
 ## Theory
 
-### The Independence Principle of the QA Agent
+### Why the QA Agent Must Be Separate
 
-The QA Agent **never shares context with the Coder Agent**. Two agents sharing the same context share the same biases, making independent verification impossible.
+Do you remember **Phase 5: Verify** from the multi-agent SDLC pipeline designed in Week 7? The core design principle at the time was "the verification agent must be independent of the generation agent." This principle is grounded not in intuition but in empirical data.
+
+According to agent system scaling research from DeepMind and MIT, **when a verification agent shares context with a generation agent, it inherits the same biases**. If the coder wrote code under a certain assumption, a QA agent with the same context will take that assumption for granted and skip verification. This is the "I thought so too" bias.
+
+PwC's 2025 AI Agent Report offers more specific numbers. In a single-agent structure (coder only), accuracy was around 10%, but **adding an independent judge agent raised it to 70%** — a 7x improvement. QA agent independence is not optional; it is a prerequisite for system reliability.
+
+In sdlc-toolkit, this is implemented in two stages:
+
+- `/reflect` — self-review: the coder agent first reviews its own output
+- `/review` — independent review: a separate QA agent evaluates only the code and tests
+
+The reason for having an independent review even after self-review is simple. `/reflect` quickly catches obvious errors and incomplete items to reduce the burden on `/review`, while `/review` acts as the final unbiased gate. The two stages serve different purposes.
+
+---
+
+### Independence Principles of the QA Agent
+
+The QA agent **never uses shared context with the coder agent**. Two agents sharing the same context share the same biases, making independent verification impossible.
 
 <Aside type="note" title="QA Agent Independence">
-Even if the Coder has determined "this code is correct," the QA Agent verifies independently — seeing **only the code and tests**, with no knowledge of the Coder's reasoning process.
+Even if the coder has determined "this code is correct," the QA agent verifies independently — seeing **only the code and tests**, with no knowledge of the coder's reasoning process.
 </Aside>
+
+Three mechanisms actually enforce independence:
+
+**1. Context Isolation**
+
+The QA agent cannot see the coder's reasoning trace, intermediate decision process, or system prompt. Its only input is the code file and test file. The moment QA knows "why this was implemented this way," it starts accepting the coder's rationalization. Not knowing leads to more accurate judgment.
+
+**2. Tool Restriction**
+
+In sdlc-toolkit's `/review` stage, the QA agent has no `Edit` permission. Only `Read` and `Bash` (for running tests) are allowed. If QA can fix bugs it finds directly, loose reviews arise from the mindset of "I'll fix it anyway." Restricting tools keeps QA focused on discovery, handing fixes back to the coder. Role separation improves quality.
+
+**3. Model Tier Separation**
+
+Using Claude Code's model routing feature, a more powerful model can be assigned to the QA agent. When the coder uses `claude-sonnet`, the QA can use `claude-opus`. Investing more reasoning capacity in verification than in generation is cost-effective.
+
+---
 
 ### QA Agent Implementation
 
@@ -49,7 +83,7 @@ class QAAgent:
         self.client = anthropic.Anthropic()
 
     def run_tests(self, test_dir: str) -> dict:
-        """Run pytest and parse results"""
+        """pytest 실행 및 결과 파싱"""
         result = subprocess.run(
             ["python", "-m", "pytest", test_dir, "-v", "--tb=short", "--json-report"],
             capture_output=True, text=True
@@ -61,25 +95,25 @@ class QAAgent:
         }
 
     def code_review(self, diff: str) -> str:
-        """Code review via Claude"""
+        """Claude를 통한 코드 리뷰"""
         response = self.client.messages.create(
             model="claude-opus-4-6",
             max_tokens=2048,
-            system="""You are a senior software engineer.
-Review the code diff and check for:
-1. Logic errors
-2. Unhandled edge cases
-3. Security vulnerabilities
-4. Performance issues
-5. Missing tests
+            system="""당신은 시니어 소프트웨어 엔지니어입니다.
+코드 diff를 검토하고 다음을 확인하세요:
+1. 논리적 오류
+2. 엣지 케이스 미처리
+3. 보안 취약점
+4. 성능 문제
+5. 테스트 누락
 
-Output: JSON {"approved": bool, "issues": [...], "suggestions": [...]}""",
-            messages=[{"role": "user", "content": f"Code review request:\n{diff}"}]
+출력: JSON {"approved": bool, "issues": [...], "suggestions": [...]}""",
+            messages=[{"role": "user", "content": f"코드 리뷰 요청:\n{diff}"}]
         )
         return response.content[0].text
 
     def review_pr(self, pr_diff: str, test_dir: str) -> dict:
-        """Full PR validation"""
+        """PR 전체 검증"""
         test_result = self.run_tests(test_dir)
         review_result = self.code_review(pr_diff)
 
@@ -90,6 +124,176 @@ Output: JSON {"approved": bool, "issues": [...], "suggestions": [...]}""",
             "approved": test_result["passed"] and "approved: true" in review_result.lower()
         }
 ```
+
+#### 3-Parallel Reviewer Implementation
+
+We now implement the 3-parallel reviewer pattern designed in Week 7. Three perspectives — Correctness, Quality, and Architecture — are reviewed simultaneously, and a severity-based PASS/FAIL gate delivers the final verdict.
+
+```python
+# parallel_reviewer.py
+import concurrent.futures
+import anthropic
+from dataclasses import dataclass
+from typing import Literal
+
+@dataclass
+class ReviewResult:
+    dimension: str
+    passed: bool
+    severity: Literal["critical", "major", "minor", "info"]
+    issues: list[str]
+    score: int  # 0-10
+
+class ParallelReviewer:
+    def __init__(self):
+        self.client = anthropic.Anthropic()
+
+    def _call_claude(self, system: str, user: str) -> str:
+        response = self.client.messages.create(
+            model="claude-opus-4-6",
+            max_tokens=1024,
+            system=system,
+            messages=[{"role": "user", "content": user}]
+        )
+        return response.content[0].text
+
+    def review_correctness(self, code: str, tests: str) -> ReviewResult:
+        """정확성 리뷰: 논리 오류, 엣지 케이스, 테스트 충분성"""
+        result = self._call_claude(
+            system="""코드의 정확성만 검토하라. 스타일은 무시한다.
+확인 항목: 논리 오류, 엣지 케이스 미처리, 테스트 커버리지 공백.
+출력: JSON {"score": 0-10, "severity": "critical|major|minor|info", "issues": [...]}""",
+            user=f"코드:\n{code}\n\n테스트:\n{tests}"
+        )
+        import json
+        data = json.loads(result)
+        return ReviewResult(
+            dimension="correctness",
+            passed=data["score"] >= 4 and data["severity"] != "critical",
+            severity=data["severity"],
+            issues=data["issues"],
+            score=data["score"]
+        )
+
+    def review_quality(self, code: str) -> ReviewResult:
+        """품질 리뷰: 코딩 컨벤션, 가독성, 유지보수성"""
+        result = self._call_claude(
+            system="""코드 품질만 검토하라. 기능 정확성은 무시한다.
+확인 항목: 네이밍, 함수 길이, 중복, 주석 충분성.
+출력: JSON {"score": 0-10, "severity": "critical|major|minor|info", "issues": [...]}""",
+            user=f"코드:\n{code}"
+        )
+        import json
+        data = json.loads(result)
+        return ReviewResult(
+            dimension="quality",
+            passed=data["score"] >= 4 and data["severity"] != "critical",
+            severity=data["severity"],
+            issues=data["issues"],
+            score=data["score"]
+        )
+
+    def review_architecture(self, code: str, context: str) -> ReviewResult:
+        """아키텍처 리뷰: 설계 결정, 의존성, 확장성"""
+        result = self._call_claude(
+            system="""아키텍처 관점에서만 검토하라.
+확인 항목: 단일 책임 원칙, 의존성 방향, 인터페이스 설계, 확장 가능성.
+출력: JSON {"score": 0-10, "severity": "critical|major|minor|info", "issues": [...]}""",
+            user=f"컨텍스트:\n{context}\n\n코드:\n{code}"
+        )
+        import json
+        data = json.loads(result)
+        return ReviewResult(
+            dimension="architecture",
+            passed=data["score"] >= 4 and data["severity"] != "critical",
+            severity=data["severity"],
+            issues=data["issues"],
+            score=data["score"]
+        )
+
+    def parallel_review(self, code: str, tests: str, context: str) -> dict:
+        """3-병렬 리뷰 실행 및 결과 통합"""
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+            f_correctness = executor.submit(self.review_correctness, code, tests)
+            f_quality = executor.submit(self.review_quality, code)
+            f_architecture = executor.submit(self.review_architecture, code, context)
+
+            results = [
+                f_correctness.result(),
+                f_quality.result(),
+                f_architecture.result()
+            ]
+
+        # 심각도 기반 PASS/FAIL 게이트
+        has_critical = any(r.severity == "critical" for r in results)
+        all_pass = all(r.passed for r in results)
+        avg_score = sum(r.score for r in results) / len(results)
+
+        return {
+            "overall_passed": all_pass and not has_critical,
+            "average_score": avg_score,
+            "results": results,
+            "blocking_issues": [
+                issue
+                for r in results if r.severity == "critical"
+                for issue in r.issues
+            ]
+        }
+```
+
+#### Self-Review Pattern (/reflect)
+
+Before the independent review, the coder agent reviews its own work first. This proactively catches obvious errors and surfaces ambiguous requirements as questions, reducing the burden on the QA agent.
+
+```python
+# self_reflect_agent.py
+import anthropic
+
+class SelfReflectAgent:
+    """코더 에이전트의 자기 리뷰 — /reflect 패턴 구현"""
+
+    def __init__(self):
+        self.client = anthropic.Anthropic()
+
+    def reflect(self, code: str, original_requirement: str) -> dict:
+        """구현 결과를 요구사항과 대조하여 자기 검토"""
+        response = self.client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=1024,
+            system="""당신은 방금 코드를 작성한 개발자다. 냉정하게 자기 검토하라.
+
+확인 항목:
+1. 요구사항의 모든 항목이 구현됐는가?
+2. 명백한 버그나 오타가 있는가?
+3. 테스트가 실제 요구사항을 검증하는가?
+4. 모호하거나 가정에 의존한 부분이 있는가?
+
+출력: JSON {
+  "obvious_issues": [...],
+  "ambiguous_requirements": [...],
+  "questions_for_qa": [...],
+  "self_confidence": 0-10
+}""",
+            messages=[{
+                "role": "user",
+                "content": f"요구사항:\n{original_requirement}\n\n내가 작성한 코드:\n{code}"
+            }]
+        )
+        import json
+        return json.loads(response.content[0].text)
+
+    def should_proceed_to_review(self, reflect_result: dict) -> bool:
+        """자기 리뷰 결과로 독립 리뷰 진행 여부 결정"""
+        # 명백한 이슈가 있으면 먼저 수정 후 재시도
+        if reflect_result["obvious_issues"]:
+            return False
+        # 자신감이 너무 낮으면 재작업
+        if reflect_result["self_confidence"] < 4:
+            return False
+        return True
+```
+
+---
 
 ### Feedback Loop Design
 
@@ -120,7 +324,189 @@ Output: JSON {"approved": bool, "issues": [...], "suggestions": [...]}""",
   </div>
 </div>
 
+The feedback loop enables automatic recovery, but it also carries the **"infinite refinement loop"** risk warned about in Week 7. A convergence guarantee design is needed to address this.
+
+**Iteration Cap: 3**
+
+The loop is limited to a maximum of 3 iterations. Problems not resolved within 3 attempts likely indicate a fundamentally flawed approach by the coder. Continuing automatic fixes can actually introduce more complex bugs.
+
+**Escalation Path**
+
+```
+1st failure → Automatic fix attempt (Coder re-runs)
+2nd failure → Detailed feedback + request to revisit requirements
+3rd failure → Set human intervention flag (recorded in pipeline-state.json)
+```
+
+sdlc-toolkit's `/proceed` Phase 5 integrates this pattern into three stages: reflect → review → escalate. The `qa_iteration_count` field in `pipeline-state.json` tracks the iteration count and determines escalation triggers.
+
+<Aside type="caution">
+QA without a feedback loop is just a gatekeeper. A loop is what makes it an automatic recovery system.
+</Aside>
+
+---
+
+### LLM-as-Judge Review Scoring
+
+This is the 4-dimensional scoring system defined in sdlc-toolkit's `llm-review-prompt.md`. It converts subjective "good/bad" judgments into quantitative 0-10 scores, enabling pipeline automation. In Week 12's telemetry system, these scores are aggregated to track overall quality trends across the system.
+
+**PASS Criteria**: All 4 dimensions ≥ 4 AND 0 Critical issues
+
+<Tabs>
+  <TabItem label="Scoring JSON Schema">
+
+```json
+{
+  "review_id": "string",
+  "timestamp": "ISO-8601",
+  "target": {
+    "file": "string",
+    "commit": "string"
+  },
+  "scores": {
+    "correctness": {
+      "score": 0,
+      "max": 10,
+      "rationale": "string",
+      "issues": []
+    },
+    "conventions": {
+      "score": 0,
+      "max": 10,
+      "rationale": "string",
+      "issues": []
+    },
+    "test_coverage": {
+      "score": 0,
+      "max": 10,
+      "rationale": "string",
+      "issues": []
+    },
+    "security": {
+      "score": 0,
+      "max": 10,
+      "rationale": "string",
+      "issues": []
+    }
+  },
+  "critical_issues": [],
+  "verdict": "PASS | FAIL",
+  "feedback_for_coder": "string"
+}
+```
+
+  </TabItem>
+  <TabItem label="Verdict Logic">
+
+```python
+# scoring_gate.py
+from dataclasses import dataclass
+
+@dataclass
+class ReviewScores:
+    correctness: int    # 논리 정확성, 엣지 케이스
+    conventions: int    # 코딩 컨벤션, 네이밍
+    test_coverage: int  # 테스트 충분성, 품질
+    security: int       # 보안 취약점, 입력 검증
+
+    def verdict(self, critical_issues: list[str]) -> str:
+        """PASS 기준: 전 차원 ≥ 4 AND Critical 이슈 없음"""
+        if critical_issues:
+            return "FAIL"
+        scores = [
+            self.correctness,
+            self.conventions,
+            self.test_coverage,
+            self.security
+        ]
+        if all(s >= 4 for s in scores):
+            return "PASS"
+        failing = [
+            name for name, score in zip(
+                ["correctness", "conventions", "test_coverage", "security"],
+                scores
+            ) if score < 4
+        ]
+        return f"FAIL (low scores: {', '.join(failing)})"
+
+    def to_pipeline_state(self) -> dict:
+        """pipeline-state.json 업데이트용 직렬화"""
+        return {
+            "qa_scores": {
+                "correctness": self.correctness,
+                "conventions": self.conventions,
+                "test_coverage": self.test_coverage,
+                "security": self.security,
+                "average": sum([
+                    self.correctness, self.conventions,
+                    self.test_coverage, self.security
+                ]) / 4
+            }
+        }
+```
+
+  </TabItem>
+</Tabs>
+
+This scoring system is itself an implementation of the LLM-as-Judge pattern by the QA agent. Week 12 covers how to aggregate this score data to build agent performance telemetry.
+
+---
+
+### Full Pipeline Integration
+
+This is the end-to-end chain running from Week 8 (PlannerAgent) → Coder → Week 9 (QAAgent). The `pipeline-state.json` designed in Week 7 serves as the central state store tracking completion of each Phase.
+
+**Artifact Chain**
+
+```
+requirement.md          ← Planner input
+    ↓
+architecture.md         ← Planner output (Week 8)
+    ↓
+TASK-001.md, TASK-002.md ← Coder assignments based on task_queue.json
+    ↓
+PR (code + tests)       ← Coder output
+    ↓
+review-results.json     ← QA output (Week 9)
+    ↓
+LESSON-001.md           ← Record of learned failure patterns
+```
+
+`pipeline-state.json` records when each artifact was generated, the responsible agent, and the current Phase. Even if the pipeline is interrupted, you can identify how far it progressed and restart from that point.
+
+<Aside type="tip">
+Lab 09 runs this entire chain end-to-end for the first time. This is the foundation for Week 13's Ralphthon.
+</Aside>
+
+---
+
+### In-Class Discussion Questions
+
+The goal of discussion is not to find the right answer, but to clarify trade-offs.
+
+**Q1. What problems arise if the QA agent is given Edit permission?**
+
+"Wouldn't it be more efficient to fix bugs directly when found?" — Find the logical flaw in this argument. How does QA's role change when it has Edit permission? Discuss the trade-off between short-term efficiency and long-term reliability.
+
+**Q2. If you had to choose only one of the 3-parallel reviewers (correctness, quality, architecture)?**
+
+The answer may vary depending on the team's current situation (startup MVP vs. financial system vs. open-source library). Which dimension is most important in each situation, and why? How can the two dimensions you didn't choose be compensated for?
+
+**Q3. Why was the feedback loop iteration cap set to 3?**
+
+Explain in connection with the "infinite refinement loop" risk from Week 7. What problems arise if the cap is reduced to 1? What if it's raised to 10? Is the number 3 mathematically grounded, or an empirical heuristic?
+
+**Q4. What is the relationship between Week 12's LLM-as-Judge and this week's QA agent?**
+
+The question "Isn't the QA agent already an LLM-as-Judge?" is legitimate. Find the similarities and differences between the two. What does Week 12 add? How does telemetry and aggregation differ from a simple one-time judgment?
+
+---
+
 ## Practicum
+
+<Aside type="tip">
+Connect the PlannerAgent implemented in Week 8 with this week's QAAgent to complete a 3-stage pipeline.
+</Aside>
 
 <Steps>
 1. **Implement the QA Agent** — Complete the `QAAgent` class based on the code above
@@ -147,3 +533,29 @@ Output: JSON {"approved": bool, "issues": [...], "suggestions": [...]}""",
 4. Video or log demonstrating the full Planner → Coder → QA 3-stage pipeline end-to-end
 
 </div>
+
+---
+
+## Key Takeaways
+
+1. **QA independence = context isolation + tool restriction + separate model tier.** Blocking bias inheritance is the core, empirically validated by PwC research showing accuracy improvements from 10% to 70%.
+
+2. **2-stage review: /reflect (self-review) → /review (independent review).** Self-review proactively eliminates obvious errors, reducing the burden on the independent review.
+
+3. **3-parallel reviewers: each specialized in correctness, quality, and architecture.** A severity-based PASS/FAIL gate delivers the final verdict, and parallel execution simultaneously obtains all three perspectives without delay.
+
+4. **Feedback loop + iteration cap: balance between automatic recovery and infinite loop prevention.** A cap of 3 and an escalation path (automatic fix → detailed feedback → human intervention) guarantees convergence.
+
+5. **LLM-as-Judge scoring: 4 dimensions (correctness, conventions, test coverage, security) × 0-10 scores.** PASS requires all dimensions ≥ 4 AND 0 Critical issues, and this becomes the data source for Week 12 telemetry.
+
+---
+
+## Further Reading
+
+1. **DeepMind + MIT "Towards a Science of Scaling Agent Systems"** — Empirical basis showing that verification agents inherit biases when sharing context with generation agents. The theoretical foundation for designing agent independence.
+
+2. **PwC AI Agent Report (2025)** — Industry data showing accuracy improves from 10% to 70% when an independent judge agent is added compared to a single-agent setup. Includes analysis of the specific mechanisms behind the 7x improvement.
+
+3. **sdlc-toolkit `/review` + `/reflect` official documentation** — Reference implementation of the production-level 2-stage review pattern. Includes tool restriction settings, model routing, and the pipeline-state.json schema.
+
+4. **"Judging the Judges: A Systematic Investigation of Position Bias in Pairwise Comparative Assessments by ChatGPT" (arXiv, 2024)** — Analysis of biases and limitations in LLM-based automatic evaluation. Provides practical guidance for improving scoring reliability when designing QA agents.

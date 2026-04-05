@@ -200,7 +200,7 @@ class RalphContextManager:
 
 ---
 
-### Part 4: Token Economics — Cutting 40-70% Waste
+### Token Economics — Cutting 40-70% Waste
 
 The ultimate goal of context management is to **do more useful work on the same budget**. Empirical data shows that **40-70% of agent input tokens are wasted** — duplicate tool results, unnecessary file contents, bloated system prompts.
 
@@ -240,7 +240,7 @@ Core principles:
 
 ---
 
-### Part 5: The Initializer Pattern — 2-Phase State Management
+### The Initializer Pattern — 2-Phase State Management
 
 The **2-phase pattern** recommended in Anthropic's official harness guide systematizes the state file design above:
 
@@ -273,7 +273,7 @@ This pattern is a **higher-level abstraction** of the three state files in today
 
 ---
 
-### Part 6: Context Strategy Comparison by Tool
+### Context Strategy Comparison by Tool
 
 Context management approaches differ by tool. As of 2026, three strategies are competing:
 
@@ -286,8 +286,50 @@ Context management approaches differ by tool. As of 2026, three strategies are c
 VS Code Copilot introduced **3-tier memory** (user/repository/session) in 2026, separating user preferences (global) → project rules (repo) → current conversation (session). This is the same design principle as Claude Code's 3-level CLAUDE.md hierarchy (global/project/local).
 
 <Aside type="note" title="Bridge to Week 6">
-Whatever context strategy you choose, ultimately **what you put inside the context** determines quality. **Instruction tuning**, covered next week (Week 6), answers exactly this question — what constraints to write in CLAUDE.md and how to write them.
+Whatever context strategy you choose, ultimately **what you put inside the context** determines quality. **Instruction tuning**, covered next week (Week 6), answers exactly this question �� what constraints to write in CLAUDE.md and how to write them.
 </Aside>
+
+---
+
+### Token-Efficient Data Serialization
+
+When agents send structured data to LLMs, the serialization format can cause **2–3x** differences in token consumption. Results from serializing the same 50-user list in 7 formats:
+
+| Format | Tokens | LLM Accuracy | Best For |
+|--------|--------|-------------|----------|
+| CSV | ~800 | 44.3% | Pure tables (accuracy risk) |
+| Markdown-KV | ~950 | **60.7%** | Simple key-value retrieval |
+| TOON | 993 | 76.4% | Uniform array data |
+| JSON (compact) | ~1,100 | 73.7% | **General purpose — safest balance** |
+| JSON (pretty) | 1,481 | 75.0% | When human readability is needed |
+| YAML | 1,710 | 74.5% | Nested configs, prompt structuring |
+| XML | 2,690 | 72.1% | Legacy system integration |
+
+<Aside type="caution" title="Token Efficiency ≠ Best Format">
+Token efficiency and accuracy are often **inversely correlated**. CSV uses the fewest tokens but has the lowest accuracy (44.3%). Tam et al. (2024, "Let Me Speak Freely?") reported that format constraints alone can **degrade LLM reasoning performance by 10–15%**. "Fewest tokens = best format" is not true.
+</Aside>
+
+#### TOON — A Case Study in Token-Optimized Serialization
+
+TOON (Token Oriented Object Notation, 2025) preserves JSON's structure while removing quotes, braces, and commas, representing uniform arrays as CSV-style tables. With 23.7K GitHub stars and 1.6M monthly npm downloads, community interest is real.
+
+```
+// TOON example: uniform array → header + row format
+users[3]{id,name,email}:
+  1,Alice,alice@example.com
+  2,Bob,bob@example.com
+  3,Carol,carol@example.com
+```
+
+**Strengths**: 40–60% token reduction on uniform arrays vs pretty JSON.
+**Limitations**: Can be **15–20% larger** than compact JSON for non-uniform/nested data. The spec is a Working Draft (v3.0 reached in just 3 weeks from v0.8), and LLMs haven't been trained on TOON, requiring format explanation in prompts.
+
+#### Practical Recommendations
+
+- **Default**: Compact JSON — all LLMs understand it, mature ecosystem. 25–40% savings vs pretty JSON.
+- **Large uniform tables (100+ rows)**: Consider TOON or CSV — but always measure the accuracy trade-off.
+- **API-based structured output**: Function calling / structured output APIs are optimal (Microsoft measured: **42%** savings vs JSON).
+- **Week 7 multi-agent**: Design inter-agent artifacts with compact JSON. See [Week 7 Artifact Handoff](/en/weeks/week-07/#artifact-based-handoff-design).
 
 ---
 

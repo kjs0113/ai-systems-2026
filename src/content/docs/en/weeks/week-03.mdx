@@ -68,9 +68,9 @@ MCP's status was decisively established in December 2025 when Anthropic donated 
 
 ---
 
-### Part 1: MIG — The Compute Isolation Layer
+### MIG — The Compute Isolation Layer
 
-MIG provides physical isolation, but **MCP determines what the agent can do**. This section covers the core concepts of MIG, and from Part 2 we dive deep into MCP.
+MIG provides physical isolation, but **MCP determines what the agent can do**. This section covers the core concepts of MIG, and from the next section we dive deep into MCP.
 
 #### The Noisy Neighbor Problem
 
@@ -239,7 +239,7 @@ Running `torch.cuda.device_count()` inside a MIG slice **always returns 1**. Thi
 
 ---
 
-### Part 2: MCP Core Topology and Protocol Mechanics
+### MCP Core Topology and Protocol Mechanics
 
 #### The N×M Integration Problem
 
@@ -358,7 +358,7 @@ The diagram shows the topology difference between the two transport methods. In 
 
 ---
 
-### Part 3: MCP Primitives Extended — Server + Client Features
+### MCP Primitives Extended — Server + Client Features
 
 #### The Three Server Primitives
 
@@ -371,7 +371,7 @@ The functionality an MCP server can expose is classified into three primitives:
 | **Prompts** | User selects | Reusable prompt templates. User must explicitly select to activate | "MIG Status Analysis", "Security Review Checklist" |
 
 <Aside type="danger" title="Tool Descriptions Are Untrusted">
-The latest MCP spec (2025-11-25) states explicitly: **tool descriptions from untrusted servers must also be treated as untrusted**. Tool descriptions themselves can contain embedded prompt injections. This is the core attack vector of the McpInject attack covered in Part 5.
+The latest MCP spec (2025-11-25) states explicitly: **tool descriptions from untrusted servers must also be treated as untrusted**. Tool descriptions themselves can contain embedded prompt injections. This is the core attack vector of the McpInject attack covered in the "Security and Governance" section below.
 </Aside>
 
 #### Client Features — The Reverse Hook
@@ -402,7 +402,7 @@ The server requests confirmation directly from the user. Used to obtain consent 
 
 ---
 
-### Part 4: Multi-Agent Hybrid Architecture
+### Multi-Agent Hybrid Architecture
 
 #### Limitations of REST APIs
 
@@ -434,7 +434,7 @@ In real enterprise environments, REST and MCP coexist. Referencing IBM architect
 
 ---
 
-### Part 5: Security and Governance — TBAC, OBO, Triple Gate
+### Security and Governance — TBAC, OBO, Triple Gate
 
 When MCP standardizes tool access, we can apply the governance policies from Week 2 on top of that standardized path.
 
@@ -619,7 +619,7 @@ MCP is a stateful protocol. Because context accumulates within a session, load b
 
 ---
 
-### Part 6: MCP Server Implementation Patterns
+### MCP Server Implementation Patterns
 
 #### The FastMCP Framework
 

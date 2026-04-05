@@ -65,7 +65,7 @@ All three loops rest on the same principle. The governance learned in Week 2 set
 
 ---
 
-### Part 1: Test-Time Compute Scaling — Theoretical Foundation
+### Test-Time Compute Scaling — Theoretical Foundation
 
 #### Boosting Performance Without Growing the Model
 
@@ -134,7 +134,7 @@ This reflects the trend of test-time compute allocation moving **from developer 
 
 ---
 
-### Part 2: Ralph Loop Deep Dive
+### Ralph Loop Deep Dive
 
 The **Ralph Loop** (Ralph Wiggum Loop), popularized by developer Geoffrey Huntley in late 2025, is the core paradigm of agentic software development.
 
@@ -352,7 +352,7 @@ The Ralph loop (`while :; do ... done`) is a **general-purpose pattern** — app
 
 ---
 
-### Part 3: RLM — Recursive LM Calls
+### RLM — Recursive LM Calls
 
 #### The Problem: LLMs Miss the Middle of Long Documents
 
@@ -420,7 +420,7 @@ We won't implement RLM directly in class, but understanding the principle is use
 
 ---
 
-### Part 4: autoresearch — Autonomous Experiment Loop
+### autoresearch — Autonomous Experiment Loop
 
 #### Karpathy's autoresearch
 
@@ -486,7 +486,7 @@ When running autoresearch patterns on our DGX, using the MIG slices learned in W
 
 ---
 
-### Part 5: Integrating the Three Loops — A Common Architecture
+### Integrating the Three Loops — A Common Architecture
 
 #### Comparison Table
 
@@ -561,7 +561,7 @@ Running a small model many times is often more economical than running a large m
 
 ---
 
-### Part 6: Practical Harness Optimization — Parallel Sessions and Worktree Isolation
+### Practical Harness Optimization — Parallel Sessions and Worktree Isolation
 
 Parts 1–5 covered the principles of the loop. Now we turn to the practical techniques for running loops **faster, safer, and at scale**. The 42 tips that Claude Code creator Boris Cherny released over January–February 2026 are not individual tricks — they form a **stack** in which each layer presupposes the one below. Understanding this stack lets you push Ralph loop throughput from single digits to double digits.
 
@@ -583,7 +583,7 @@ tmux select-layout -t loops tiled
 # pane 4: claude "Run performance profiling"
 ```
 
-The key is that **each instance handles an independent task**. There is no inter-agent communication. Git is the sole coordination mechanism — a natural extension of the Ralph loop's monolithic philosophy (Part 2).
+The key is that **each instance handles an independent task**. There is no inter-agent communication. Git is the sole coordination mechanism — a natural extension of the Ralph loop's monolithic philosophy .
 
 <Aside type="tip" title="Practical Rules for Parallel Sessions">
 - There must be **no file overlap** between tasks. If two agents modify the same file, a merge conflict will occur.
@@ -692,7 +692,7 @@ Tracing the order in reverse explains why it matters:
 Using an upper layer without the lower one will fail. Running parallel sessions without worktrees causes file collisions; using worktrees without CLAUDE.md means agents are ignorant of project conventions.
 
 <Aside type="note" title="From the Ralph Loop to the Boris Stack">
-The Ralph loop harness from Part 2 (backpressure + GC + AGENTS.md) ensures **quality for a single loop**. The Boris stack builds on top of it to add **throughput and isolation across loops**. Ralph answers "how do I run one loop well?"; Boris answers "how do I safely run ten loops at once?"
+The Ralph loop harness from the next section (backpressure + GC + AGENTS.md) ensures **quality for a single loop**. The Boris stack builds on top of it to add **throughput and isolation across loops**. Ralph answers "how do I run one loop well?"; Boris answers "how do I safely run ten loops at once?"
 </Aside>
 
 #### 6.5 Agentmaxxing — Multi-Tool Parallel Execution
@@ -721,7 +721,7 @@ Cursor 2.0 productized this pattern with **Background Agents** (running in isola
 
 ---
 
-### Part 7: Real-World Validation — Building a Product Without Writing a Line of Code
+### Real-World Validation — Building a Product Without Writing a Line of Code
 
 We have covered the theory and techniques. The question now: can loops alone build production software? In March 2026, OpenAI's case of **building an internal product using only the Codex agent** provides the answer.
 

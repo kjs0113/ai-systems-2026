@@ -275,3 +275,13 @@ Submit a PR to `assignments/lab-05/[student-id]/`:
 <Aside type="tip" title="Cache Utilization">
 When reusing the same system prompt repeatedly, enabling prompt caching with the `cache_control` parameter can reduce costs by up to 90%.
 </Aside>
+
+<Aside type="note" title="Bonus: Serialization Format Token Comparison">
+Serialize the same data (a list of 50 users) in 4 formats — JSON, compact JSON, YAML, CSV — then:
+
+1. Measure the **token count** for each format using `TokenCounter`
+2. Feed each format into a prompt with a retrieval question (e.g., "Find users from Korea") and compare **accuracy**
+3. Visualize the relationship between token efficiency and accuracy as a graph
+
+Compare your experimental results against the format comparison data in [Week 5 Theory — Token-Efficient Data Serialization](/en/weeks/week-05/).
+</Aside>
