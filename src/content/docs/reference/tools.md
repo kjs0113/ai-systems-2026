@@ -39,6 +39,92 @@ claude /loop --stop
 - 멀티파일 편집
 - GitHub Actions 통합
 
+**고급 기능**:
+
+#### 계획 및 제어
+
+- **Plan Mode** (`Shift+Tab`) — 코드 작성 전 계획을 먼저 수립. 계획 확정 후 자동 실행으로 전환.
+  ```bash
+  # 대화형 세션에서 Shift+Tab으로 Plan Mode 진입
+  # 계획 수립 → 확인 → 자동 실행
+  ```
+- **Effort Levels** — 추론 깊이 조절. 단순 작업에는 낮은 effort로 비용 절감, 복잡한 설계에는 높은 effort 사용.
+  ```bash
+  claude --effort low "이 함수의 반환 타입을 알려줘"
+  claude --effort high "이 모듈을 비동기로 리팩터링해줘"
+  ```
+- **Output Styles** — 인지 모드 프리셋. 설명형(Explanatory), 학습형(Learning), 간결형(Concise) 등.
+  ```bash
+  claude --output-style concise "테스트 실패 원인 분석"
+  claude --output-style explanatory "MCP 프로토콜 설명해줘"
+  ```
+
+#### 확장 시스템
+
+- **Custom Agents** — `.claude/agents/*.md` 파일로 전문화된 에이전트 정의. 역할, 허용 도구, 권한을 선언적으로 설정.
+  ```bash
+  # .claude/agents/qa-reviewer.md 에 역할 정의 후:
+  claude --agent qa-reviewer "이 PR을 리뷰해줘"
+  ```
+  ```json
+  // settings.json에서 기본 에이전트 지정
+  { "defaultAgent": "qa-reviewer" }
+  ```
+- **Skills** — 설치 가능한 `.md` 스킬 파일. `~/.claude/skills/`에 배치하고 세션 내에서 로드.
+  ```bash
+  # 스킬 로드
+  claude /skills refactor-guide
+  ```
+- **Hooks** — 도구 호출 등 이벤트에 트리거되는 셸 명령. `settings.json`에서 설정.
+  ```json
+  // ~/.claude/settings.json
+  {
+    "hooks": {
+      "PreToolUse": [
+        {
+          "matcher": "Bash",
+          "command": "echo '$(date): Bash called' >> ~/.claude/audit.log"
+        }
+      ]
+    }
+  }
+  ```
+
+#### 격리 및 안전
+
+- **Sandboxing** (`/sandbox`) — BashTool의 파일 및 네트워크 접근을 격리. 에이전트 실수의 피해 범위를 제한.
+  ```bash
+  # 세션 내에서 샌드박스 모드 활성화
+  claude --sandbox
+  ```
+- **Worktree Native** (`--worktree`) — git worktree 기반 격리 세션. tmux 통합으로 백그라운드 실행 가능.
+  ```bash
+  # 격리된 worktree 세션 시작
+  claude --worktree feature-auth
+  # tmux 세션으로 백그라운드 실행
+  claude --worktree feature-auth --tmux
+  ```
+
+#### 병렬 실행
+
+- **Parallel Sessions** — 여러 Claude Code 인스턴스를 동시 실행. 각 세션이 독립 컨텍스트를 유지.
+  ```bash
+  # 터미널 1: 프론트엔드 작업
+  claude --worktree frontend "React 컴포넌트 구현"
+  # 터미널 2: 백엔드 작업
+  claude --worktree backend "API 엔드포인트 구현"
+  ```
+- **/batch** — 대화형 계획 수립 후 worktree 격리 기반 병렬 실행. 각 에이전트가 테스트 후 개별 PR 생성.
+  ```bash
+  claude /batch "src/의 로깅을 새 구조화 로거로 마이그레이션"
+  ```
+- **/simplify** — 병렬 에이전트로 코드 리뷰 수행. 재사용성, 품질, 효율성 관점을 동시 분석.
+  ```bash
+  claude /simplify
+  ```
+
+> 기능별 상세 설명과 실습 예제는 [4주차](/weeks/week-04/) (루프/worktree), [6주차](/weeks/week-06/) (인스트럭션 튜닝), [7주차](/weeks/week-07/) (멀티에이전트 설계) 참조.
+
 ---
 
 ### Gemini CLI (Google)

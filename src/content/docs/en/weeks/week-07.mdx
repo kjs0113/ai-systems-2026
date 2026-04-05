@@ -18,7 +18,7 @@ difficulty: advanced
 estimated_time: "7 hours"
 ---
 
-import { Aside, Steps, Badge, Card, CardGrid } from '@astrojs/starlight/components';
+import { Aside, Steps, Tabs, TabItem, Badge, Card, CardGrid } from '@astrojs/starlight/components';
 
 <div class="week-meta">
   <span class="phase-tag">Phase 3</span>
@@ -82,6 +82,126 @@ import { Aside, Steps, Badge, Card, CardGrid } from '@astrojs/starlight/componen
 <Aside type="caution" title="Golden Rule of Inter-Agent Communication">
 Communication between agents must always occur through **structured artifacts** (Markdown, JSON).
 Having Agent A send direct messages to Agent B maximizes non-determinism.
+</Aside>
+
+### Claude Code Native Multi-Agent — A Lightweight Alternative
+
+Before building the full pipeline above from scratch, let's first understand the **lightweight multi-agent tools** built into Claude Code. These tools, revealed by Boris Cherny in February 2026, replace each pipeline stage with a single CLI flag.
+
+#### Plan Mode — Built-in Planner Agent
+
+```bash
+# Press Shift+Tab to enter Plan Mode
+# Draft plan → user confirmation → auto-execute
+```
+
+Pressing `Shift+Tab` makes Claude Code **draft a plan before writing any code.** Once the plan is confirmed, it automatically proceeds to implementation. Boris: *"Claude 1-shots the implementation when the plan is right."*
+
+This performs what the Planner Agent above does — requirements parsing, spec.md generation, priority assignment — in an interactive conversational flow. When you build PlannerAgent from scratch in Week 8, you'll understand the internal structure of this process.
+
+#### Custom Agents — Declarative Role Specialization
+
+Add Markdown files to the `.claude/agents/` directory to define specialized agents:
+
+<Tabs>
+  <TabItem label="code-simplifier.md">
+    ```markdown
+    ---
+    name: code-simplifier
+    description: Code simplification specialist agent
+    tools: [Read, Edit, Grep, Glob]
+    ---
+
+    Review changed code to:
+    1. Leverage existing reusable functions
+    2. Remove unnecessary complexity
+    3. Apply consistent patterns
+    ```
+  </TabItem>
+  <TabItem label="verify-app.md">
+    ```markdown
+    ---
+    name: verify-app
+    description: Application verification agent
+    tools: [Read, Bash, Grep]
+    ---
+
+    Verify changes by:
+    1. Confirming all tests pass
+    2. Confirming build succeeds
+    3. Confirming no lint errors
+    ```
+  </TabItem>
+  <TabItem label="Usage">
+    ```bash
+    # Run with a specific agent
+    claude --agent code-simplifier "Refactor this module"
+
+    # Set default agent in settings.json
+    # { "defaultAgent": "code-simplifier" }
+    ```
+  </TabItem>
+</Tabs>
+
+This is the role assignment design above — Coder Agent, QA Agent — implemented declaratively in **a single .md file**. The same principle of MCP-governed tool access applies via the `tools` field.
+
+#### `/simplify` — Built-in QA Agent
+
+```bash
+# Auto-review after code changes
+claude /simplify
+```
+
+Parallel agents review changed code simultaneously across three dimensions: **reuse**, **quality**, and **efficiency**. Boris: *"It catches the structural issues a senior engineer would flag in the first five minutes of code review."*
+
+<Aside type="caution" title="Limitations of /simplify">
+Domain-specific concerns — API contract compliance, DB read-replica routing, business logic consistency — are not caught. `/simplify` does not **replace** code review; it **raises the starting baseline**.
+</Aside>
+
+#### `/batch` — Large-Scale Parallel Execution Engine
+
+```bash
+# Interactive planning → parallel execution
+claude /batch "Migrate logging in src/ to the new structured logger"
+```
+
+`/batch` operates in three stages:
+
+1. **Interactive planning**: Decomposes the task through conversation with the user
+2. **Parallel execution**: Runs each subtask in an independent worktree in parallel
+3. **PR creation**: Each agent opens an individual PR after its tests pass
+
+Boris's team case: 6 parallel agents migrating logging across 14 files. **Total: 11 minutes. 5 of 6 PRs merged without changes.** The remaining one required human judgment on a conditional logging edge case.
+
+This is the same multi-agent pipeline principle above — Planner → Coder × N → QA — packaged at product level.
+
+#### Skills System — Packaged Instruction Tuning
+
+```bash
+# Install a skill (example — verify actual URL from the skill distributor)
+mkdir -p ~/.claude/skills/boris
+curl -L -o ~/.claude/skills/boris/SKILL.md \
+  https://example.com/skills/boris/SKILL.md
+
+# Or write your own SKILL.md and place it directly
+# Load skill in a session
+claude /skills boris
+```
+
+This extends the instruction tuning from Week 6 (adding constraints to PROMPT.md) into **reusable packages**. Boris's own 42 tips are packaged as a single skill, loadable in any project.
+
+#### Full Pipeline vs Native Tools — When to Use Which
+
+| Aspect | Full Pipeline (Weeks 7-9) | Native Tools (Boris) |
+|--------|--------------------------|---------------------|
+| **Setup cost** | High — JSON schemas, agent code implementation | Low — .md files, CLI flags |
+| **Flexibility** | Unlimited — custom handoff logic, feedback loops | Limited — within preset capabilities |
+| **Inter-agent comms** | Artifact-based (JSON schema contracts) | None — each agent runs independently |
+| **Verification** | QA agent runs integration tests + code review | `/simplify` catches structural issues only |
+| **Best for** | Complex multi-stage workflows, custom quality criteria | Large-scale parallel processing of repetitive tasks |
+
+<Aside type="tip" title="Why you need to learn both">
+Boris uses `/batch` for simple migrations and custom pipelines for complex feature work. Understanding the **limitations** of native tools is what makes you appreciate **why** full pipelines are necessary. Experience native tools this week, then build full pipelines from scratch in Weeks 8-9.
 </Aside>
 
 ### Artifact-Based Handoff Design

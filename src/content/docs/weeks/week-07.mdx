@@ -18,7 +18,7 @@ difficulty: 고급
 estimated_time: 7시간
 ---
 
-import { Aside, Steps, Badge, Card, CardGrid } from '@astrojs/starlight/components';
+import { Aside, Steps, Tabs, TabItem, Badge, Card, CardGrid } from '@astrojs/starlight/components';
 
 <div class="week-meta">
   <span class="phase-tag">Phase 3</span>
@@ -82,6 +82,126 @@ import { Aside, Steps, Badge, Card, CardGrid } from '@astrojs/starlight/componen
 <Aside type="caution" title="에이전트 간 통신의 황금 규칙">
 에이전트 간 통신은 반드시 **구조화된 아티팩트** (Markdown, JSON)를 통해 이루어져야 한다.
 에이전트 A가 에이전트 B에게 직접 메시지를 보내는 방식은 비결정성을 극대화한다.
+</Aside>
+
+### Claude Code 네이티브 멀티에이전트 — 경량 대안
+
+위의 풀 파이프라인을 직접 구축하기 전에, Claude Code가 내장하는 **경량 멀티에이전트 도구**를 먼저 이해하자. Boris Cherny가 2026년 2월에 공개한 이 도구들은 파이프라인의 각 단계를 CLI 플래그 하나로 대체한다.
+
+#### Plan Mode — 내장 플래너 에이전트
+
+```bash
+# Shift+Tab으로 Plan Mode 진입
+# 계획 수립 → 사용자 확인 → 자동 실행
+```
+
+`Shift+Tab`을 누르면 Claude Code가 **코드를 작성하기 전에 계획을 먼저 세운다.** 계획이 확정되면 자동으로 구현에 들어간다. Boris: *"Claude 1-shots the implementation when the plan is right."*
+
+이것은 위의 플래너 에이전트(Planner Agent)가 하는 일 — 요구사항 파싱, spec.md 생성, 우선순위 결정 — 을 대화형으로 수행하는 것이다. Week 8에서 PlannerAgent를 직접 구현하면 이 과정의 내부 구조를 이해할 수 있다.
+
+#### Custom Agents — 선언적 역할 특화
+
+`.claude/agents/` 디렉토리에 Markdown 파일을 추가하면 전문화된 에이전트를 정의할 수 있다:
+
+<Tabs>
+  <TabItem label="code-simplifier.md">
+    ```markdown
+    ---
+    name: code-simplifier
+    description: 코드 단순화 전문 에이전트
+    tools: [Read, Edit, Grep, Glob]
+    ---
+
+    변경된 코드를 검토하여:
+    1. 재사용 가능한 기존 함수가 있으면 활용
+    2. 불필요한 복잡성 제거
+    3. 일관된 패턴 적용
+    ```
+  </TabItem>
+  <TabItem label="verify-app.md">
+    ```markdown
+    ---
+    name: verify-app
+    description: 애플리케이션 검증 에이전트
+    tools: [Read, Bash, Grep]
+    ---
+
+    변경사항을 검증하여:
+    1. 모든 테스트 통과 확인
+    2. 빌드 성공 확인
+    3. 린트 에러 없음 확인
+    ```
+  </TabItem>
+  <TabItem label="사용법">
+    ```bash
+    # 특정 에이전트로 실행
+    claude --agent code-simplifier "이 모듈 리팩터링"
+
+    # settings.json에서 기본 에이전트 지정
+    # { "defaultAgent": "code-simplifier" }
+    ```
+  </TabItem>
+</Tabs>
+
+이것은 위의 역할 분담 설계 — 코더 에이전트, QA 에이전트 — 를 **.md 파일 하나**로 선언적으로 구현하는 것이다. MCP를 통한 도구 접근 권한 관리와 동일한 원리가 `tools` 필드에 적용된다.
+
+#### `/simplify` — 내장 QA 에이전트
+
+```bash
+# 코드 변경 후 자동 리뷰
+claude /simplify
+```
+
+병렬 에이전트가 변경된 코드를 **재사용성(reuse)**, **품질(quality)**, **효율성(efficiency)** 세 관점에서 동시에 리뷰한다. Boris: *"코드 리뷰 첫 5분에서 시니어 엔지니어가 잡을 수준의 구조적 이슈를 자동 포착한다."*
+
+<Aside type="caution" title="/simplify의 한계">
+도메인 특화 이슈 — API 계약 준수, DB 읽기 복제본 라우팅, 비즈니스 로직 정합성 — 는 잡지 못한다. `/simplify`는 코드 리뷰를 **대체**하는 것이 아니라, 리뷰의 **시작점을 높이는** 도구다.
+</Aside>
+
+#### `/batch` — 대규모 병렬 실행 엔진
+
+```bash
+# 대화형 계획 → 병렬 실행
+claude /batch "src/ 디렉토리의 로깅을 새 구조화 로거로 마이그레이션"
+```
+
+`/batch`는 세 단계로 동작한다:
+
+1. **대화형 계획**: 사용자와 대화하며 태스크를 분해한다
+2. **병렬 실행**: 각 서브태스크를 독립 worktree에서 병렬로 실행한다
+3. **PR 생성**: 각 에이전트가 테스트 통과 후 개별 PR을 올린다
+
+Boris 팀 사례: 14개 파일의 로깅 마이그레이션에 6개 병렬 에이전트를 투입. **총 11분, 6개 중 5개 무수정 merge.** 나머지 1개는 조건부 로깅의 엣지 케이스로 인간 판단이 필요했다.
+
+이것이 위의 멀티에이전트 파이프라인과 같은 원리 — Planner → Coder × N → QA — 가 제품 수준으로 패키징된 것이다.
+
+#### Skills 시스템 — 패키징된 인스트럭션 튜닝
+
+```bash
+# 스킬 설치 (예시 — 실제 URL은 스킬 배포처에서 확인)
+mkdir -p ~/.claude/skills/boris
+curl -L -o ~/.claude/skills/boris/SKILL.md \
+  https://example.com/skills/boris/SKILL.md
+
+# 또는 직접 SKILL.md 파일을 작성하여 배치
+# 세션에서 스킬 로드
+claude /skills boris
+```
+
+6주차에서 배운 인스트럭션 튜닝(PROMPT.md에 제약 추가)을 **재사용 가능한 패키지**로 확장한 것이다. Boris 자신의 42개 팁이 하나의 skill로 패키징되어 어떤 프로젝트에서든 로드할 수 있다.
+
+#### 풀 파이프라인 vs 네이티브 도구 — 언제 무엇을 쓰는가
+
+| 항목 | 풀 파이프라인 (Week 7-9) | 네이티브 도구 (Boris) |
+|------|------------------------|---------------------|
+| **설정 비용** | 높음 — JSON 스키마, 에이전트 코드 구현 | 낮음 — .md 파일, CLI 플래그 |
+| **유연성** | 무한 — 커스텀 핸드오프 로직, 피드백 루프 | 제한적 — 프리셋 기능 내에서만 |
+| **에이전트 간 통신** | 아티팩트 기반 (JSON 스키마로 계약) | 없음 — 각 에이전트가 독립 실행 |
+| **검증** | QA 에이전트가 통합 테스트 + 코드 리뷰 | `/simplify`가 구조적 이슈만 포착 |
+| **적합 상황** | 복잡한 다단계 워크플로우, 커스텀 품질 기준 | 반복적 단일 태스크의 대규모 병렬 처리 |
+
+<Aside type="tip" title="둘 다 배워야 하는 이유">
+Boris는 단순한 마이그레이션에 `/batch`를, 복잡한 기능 개발에 커스텀 파이프라인을 사용한다. 네이티브 도구의 **한계를 이해**해야 풀 파이프라인이 **왜 필요한지** 체감할 수 있다. 이번 주에 네이티브 도구를 경험한 뒤, Week 8-9에서 풀 파이프라인을 직접 구축한다.
 </Aside>
 
 ### 아티팩트 기반 핸드오프 설계

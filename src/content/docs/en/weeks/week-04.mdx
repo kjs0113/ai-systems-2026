@@ -429,6 +429,142 @@ When these three elements are in place, the loop paradigm can be applied to any 
 
 ---
 
+### Part 6: Practical Harness Optimization — Parallel Sessions and Worktree Isolation
+
+Parts 1–5 covered the principles of the loop. Now we turn to the practical techniques for running loops **faster, safer, and at scale**. The 42 tips that Claude Code creator Boris Cherny released over January–February 2026 are not individual tricks — they form a **stack** in which each layer presupposes the one below. Understanding this stack lets you push Ralph loop throughput from single digits to double digits.
+
+#### 6.1 Parallel Sessions — Developer-Level Multiplexing
+
+Boris runs 5 Claude Code instances in his terminal and 5–10 more on claude.ai/code simultaneously. This is not a multi-agent pipeline. It is one developer **supervising multiple loops at the same time** — real-world parallelism.
+
+```bash
+# Set up parallel sessions with tmux
+tmux new-session -s loops -d
+for i in 1 2 3 4; do tmux split-window -t loops; done
+tmux select-layout -t loops tiled
+
+# Run independent tasks in each pane
+# pane 0: claude "Refactor frontend components"
+# pane 1: claude "Write API endpoint tests"
+# pane 2: claude "Update documentation"
+# pane 3: claude "Fix lint errors"
+# pane 4: claude "Run performance profiling"
+```
+
+The key is that **each instance handles an independent task**. There is no inter-agent communication. Git is the sole coordination mechanism — a natural extension of the Ralph loop's monolithic philosophy (Part 2).
+
+<Aside type="tip" title="Practical Rules for Parallel Sessions">
+- There must be **no file overlap** between tasks. If two agents modify the same file, a merge conflict will occur.
+- Assign a **separate branch** to each session, or share the same CLAUDE.md while explicitly scoping each task.
+- Beyond 5 sessions, supervision overhead exceeds the productivity gain. Boris's rule of thumb: "terminal 5 + web 5–10."
+</Aside>
+
+#### 6.2 The `--worktree` Flag — Native Isolation
+
+In Part 2 we saw that `/loop` automatically creates a worktree. The `--worktree` flag extends this isolation to **ad-hoc sessions**.
+
+```bash
+# Basic: give Claude a dedicated worktree
+claude --worktree my_feature
+
+# Also auto-create a tmux session
+claude --worktree my_feature --tmux
+
+# Real-world pattern: 10 parallel agents for a migration
+for module in auth billing users payments notifications \
+              search analytics admin logging config; do
+  claude --worktree "migrate-${module}" --tmux \
+    "Migrate sync I/O in module ${module} to async. \
+     Open a PR once all tests pass."
+done
+```
+
+<Tabs>
+  <TabItem label="Without worktree">
+    ```bash
+    # Dangerous: all agents share the same working directory
+    claude "Modify auth module"     # ← file collision risk
+    claude "Modify billing module"  # ← file collision risk
+    # One agent's git checkout . can delete another agent's work
+    ```
+  </TabItem>
+  <TabItem label="With worktree">
+    ```bash
+    # Safe: each agent works in an isolated filesystem
+    claude --worktree auth "Modify auth module"
+    claude --worktree billing "Modify billing module"
+    # Each worktree is an independent branch → merge conflicts resolved at PR stage
+    ```
+  </TabItem>
+</Tabs>
+
+`/loop`'s worktree is optimized for **time-based iteration**; `--worktree` is optimized for **parallel task distribution**. The two are complementary.
+
+#### 6.3 `/sandbox` — Trust-Based Isolation
+
+The MIG we learned in Week 3 provided **GPU compute isolation** — one student's OOM cannot propagate to another. `/sandbox` isolates BashTool's **file and network access**, providing a different dimension of protection.
+
+| Dimension | MIG (Week 3) | `/sandbox` (Week 4) |
+|-----------|-------------|---------------------|
+| **What is isolated** | GPU compute | Filesystem + network |
+| **Purpose** | Resource protection — block one student's OOM | Trust — accept agent edits faster |
+| **Mechanism** | Hardware partitioning | BashTool file/network restriction |
+| **Effect** | "This process cannot touch my GPU" | "If this agent makes a mistake, the blast radius is clear" |
+
+Boris's core insight: *"When you trust the containment, you accept edits faster. That speeds up the whole loop."* Trusting the isolation reduces human review time per loop cycle, raising the total throughput of the loop.
+
+<Aside type="caution" title="Two Layers of Isolation">
+MIG isolates hardware; `/sandbox` isolates software. When both layers operate together, loop isolation is complete: running a Ralph loop in `/sandbox` mode inside a MIG slice on the DGX keeps both GPU resources and the filesystem safe.
+</Aside>
+
+#### 6.4 Stack Philosophy — Layers Build on Each Other
+
+What makes Boris's 42 tips pedagogically valuable is that they form a **stack, not a menu**. Each layer presupposes the one beneath it:
+
+<div class="diagram">
+  <div class="diagram__title">BORIS STACK — Harness Optimization Layers</div>
+  <div class="diagram__flow">
+    <div class="diagram__node diagram__node--green">
+      <span class="diagram__node__label">Layer 1: Plan Mode</span>
+      <span class="diagram__node__sub">Plan before executing</span>
+    </div>
+    <div class="diagram__arrow">&#x2193;</div>
+    <div class="diagram__node diagram__node--blue">
+      <span class="diagram__node__label">Layer 2: CLAUDE.md</span>
+      <span class="diagram__node__sub">Project rules are injected every session</span>
+    </div>
+    <div class="diagram__arrow">&#x2193;</div>
+    <div class="diagram__node diagram__node--cyan">
+      <span class="diagram__node__label">Layer 3: Worktree Isolation</span>
+      <span class="diagram__node__sub">Each agent works in an independent filesystem</span>
+    </div>
+    <div class="diagram__arrow">&#x2193;</div>
+    <div class="diagram__node diagram__node--orange">
+      <span class="diagram__node__label">Layer 4: Parallel Sessions + /sandbox</span>
+      <span class="diagram__node__sub">Run multiple isolated agents simultaneously</span>
+    </div>
+    <div class="diagram__arrow">&#x2193;</div>
+    <div class="diagram__node diagram__node--purple">
+      <span class="diagram__node__label">Layer 5: /loop + /batch</span>
+      <span class="diagram__node__sub">Time-based autonomous iteration + large-scale batch processing</span>
+    </div>
+  </div>
+</div>
+
+Tracing the order in reverse explains why it matters:
+
+- To migrate 10 modules simultaneously with `/batch` → each needs **worktree isolation**
+- For agents in a worktree to behave correctly → **CLAUDE.md** must inject project rules
+- For CLAUDE.md to be effective → the agent must form a plan with **plan mode** before executing
+
+Using an upper layer without the lower one will fail. Running parallel sessions without worktrees causes file collisions; using worktrees without CLAUDE.md means agents are ignorant of project conventions.
+
+<Aside type="note" title="From the Ralph Loop to the Boris Stack">
+The Ralph loop harness from Part 2 (backpressure + GC + AGENTS.md) ensures **quality for a single loop**. The Boris stack builds on top of it to add **throughput and isolation across loops**. Ralph answers "how do I run one loop well?"; Boris answers "how do I safely run ten loops at once?"
+</Aside>
+
+---
+
 ### In-Class Discussion Questions
 
 1. Ralph's "fresh context every loop" and RLM's "recursive calls" solve the context window problem in **opposite directions**. Can these two be combined? What form would it take?
@@ -436,6 +572,8 @@ When these three elements are in place, the loop paradigm can be applied to any 
 3. What is the difference between **recording learnings in AGENTS.md** in the Ralph loop and **fine-tuning the model**? What are the advantages and disadvantages of each?
 4. If you ran 100 loops during your 8 hours of sleep, **what task would you apply it to**? What would you set as the verification condition?
 5. What are the **limits** of the loop paradigm? What problems can't be solved by iteration?
+6. In Boris's stack, what problems arise if you **use only worktrees without CLAUDE.md**? Conversely, what if you **use only CLAUDE.md without worktrees**? Explain the inter-layer dependency with a concrete scenario.
+7. Do you agree with the claim that `/sandbox`'s purpose is **trust**, not security? Discuss specifically what behavioral changes "isolation increases trust" actually implies.
 
 ---
 

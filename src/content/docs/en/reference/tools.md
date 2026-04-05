@@ -39,6 +39,92 @@ claude /loop --stop
 - Multi-file editing
 - GitHub Actions integration
 
+**Advanced features**:
+
+#### Planning & Control
+
+- **Plan Mode** (`Shift+Tab`) — Draft a plan before writing code. Once confirmed, auto-executes the plan.
+  ```bash
+  # In an interactive session, press Shift+Tab to enter Plan Mode
+  # Draft plan → confirm → auto-execute
+  ```
+- **Effort Levels** — Adjust reasoning depth. Use low effort for simple tasks to save cost; high effort for complex design work.
+  ```bash
+  claude --effort low "What is the return type of this function?"
+  claude --effort high "Refactor this module to be async"
+  ```
+- **Output Styles** — Cognitive mode presets: Explanatory, Learning, Concise, etc.
+  ```bash
+  claude --output-style concise "Analyze test failure cause"
+  claude --output-style explanatory "Explain the MCP protocol"
+  ```
+
+#### Extension System
+
+- **Custom Agents** — Define specialized agents in `.claude/agents/*.md`. Declaratively set role, allowed tools, and permissions.
+  ```bash
+  # After defining a role in .claude/agents/qa-reviewer.md:
+  claude --agent qa-reviewer "Review this PR"
+  ```
+  ```json
+  // Set default agent in settings.json
+  { "defaultAgent": "qa-reviewer" }
+  ```
+- **Skills** — Installable `.md` skill files. Place in `~/.claude/skills/` and load within a session.
+  ```bash
+  # Load a skill
+  claude /skills refactor-guide
+  ```
+- **Hooks** — Shell commands triggered by events (tool calls, etc.). Configured in settings.json.
+  ```json
+  // ~/.claude/settings.json
+  {
+    "hooks": {
+      "PreToolUse": [
+        {
+          "matcher": "Bash",
+          "command": "echo '$(date): Bash called' >> ~/.claude/audit.log"
+        }
+      ]
+    }
+  }
+  ```
+
+#### Isolation & Safety
+
+- **Sandboxing** (`/sandbox`) — Isolate BashTool file and network access. Limits blast radius of agent mistakes.
+  ```bash
+  # Activate sandbox mode
+  claude --sandbox
+  ```
+- **Worktree Native** (`--worktree`) — Git worktree-based isolated sessions. Supports tmux integration for background execution.
+  ```bash
+  # Start an isolated worktree session
+  claude --worktree feature-auth
+  # Run in background via tmux
+  claude --worktree feature-auth --tmux
+  ```
+
+#### Parallel Execution
+
+- **Parallel Sessions** — Run multiple Claude Code instances simultaneously. Each session maintains an independent context.
+  ```bash
+  # Terminal 1: frontend work
+  claude --worktree frontend "Implement React components"
+  # Terminal 2: backend work
+  claude --worktree backend "Implement API endpoints"
+  ```
+- **/batch** — Interactive planning followed by worktree-isolated parallel execution. Each agent tests and opens an individual PR.
+  ```bash
+  claude /batch "Migrate logging in src/ to the new structured logger"
+  ```
+- **/simplify** — Parallel-agent code review across reuse, quality, and efficiency dimensions.
+  ```bash
+  claude /simplify
+  ```
+
+> For detailed explanations and hands-on examples, see [Week 4](/en/weeks/week-04/) (loops/worktree), [Week 6](/en/weeks/week-06/) (instruction tuning), and [Week 7](/en/weeks/week-07/) (multi-agent design).
+
 ---
 
 ### Gemini CLI (Google)

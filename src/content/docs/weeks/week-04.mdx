@@ -429,6 +429,142 @@ autoresearch와 Ralph Loop은 **동일한 패턴**이다:
 
 ---
 
+### Part 6: 실전 하네스 최적화 — 병렬 세션과 Worktree 격리
+
+Part 1-5에서 루프의 원리를 배웠다. 이제 루프를 **빠르게, 안전하게, 대규모로** 돌리는 실전 기법을 다룬다. Claude Code 창시자 Boris Cherny가 2026년 1-2월에 걸쳐 공개한 42개 팁은 개별 트릭이 아니라, 각 레이어가 이전 레이어를 전제하는 **스택(stack)** 구조다. 이 스택을 이해하면 Ralph 루프의 처리량을 한 자릿수에서 두 자릿수로 끌어올릴 수 있다.
+
+#### 6.1 병렬 세션 — 개발자 수준의 멀티플렉싱
+
+Boris는 터미널에서 Claude Code 인스턴스 5개, claude.ai/code에서 5-10개를 동시에 운용한다. 멀티에이전트 파이프라인이 아니다. 한 명의 개발자가 **여러 루프를 동시에 감독**하는 실전 병렬성이다.
+
+```bash
+# tmux로 병렬 세션 구성
+tmux new-session -s loops -d
+for i in 1 2 3 4; do tmux split-window -t loops; done
+tmux select-layout -t loops tiled
+
+# 각 pane에서 독립 태스크 실행
+# pane 0: claude "프론트엔드 컴포넌트 리팩터링"
+# pane 1: claude "API 엔드포인트 테스트 작성"
+# pane 2: claude "문서 업데이트"
+# pane 3: claude "린트 에러 수정"
+# pane 4: claude "성능 프로파일링"
+```
+
+핵심은 **각 인스턴스가 독립적인 태스크를 처리**한다는 점이다. 에이전트 간 통신은 없다. git이 유일한 조율 메커니즘이다 — 이것이 Ralph 루프의 모놀리식 철학(Part 2)의 자연스러운 확장이다.
+
+<Aside type="tip" title="병렬 세션의 실전 규칙">
+- 태스크 간 **파일 겹침이 없어야** 한다. 두 에이전트가 같은 파일을 수정하면 merge conflict가 발생한다.
+- 각 세션에 **별도 브랜치**를 부여하거나, 같은 CLAUDE.md를 공유하되 태스크 범위를 명시한다.
+- 5개를 넘기면 감독 비용이 생산성 이득을 초과한다. Boris의 경험칙: "터미널 5 + 웹 5-10".
+</Aside>
+
+#### 6.2 `--worktree` 플래그 — 네이티브 격리
+
+Part 2에서 `/loop`가 자동으로 worktree를 생성한다고 배웠다. `--worktree` 플래그는 이 격리를 **ad-hoc 세션**으로 확장한다.
+
+```bash
+# 기본: Claude에게 전용 worktree 부여
+claude --worktree my_feature
+
+# tmux 세션까지 자동 생성
+claude --worktree my_feature --tmux
+
+# 실전 패턴: 10개 병렬 에이전트로 마이그레이션
+for module in auth billing users payments notifications \
+              search analytics admin logging config; do
+  claude --worktree "migrate-${module}" --tmux \
+    "모듈 ${module}의 sync I/O를 async로 마이그레이션하라. \
+     모든 테스트가 통과하면 PR을 올려라."
+done
+```
+
+<Tabs>
+  <TabItem label="worktree 없이">
+    ```bash
+    # 위험: 모든 에이전트가 같은 working directory 공유
+    claude "auth 모듈 수정"     # ← 파일 충돌 위험
+    claude "billing 모듈 수정"  # ← 파일 충돌 위험
+    # 한 에이전트의 git checkout .이 다른 에이전트의 작업을 삭제할 수 있다
+    ```
+  </TabItem>
+  <TabItem label="worktree 사용">
+    ```bash
+    # 안전: 각 에이전트가 독립된 파일시스템에서 작업
+    claude --worktree auth "auth 모듈 수정"
+    claude --worktree billing "billing 모듈 수정"
+    # 각 worktree는 독립 브랜치 → merge conflict는 PR 단계에서 해결
+    ```
+  </TabItem>
+</Tabs>
+
+`/loop`의 worktree는 **시간 기반 반복**에 최적화되어 있고, `--worktree`는 **병렬 태스크 분배**에 최적화되어 있다. 둘은 보완 관계다.
+
+#### 6.3 `/sandbox` — 신뢰 기반 격리
+
+3주차에서 배운 MIG는 **GPU 컴퓨팅 격리**였다 — 한 학생의 OOM이 다른 학생에게 전파되지 않는다. `/sandbox`는 BashTool의 **파일 및 네트워크 접근을 격리**하여 다른 관점의 보호를 제공한다.
+
+| 관점 | MIG (Week 3) | `/sandbox` (Week 4) |
+|------|-------------|---------------------|
+| **격리 대상** | GPU 컴퓨팅 | 파일시스템 + 네트워크 |
+| **목적** | 자원 보호 — 한 학생의 OOM 차단 | 신뢰 — 에이전트 편집의 빠른 수용 |
+| **메커니즘** | 하드웨어 파티셔닝 | BashTool 파일/네트워크 제한 |
+| **효과** | "이 프로세스는 내 GPU를 침범할 수 없다" | "이 에이전트가 실수해도 피해 범위가 명확하다" |
+
+Boris의 핵심 통찰: *"When you trust the containment, you accept edits faster. That speeds up the whole loop."* 격리를 신뢰하면 매 루프의 human review 시간이 줄어들고, 루프 전체의 처리량이 올라간다.
+
+<Aside type="caution" title="격리의 두 레이어">
+MIG가 하드웨어를, `/sandbox`가 소프트웨어를 격리한다. 두 레이어가 함께 작동하면 루프의 격리가 완전해진다: DGX에서 MIG 슬라이스 안에서 `/sandbox` 모드로 Ralph 루프를 돌리면, GPU 자원도 파일시스템도 안전하다.
+</Aside>
+
+#### 6.4 스택 철학 — 레이어가 쌓인다
+
+Boris의 42개 팁이 교육적으로 가치 있는 이유는 **메뉴가 아니라 스택**이기 때문이다. 각 레이어는 이전 레이어를 전제한다:
+
+<div class="diagram">
+  <div class="diagram__title">BORIS STACK — 하네스 최적화 레이어</div>
+  <div class="diagram__flow">
+    <div class="diagram__node diagram__node--green">
+      <span class="diagram__node__label">Layer 1: Plan Mode</span>
+      <span class="diagram__node__sub">실행 전에 계획을 세운다</span>
+    </div>
+    <div class="diagram__arrow">&#x2193;</div>
+    <div class="diagram__node diagram__node--blue">
+      <span class="diagram__node__label">Layer 2: CLAUDE.md</span>
+      <span class="diagram__node__sub">프로젝트 규칙이 매 세션마다 주입된다</span>
+    </div>
+    <div class="diagram__arrow">&#x2193;</div>
+    <div class="diagram__node diagram__node--cyan">
+      <span class="diagram__node__label">Layer 3: Worktree 격리</span>
+      <span class="diagram__node__sub">각 에이전트가 독립 파일시스템에서 작업한다</span>
+    </div>
+    <div class="diagram__arrow">&#x2193;</div>
+    <div class="diagram__node diagram__node--orange">
+      <span class="diagram__node__label">Layer 4: 병렬 세션 + /sandbox</span>
+      <span class="diagram__node__sub">격리된 에이전트를 동시에 여러 개 실행한다</span>
+    </div>
+    <div class="diagram__arrow">&#x2193;</div>
+    <div class="diagram__node diagram__node--purple">
+      <span class="diagram__node__label">Layer 5: /loop + /batch</span>
+      <span class="diagram__node__sub">시간 기반 자율 반복 + 대규모 일괄 처리</span>
+    </div>
+  </div>
+</div>
+
+이 순서가 중요한 이유를 거꾸로 추적하면:
+
+- `/batch`로 10개 모듈을 동시 마이그레이션하려면 → 각각 **worktree 격리**가 필요하다
+- worktree에서 에이전트가 올바르게 동작하려면 → **CLAUDE.md**가 프로젝트 규칙을 주입해야 한다
+- CLAUDE.md가 효과적이려면 → 에이전트가 실행 전에 **plan mode**로 계획을 세워야 한다
+
+아래 레이어 없이 위 레이어만 쓰면 실패한다. Worktree 없이 병렬 세션을 돌리면 파일 충돌이 나고, CLAUDE.md 없이 worktree를 써봐야 에이전트가 프로젝트 규칙을 모른다.
+
+<Aside type="note" title="Ralph 루프에서 Boris 스택으로">
+Part 2의 Ralph 루프 하네스(backpressure + GC + AGENTS.md)는 **단일 루프의 품질**을 보장한다. Boris 스택은 그 위에 **루프의 처리량과 격리**를 쌓는다. Ralph가 "어떻게 한 번의 루프를 잘 돌릴 것인가"라면, Boris는 "어떻게 열 개의 루프를 동시에 안전하게 돌릴 것인가"다.
+</Aside>
+
+---
+
 ### 강의 중 토론 질문
 
 1. Ralph의 "매번 새 context"와 RLM의 "재귀 호출"은 context window 문제를 **반대 방향**으로 해결한다. 이 둘을 결합할 수 있는가? 어떤 형태가 될 것인가?
@@ -436,6 +572,8 @@ autoresearch와 Ralph Loop은 **동일한 패턴**이다:
 3. Ralph 루프에서 **AGENTS.md에 학습 내용을 기록하는 것**과 **모델을 파인튜닝하는 것**의 차이는 무엇인가? 각각의 장단점은?
 4. 당신이 잠든 8시간 동안 100번의 루프를 돌린다면, **어떤 태스크에 적용**하겠는가? 검증 조건은 무엇으로 설정하겠는가?
 5. 루프 패러다임의 **한계**는 무엇인가? 어떤 문제는 반복해도 풀리지 않는가?
+6. Boris의 스택에서 **CLAUDE.md 없이 worktree만 사용하면** 어떤 문제가 생기는가? 반대로, **worktree 없이 CLAUDE.md만 사용하면**? 레이어 간 의존성을 구체적 시나리오로 설명하라.
+7. `/sandbox`의 목적이 보안이 아니라 **신뢰**라는 주장에 동의하는가? 격리가 "신뢰를 높인다"는 것이 구체적으로 어떤 행동 변화를 의미하는지 토론하라.
 
 ---
 

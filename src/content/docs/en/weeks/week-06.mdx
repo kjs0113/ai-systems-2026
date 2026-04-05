@@ -18,7 +18,7 @@ difficulty: intermediate
 estimated_time: "4 hours"
 ---
 
-import { Aside, Steps, Badge } from '@astrojs/starlight/components';
+import { Aside, Steps, Badge, Tabs, TabItem, Card, CardGrid } from '@astrojs/starlight/components';
 
 <div class="week-meta">
   <span class="phase-tag">Phase 2</span>
@@ -96,6 +96,67 @@ Think of it like placing a "Do Not Climb" warning sign next to a children's play
 | Recurring error rate | Number of identical error occurrences / total loop count |
 | Average loop count | Number of loops required to complete a task |
 | Context efficiency | Ratio of tokens wasted on unnecessary exploration |
+
+### Output Styles and Cognitive Modes — Zero-Config Instruction Tuning
+
+Adding constraints to PROMPT.md is like installing **custom-made signs**. In contrast, Claude Code's **Output Styles** are **pre-installed mode switches** built into the agent. They change behavior patterns at zero configuration cost.
+
+The key insight: output styles **change the cognitive mode, not just the tone.** Given the same task, the agent's approach to the problem itself changes depending on the style.
+
+<Tabs>
+  <TabItem label="Explanatory">
+    ```bash
+    claude --output-style explanatory "Improve error handling in this function"
+    ```
+    The agent modifies code while **explaining why** it makes each change. Reasoning is already embedded in the PR, so reviewers only need to verify the decisions.
+
+    **Best for**: Team onboarding, junior engineers working in unfamiliar codebases, reducing code review turnaround
+  </TabItem>
+  <TabItem label="Learning">
+    ```bash
+    claude --output-style learning "Improve error handling in this function"
+    ```
+    Instead of making changes directly, the agent **guides step by step**, encouraging the learner to make the changes themselves. Coaching mode.
+
+    **Best for**: Educational purposes, lab exercises where students need to understand the principles
+  </TabItem>
+  <TabItem label="Concise">
+    ```bash
+    claude --output-style concise "Improve error handling in this function"
+    ```
+    Outputs code changes with minimal explanation. For experienced developers who just need results fast.
+
+    **Best for**: Repetitive tasks, lint fixes, applying well-known patterns
+  </TabItem>
+</Tabs>
+
+Boris Cherny's team sets **Explanatory as the default** when junior engineers work in unfamiliar services. The result: PR review time dropped — reasoning arrives attached to the code, so reviewers no longer need to reconstruct the decision chain.
+
+#### Effort Levels — Adjusting Reasoning Depth
+
+If output styles change the **direction**, effort levels adjust the **depth**.
+
+| Level | Use Case | Cost | Example |
+|-------|----------|------|---------|
+| `low` | Simple lookups, type checks | Minimal | `claude --effort low "Return type of this function?"` |
+| `medium` | General code changes | Moderate | `claude --effort medium "Add tests"` |
+| `high` | Architecture design, complex debugging | High | `claude --effort high "Design async refactoring"` |
+
+Practical effort level use in Ralph loops: start with `low` in early iterations (exploration phase), then switch to `high` for core implementation — this optimizes token cost across the loop.
+
+#### PROMPT.md Tuning vs Output Styles — When to Use Which
+
+| Aspect | PROMPT.md Instruction Tuning | Output Style + Effort Level |
+|--------|----------------------------|---------------------------|
+| **Setup cost** | High — error analysis → writing → verification | Zero — a single CLI flag |
+| **Customization** | Unlimited — free-text project constraints | Limited — choose from preset list |
+| **Persistence** | Permanent — written to file, git-tracked | Per-session — must specify each time |
+| **Sign metaphor** | Custom-made signs installed on site | Factory-installed mode switches |
+| **Best for** | Project-specific recurring error correction | General behavior pattern changes |
+
+<Aside type="note" title="The two approaches are complementary">
+Use output styles to set the agent's **default behavior pattern**, then add **project-specific constraints** via PROMPT.md. Example: Explanatory mode + "Record error messages in AGENTS.md when pytest fails" — layer project rules on top of a general cognitive mode.
+</Aside>
 
 ## Practicum
 
