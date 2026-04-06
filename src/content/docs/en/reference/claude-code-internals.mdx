@@ -1,0 +1,686 @@
+---
+title: Claude Code Internals
+description: Deep dive into Claude Code architecture — Query Engine, Tool System, Permission Model, Context Management, MCP Integration, and Agent Orchestration
+---
+
+import { Aside, Steps, Tabs, TabItem, Card, CardGrid, Badge } from '@astrojs/starlight/components';
+
+## Why Understand the Internals
+
+Claude Code is the de facto standard harness for agentic coding. Yet most users treat it as a **black box** — "put in a prompt, get code out."
+
+Harness engineers are different. They open the black box to understand **why it was designed this way**, then apply those principles to their own systems. Understanding Claude Code's internals enables you to:
+
+- **Week 4 Loop Paradigm**: Recognize that the Query Engine's turn loop is the foundation of the Ralph Loop
+- **Week 5 Context Management**: Understand the actual mechanism by which auto-compaction prevents Context Rot
+- **Week 6 Instruction Tuning**: See that the CLAUDE.md hierarchy is the implementation of the "Sign" metaphor
+- **Week 7 Multi-Agent**: Learn that the Agent tool's worktree isolation is the technical foundation for role separation
+
+This document is based on official documentation, CLI behavior observation, system prompt analysis, and the MCP public specification.
+
+---
+
+## 1. System Architecture Overview
+
+Claude Code has a **dual-layer** architecture:
+
+- **Orchestration Layer**: Session management, command routing, LLM interaction (60+ modules)
+- **Execution Layer**: API communication, tool execution, terminal rendering, security (multi-crate workspace)
+
+<div class="diagram">
+  <div class="diagram__title">SYSTEM ARCHITECTURE</div>
+  <div class="diagram__stack">
+    <div class="diagram__node diagram__node--cyan">
+      <span class="diagram__node__label">CLI / REPL</span>
+      <span class="diagram__node__sub">User Interface</span>
+    </div>
+    <div class="diagram__node diagram__node--blue">
+      <span class="diagram__node__label">Commands Dispatcher</span>
+      <span class="diagram__node__sub">15+ slash commands — /help, /status, /compact, /cost ...</span>
+    </div>
+    <div class="diagram__node diagram__node--blue">
+      <span class="diagram__node__label">Query Engine</span>
+      <span class="diagram__node__sub">Conversation loop, turn management, budget control</span>
+    </div>
+    <div class="diagram__node diagram__node--purple">
+      <span class="diagram__node__label">Tool Registry (40 tools)</span>
+      <span class="diagram__node__sub">Base + Plugin + Runtime(MCP)</span>
+    </div>
+    <div class="diagram__node diagram__node--orange">
+      <span class="diagram__node__label">Permission Enforcer</span>
+      <span class="diagram__node__sub">3-mode × 4-layer authorization gate</span>
+    </div>
+    <div class="diagram__node diagram__node--green">
+      <span class="diagram__node__label">Bash / File I/O / MCP / LSP / Sandbox</span>
+      <span class="diagram__node__sub">Actual system manipulation</span>
+    </div>
+    <div class="diagram__node diagram__node--gray">
+      <span class="diagram__node__label">OS / Filesystem / Network</span>
+      <span class="diagram__node__sub">Hardware boundary</span>
+    </div>
+  </div>
+</div>
+
+<Aside type="note" title="Design Philosophy">
+The orchestration layer is optimized for **rapid experimentation** — flexibly changing session management, prompt assembly, and tool routing.
+The execution layer is optimized for **safety and performance** — strictly guaranteeing sandboxing, permission checks, and file I/O.
+The pattern of separating a "rapid experimentation layer" from a "trusted execution layer" is universal in agentic systems.
+</Aside>
+
+---
+
+## 2. Bootstrap & Session Lifecycle
+### 7-Step Bootstrap
+
+A Claude Code session doesn't just "start when you open the terminal." It goes through a 7-step initialization:
+
+<Steps>
+1. **Prefetch** — Pre-load environment variables and authentication tokens
+2. **Warning Handler** — Register warning handlers (trust prompt detection)
+3. **CLI Parse** — Parse and validate command-line arguments
+4. **Concurrent Setup** — Run workspace discovery and command loading **in parallel**
+5. **Deferred Init** — Deferred initialization (MCP server connections, plugin loading)
+6. **Mode Routing** — Determine execution mode (REPL / one-shot / resume / headless)
+7. **Query Engine Loop** — Enter the conversation loop
+</Steps>
+
+<Aside type="tip" title="FastPath Optimization">
+Not all steps are executed every time. Simple commands (`claude --version`) terminate early via FastPath, skipping the full initialization.
+</Aside>
+
+### Session Persistence
+
+- Session state is saved as JSON in `.claude/sessions/`
+- Restore the last session with `--resume latest`
+- State sharing between sessions happens **only through the filesystem**: CLAUDE.md, MEMORY.md, state tracking files
+- This is the technical foundation for the Ralph Loop's "session end → read state files in new session" pattern
+
+### Course Connections
+
+| Week | Connection |
+|------|------------|
+| **Week 4** | The Ralph Loop's "start session → work → end → new session" cycle operates on top of this lifecycle |
+| **Week 5** | The session persistence mechanism is the foundation for Context Rot prevention — new sessions start with a clean context |
+
+---
+
+## 3. Query Engine — The Heart of the Conversation Loop
+Takes a user message, executes tools, and generates a response in an iterative loop. This is the core engine of Claude Code.
+
+### Default Settings
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `max_turns` | 8 | Maximum turns per query (1 tool call = 1 turn) |
+| `max_budget_tokens` | 2,000 | Token budget ceiling per turn |
+| `compact_after_turns` | 12 | Threshold for triggering auto-compaction |
+| ConversationRuntime max | 16 | Internal iteration ceiling |
+
+### Turn Loop Flow
+
+<div class="diagram">
+  <div class="diagram__title">QUERY ENGINE TURN LOOP</div>
+  <div class="diagram__flow">
+    <div class="diagram__node diagram__node--cyan">
+      <span class="diagram__node__label">User Input</span>
+    </div>
+    <div class="diagram__arrow">&#x2193;</div>
+    <div class="diagram__node diagram__node--blue diagram__node--wide">
+      <span class="diagram__node__label">System Prompt Assembly</span>
+      <span class="diagram__node__sub">CLAUDE.md + tool list + session state</span>
+    </div>
+    <div class="diagram__arrow">&#x2193;</div>
+    <div class="diagram__node diagram__node--blue">
+      <span class="diagram__node__label">Append Message to Session History</span>
+    </div>
+    <div class="diagram__arrow">&#x2193;</div>
+    <div class="diagram__loop">
+      <span class="diagram__loop__label">Turn Loop (max 16)</span>
+      <div class="diagram__node diagram__node--purple diagram__node--wide">
+        <span class="diagram__node__label">API Streaming Call (SSE)</span>
+      </div>
+      <div class="diagram__arrow">&#x2193;</div>
+      <div class="diagram__node diagram__node--purple diagram__node--wide">
+        <span class="diagram__node__label">Response Parsing — Tool call detected?</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;width:100%;max-width:28rem;margin-top:0.35rem;">
+        <div class="diagram__node diagram__node--green" style="max-width:100%;">
+          <span class="diagram__node__label">Yes</span>
+          <span class="diagram__node__sub">Check permission → Execute tool → Add result to session → Next turn</span>
+        </div>
+        <div class="diagram__node diagram__node--red" style="max-width:100%;">
+          <span class="diagram__node__label">No</span>
+          <span class="diagram__node__sub">Text response → Exit loop</span>
+        </div>
+      </div>
+    </div>
+    <div class="diagram__arrow">&#x2193;</div>
+    <div class="diagram__node diagram__node--orange diagram__node--wide">
+      <span class="diagram__node__label">Final Rendering + Token Usage Logging</span>
+    </div>
+  </div>
+</div>
+
+### TurnResult — Turn Result Capture
+
+Seven elements are recorded per turn:
+
+1. **input** — Original prompt
+2. **response** — Generated response
+3. **slash commands** — Detected slash commands
+4. **invoked tools** — List of called tools
+5. **permission blocks** — Denied permissions
+6. **token usage** — input/output/cache token counts
+7. **termination reason** — `completed` | `max_turns_reached` | `max_budget_reached`
+
+### Streaming Event Protocol
+
+API responses are delivered via SSE (Server-Sent Events). Six event types:
+
+| Event | Timing |
+|-------|--------|
+| `message_start` | Response begins |
+| `command_match` | Slash command detected |
+| `tool_match` | Tool call detected |
+| `permission_denial` | Permission denied |
+| `message_delta` | Text chunk streaming |
+| `message_stop` | Response complete |
+
+### Course Connections
+
+| Week | Connection |
+|------|------------|
+| **Week 4** | The Ralph Loop's "execute → verify → retry" operates on top of the Query Engine turn loop. `max_turns` is a form of backpressure |
+| **Week 5** | `compact_after_turns` and the token budget are the first line of defense against Context Rot |
+| **Week 12** | TurnResult's 7 elements are the starting point for telemetry design |
+
+---
+
+## 4. Tool System — 3-Layer Composition of 40 Tools
+The reason Claude Code can actually "act." An LLM without tools can only generate text, but an LLM with tools can modify files, execute commands, and call external services.
+
+### Tool Categories
+
+<Tabs>
+  <TabItem label="Shell (2)">
+    | Tool | Function |
+    |------|----------|
+    | **Bash** | Sandboxed shell execution. Max timeout 600s, output truncated at 16KiB, UTF-8 boundary correction |
+    | **PowerShell** | Windows shell. Same safety measures applied |
+  </TabItem>
+  <TabItem label="File I/O (4)">
+    | Tool | Function |
+    |------|----------|
+    | **Read** | Line-windowed reading. 10MB limit, binary detection, PDF/image/notebook support |
+    | **Write** | Full file writing. Returns structured patch hunks, generates git diffs |
+    | **Edit** | String substitution editing. old_string → new_string. Fails on non-unique matches |
+    | **NotebookEdit** | Jupyter cell manipulation. replace, insert, delete |
+  </TabItem>
+  <TabItem label="Search (3)">
+    | Tool | Function |
+    |------|----------|
+    | **Glob** | File pattern matching. Max 100 results, sorted by mtime |
+    | **Grep** | ripgrep-based regex search. 13 parameters (context, multiline, type filter, etc.) |
+    | **ToolSearch** | Deferred tool schema lookup. Name/keyword search → JSON schema returned |
+  </TabItem>
+  <TabItem label="Web (2)">
+    | Tool | Function |
+    |------|----------|
+    | **WebFetch** | URL content extraction. HTML→Markdown conversion, 15-minute cache |
+    | **WebSearch** | Web search. Domain filtering support |
+  </TabItem>
+  <TabItem label="Agent (2)">
+    | Tool | Function |
+    |------|----------|
+    | **Agent** | Sub-agent spawning. Model selection (sonnet/opus/haiku), worktree isolation, background execution |
+    | **Skill** | Pre-defined skill loading. Workflows combining multiple tool calls |
+  </TabItem>
+  <TabItem label="Task/Session (6)">
+    | Tool | Function |
+    |------|----------|
+    | **TodoWrite** | Task list management. id/content/status/priority |
+    | **Sleep** | Pause execution (duration_ms) |
+    | **SendUserMessage** | Send message to user (attachments, status display) |
+    | **Config** | Read/write agent settings |
+    | **StructuredOutput** | Machine-parseable JSON output |
+    | **REPL** | Language-specific execution environment (Python, Node.js, etc.) |
+  </TabItem>
+</Tabs>
+
+### 3-Layer Composition
+
+Tools are composed in three layers:
+
+<div class="diagram">
+  <div class="diagram__title">TOOL 3-LAYER COMPOSITION</div>
+  <div class="diagram__flow">
+    <div class="diagram__node diagram__node--blue diagram__node--wide">
+      <span class="diagram__node__label">Layer 1: Base</span>
+      <span class="diagram__node__sub">Compile-time static definitions</span>
+      <span class="diagram__node__detail">40 built-in tools — ToolSpec (name, description, JSON schema, required permissions)</span>
+    </div>
+    <div class="diagram__arrow">&#x2193;<span class="diagram__arrow--label">Name collision check</span></div>
+    <div class="diagram__node diagram__node--purple diagram__node--wide">
+      <span class="diagram__node__label">Layer 2: Plugin</span>
+      <span class="diagram__node__sub">User-installed extensions</span>
+      <span class="diagram__node__detail">Hook-based lifecycle: pre_tool_use → execution → post_tool_use / post_tool_use_failure</span>
+    </div>
+    <div class="diagram__arrow">&#x2193;<span class="diagram__arrow--label">Name collision check</span></div>
+    <div class="diagram__node diagram__node--cyan diagram__node--wide">
+      <span class="diagram__node__label">Layer 3: Runtime</span>
+      <span class="diagram__node__sub">MCP server dynamic registration</span>
+      <span class="diagram__node__detail">mcp__&#123;server&#125;__&#123;tool&#125; naming — auto-registered on server connection</span>
+    </div>
+  </div>
+</div>
+
+**Key Design Decisions**:
+- Higher-layer tools that **collide in name** with lower layers are **rejected** — ensuring built-in tool stability
+- In `simple mode`, only Bash, FileRead, FileEdit — **3 tools are exposed** — principle of least privilege
+- Rejected tools are **completely removed** from the system prompt — the LLM doesn't even know they exist
+
+<Aside type="caution" title="Tool Hiding vs. Execution Denial">
+Removing a tool from the system prompt (Layer 1 filtering) and denying permission at execution time (Layer 4 enforcement) are **different security layers**. The former prevents the LLM from knowing the tool exists; the latter blocks execution even if it does. This is a defense-in-depth pattern.
+</Aside>
+
+### Course Connections
+
+| Week | Connection |
+|------|------------|
+| **Week 3** | The mechanism by which MCP servers dynamically register tools at Layer 3 |
+| **Week 6** | Simple mode's tool filtering = mechanical implementation of instruction tuning |
+| **Week 7** | Restricting accessible tools to sub-agents via `allowedTools` → role separation |
+
+---
+
+## 5. Permission Model — 3 Modes × 4 Layers
+A deterministic gate controlling the agent's scope of action. The actual implementation of Week 2 governance and Week 3 TBAC.
+
+### 3 Permission Modes
+
+| Mode | Allowed Scope | Use Case |
+|------|--------------|----------|
+| **ReadOnly** | Read/search only | Code analysis, explanation requests |
+| **WorkspaceWrite** (default) | Write within workspace + sandboxed commands | General development |
+| **DangerFullAccess** | Full access | System administration (dangerous) |
+
+### 4-Layer Security
+
+<Steps>
+1. **Deny List (Tool Hiding)** — Remove tools from the system prompt. The LLM doesn't know they exist. `frozenset`-based O(1) matching + prefix scanning.
+2. **Permission Policy (Per-tool Override)** — `BTreeMap` specifying the required mode for each tool. Example: `bash → DangerFullAccess`.
+3. **CLI Mode Preset** — Set the session-wide mode with the `--permission-mode` flag.
+4. **Workspace Boundary (File Boundary)** — Blocks symlink escapes on file writes, validates `../` escape attempts, canonical path comparison, binary file detection.
+</Steps>
+
+### Authorization Flow
+
+<div class="diagram">
+  <div class="diagram__title">AUTHORIZATION FLOW</div>
+  <div class="diagram__flow">
+    <div class="diagram__node diagram__node--blue diagram__node--wide">
+      <span class="diagram__node__label">authorize(tool_name, input)</span>
+    </div>
+    <div class="diagram__arrow">&#x2193;</div>
+    <div class="diagram__node diagram__node--purple diagram__node--wide">
+      <span class="diagram__node__label">Mode Lookup</span>
+      <span class="diagram__node__sub">tool → required_mode</span>
+    </div>
+    <div class="diagram__arrow">&#x2193;</div>
+    <div class="diagram__branch--3">
+      <div class="diagram__node--green" style="padding:0.75rem;border-radius:0.5rem;border:1px solid rgba(34,197,94,0.25);">
+        <span class="diagram__node__label" style="color:#22C55E;">Allow</span>
+        <span class="diagram__node__sub">Pass immediately</span>
+      </div>
+      <div class="diagram__node--red" style="padding:0.75rem;border-radius:0.5rem;border:1px solid rgba(239,68,68,0.25);">
+        <span class="diagram__node__label" style="color:#EF4444;">Deny</span>
+        <span class="diagram__node__sub">Return reason (tool, active_mode, required_mode, reason)</span>
+      </div>
+      <div class="diagram__node--orange" style="padding:0.75rem;border-radius:0.5rem;border:1px solid rgba(249,115,22,0.25);">
+        <span class="diagram__node__label" style="color:#F97316;">Prompt</span>
+        <span class="diagram__node__sub">Request user approval → Allow/Deny decision</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+### Bash Special Handling
+
+| ReadOnly Allowed | Blocked |
+|-----------------|---------|
+| `ls`, `cat`, `grep`, `git status`, `find`, `wc` | `rm -rf`, `mkfs`, `reboot`, `chmod`, pipe chains |
+
+Dangerous commands are evaluated by a **heuristic risk score**, and only safe commands on the allowlist pass in ReadOnly mode.
+
+### Course Connections
+
+| Week | Connection |
+|------|------------|
+| **Week 2** | The actual code implementation of Governance-as-Code |
+| **Week 3** | Runtime enforcement of TBAC (Tool-Based Access Control) |
+| **Week 6** | Permission constraints = mechanical means of agent behavior correction |
+
+---
+
+## 6. Context Management & Compaction
+The mechanism for preventing Context Rot in long-running sessions. Shows how Claude Code implements the theory from Week 5.
+
+### CLAUDE.md 3-Level Hierarchy
+
+Higher priority overrides lower:
+
+| Priority | Path | Scope |
+|----------|------|-------|
+| 3 (high) | `<workspace>/CLAUDE.md` | Workspace local (personal) |
+| 2 | `<project>/.claude/CLAUDE.md` | Project (team-shared) |
+| 1 (low) | `~/.claude/CLAUDE.md` | User global (all projects) |
+
+**Size Limits**:
+- Single instruction file: max 4,000 characters (`MAX_INSTRUCTION_FILE_CHARS`)
+- Total instructions combined: max 12,000 characters (`MAX_TOTAL`)
+
+In addition, **MEMORY.md** (persistent memory) and **AGENTS.md** (agent role definitions) are appended to the system prompt.
+
+### Auto-Compaction Algorithm
+
+Conversations are automatically compressed as they grow longer:
+
+<div class="diagram">
+  <div class="diagram__title">AUTO-COMPACTION ALGORITHM</div>
+  <div class="diagram__flow">
+    <div class="diagram__node diagram__node--red diagram__node--wide">
+      <span class="diagram__node__label">Trigger</span>
+      <span class="diagram__node__sub">Turn count &gt; compact_after_turns (default 12)</span>
+    </div>
+    <div class="diagram__arrow">&#x2193;</div>
+    <div class="diagram__node diagram__node--green diagram__node--wide">
+      <span class="diagram__node__label">Preserve</span>
+      <span class="diagram__node__sub">Keep the most recent 4 messages</span>
+    </div>
+    <div class="diagram__arrow">&#x2193;</div>
+    <div class="diagram__node diagram__node--purple diagram__node--wide">
+      <span class="diagram__node__label">Compaction Target (remainder)</span>
+      <ul>
+        <li>Markdown → plaintext conversion</li>
+        <li>Remove duplicate tool results</li>
+        <li>Remove timestamps/metadata</li>
+        <li>Truncate to 10,000 token ceiling</li>
+      </ul>
+    </div>
+    <div class="diagram__arrow">&#x2193;</div>
+    <div class="diagram__node diagram__node--cyan diagram__node--wide">
+      <span class="diagram__node__label">Result</span>
+      <span class="diagram__node__sub">Reconstruct with summary prompt + most recent 4 messages</span>
+    </div>
+  </div>
+</div>
+
+Manual trigger: `/compact` command
+
+### Token Tracking and Cost Calculation
+
+Four types of tokens are tracked per API call:
+
+| Token Type | Description |
+|------------|-------------|
+| `input_tokens` | Input tokens |
+| `cache_creation_input_tokens` | Cache creation tokens |
+| `cache_read_input_tokens` | Cache read tokens |
+| `output_tokens` | Output tokens |
+
+Price per model (per 1M tokens):
+
+| Model | Input | Output |
+|-------|-------|--------|
+| Sonnet | $15 | $75 |
+| Haiku | $1 | $5 |
+| Opus | $15 | $75 |
+
+Use the `/cost` command to check cumulative session costs in real time.
+
+### Course Connections
+
+| Week | Connection |
+|------|------------|
+| **Week 5** | The actual implementation of Context Rot prevention. Auto-compaction = deterministic context management |
+| **Week 6** | CLAUDE.md 3-level hierarchy = implementation of the "Sign" metaphor. Global/project/local constraints |
+| **Week 12** | Token tracking as the foundation for cost optimization telemetry |
+
+---
+
+## 7. MCP Integration
+The layer that connects external tools and data sources via a standard protocol. Shows how the MCP theory learned in Week 3 is implemented inside Claude Code.
+
+### 6 Transport Types
+
+| Transport | Communication | Use Case | Configuration |
+|-----------|--------------|----------|---------------|
+| **Stdio** | stdin/stdout | Local processes (most common) | command, args, env |
+| **SSE** | HTTP streaming | Remote servers | URL, headers |
+| **HTTP** | REST | Standard APIs | URL, headers |
+| **WebSocket** | Bidirectional | Real-time communication | URL |
+| **SDK** | In-process | No network | Direct calls |
+| **ClaudeAiProxy** | Proxy | claude.ai hosted servers | Wrapped URL |
+
+### Server Lifecycle State Machine
+
+<div class="diagram">
+  <div class="diagram__title">MCP SERVER LIFECYCLE</div>
+  <div class="diagram__flow">
+    <div class="diagram__node diagram__node--gray">
+      <span class="diagram__node__label">Configured</span>
+    </div>
+    <div class="diagram__arrow">&#x2193;<span class="diagram__arrow--label">spawn process (Stdio) or connect (HTTP/WS)</span></div>
+    <div class="diagram__node diagram__node--blue">
+      <span class="diagram__node__label">Initializing</span>
+    </div>
+    <div class="diagram__arrow">&#x2193;<span class="diagram__arrow--label">JSON-RPC initialize handshake (protocol version negotiation)</span></div>
+    <div class="diagram__node diagram__node--cyan">
+      <span class="diagram__node__label">Connected</span>
+    </div>
+    <div class="diagram__arrow">&#x2193;<span class="diagram__arrow--label">tools/list + resources/list (tool/resource discovery)</span></div>
+    <div class="diagram__node diagram__node--green">
+      <span class="diagram__node__label">In Use</span>
+    </div>
+    <div class="diagram__arrow">&#x2193;<span class="diagram__arrow--label">shutdown signal or error</span></div>
+    <div class="diagram__node diagram__node--red">
+      <span class="diagram__node__label">Terminated</span>
+    </div>
+  </div>
+</div>
+
+### JSON-RPC 2.0 Protocol
+
+MCP uses JSON-RPC 2.0 as its wire protocol:
+
+```json
+// Request
+{"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}
+
+// Response
+{"jsonrpc": "2.0", "id": 1, "result": {"tools": [...]}}
+
+// Error
+{"jsonrpc": "2.0", "id": 1, "error": {"code": -32600, "message": "Invalid request"}}
+```
+
+Key methods:
+- `initialize` — Handshake, capability negotiation
+- `tools/list` — Available tool list
+- `tools/call` — Tool execution
+- `resources/list` — Resource list
+- `resources/read` — Resource reading
+
+### Tool Naming Convention
+
+MCP server tools are identified by a naming convention:
+
+```
+mcp__{normalized_server_name}__{tool_name}
+```
+
+Example: `mcp__my_database__query`, `mcp__github__create_pull_request`
+
+claude.ai hosted servers use the `"claude.ai "` prefix: `mcp__claude_ai_GitHub__search_code`
+
+### Settings 3-Source Hierarchy
+
+<div class="diagram">
+  <div class="diagram__title">SETTINGS 3-SOURCE HIERARCHY</div>
+  <div class="diagram__flow">
+    <div class="diagram__node diagram__node--blue">
+      <span class="diagram__node__label">~/.claude/settings.json</span>
+      <span class="diagram__node__sub">User global</span>
+    </div>
+    <div class="diagram__arrow">&#x2193;<span class="diagram__arrow--label">deep merge</span></div>
+    <div class="diagram__node diagram__node--purple">
+      <span class="diagram__node__label">&lt;project&gt;/.claude/settings.json</span>
+      <span class="diagram__node__sub">Project</span>
+    </div>
+    <div class="diagram__arrow">&#x2193;<span class="diagram__arrow--label">deep merge</span></div>
+    <div class="diagram__node diagram__node--cyan">
+      <span class="diagram__node__label">.claude/settings.local.json</span>
+      <span class="diagram__node__sub">Local (gitignore)</span>
+    </div>
+  </div>
+</div>
+
+- The most specific setting takes precedence
+- **FNV-1a hashing** detects duplicate servers — even if the same server is defined at multiple levels, it connects only once
+- Can include OAuth settings: `client_id`, `callback_port`, `auth_server_metadata_url`
+
+### Degraded Mode
+
+Even if some MCP servers fail, the rest continue operating normally:
+
+| Failure Type | Classification | Response |
+|-------------|----------------|----------|
+| Process start failure | `startup` | Other servers operate normally |
+| Handshake failure | `handshake` | Reconnection attempt |
+| Config error | `config` | Error message + skip |
+| Partial start | `partial` | Register only available tools |
+
+<Aside type="tip" title="Graceful Degradation">
+This follows the same principle as the circuit breaker pattern in microservices. A single MCP server failure doesn't bring down the entire system. An essential pattern in agentic system design.
+</Aside>
+
+### Course Connections
+
+| Week | Connection |
+|------|------------|
+| **Week 3** | Actual implementation of the MCP protocol. Transport selection, lifecycle management, degraded mode |
+| **Week 7** | Differentiating tool access permissions per agent via MCP |
+
+---
+
+## 8. Agent Orchestration
+Claude Code's multi-agent execution model. The technical foundation for the Week 7 Multi-Agent SDLC.
+
+### Agent Tool — Sub-Agent Spawning
+
+The `Agent` tool creates independent processes:
+
+| Parameter | Description |
+|-----------|-------------|
+| `prompt` | Task description to pass to the sub-agent |
+| `model` | Model selection: `sonnet` (standard), `opus` (complex), `haiku` (lightweight) |
+| `isolation: "worktree"` | Isolated execution in a git worktree — no impact on parent workspace |
+| `run_in_background` | Asynchronous execution, notification on completion |
+| `mode` | Permission mode (plan, auto, default, etc.) |
+
+<Aside type="caution" title="Sub-agents don't know the parent context">
+Sub-agents operate with an **independent prompt**. They cannot access the parent session's conversation history or variables. Therefore, sufficient context must be included in the prompt. This follows the same principle as explicit contracts (API contracts) between microservices.
+</Aside>
+
+### Task Packet — Structured Task Delivery
+
+Instead of natural language prompts, tasks are assigned to agents via **structured packets**:
+
+```
+TaskPacket {
+  objective:         "사용자 인증 모듈 리팩터링"
+  scope:             Module           // Workspace | Module | SingleFile | Custom
+  branch_policy:     "feature/auth-refactor"
+  acceptance_tests:  ["pytest tests/auth/", "mypy src/auth/"]
+  commit_policy:     "conventional commits"
+  escalation_policy: "3회 실패 시 중단 후 보고"
+}
+```
+
+**Benefits**: Eliminates natural language ambiguity, enables logging/retry/transformation, and clarifies contracts between agents.
+
+### Team & Cron Registry
+
+| Feature | Tool | Description |
+|---------|------|-------------|
+| Team creation | `TeamCreate` | Compose agent teams, assign task IDs |
+| Team deletion | `TeamDelete` | Disband teams |
+| Scheduled execution | `CronCreate` | Register schedules with cron expressions + handlers |
+| Schedule listing | `CronList` | List active schedules |
+| Schedule deletion | `CronDelete` | Remove schedules |
+
+Teams coordinate multiple tasks, and Cron is the foundation for periodic execution like `/loop`.
+
+### Course Connections
+
+| Week | Connection |
+|------|------------|
+| **Week 4** | Cron registry = scheduling foundation for the `/loop` command |
+| **Week 7** | Agent tool + worktree isolation = technical foundation of multi-agent pipelines |
+| **Week 8-9** | Task Packet = artifact contract between Planner → Coder → QA |
+
+---
+
+## 9. Configuration System
+The settings hierarchy that determines Claude Code's behavior.
+
+### Config Priority
+
+Higher overrides lower:
+
+<Steps>
+1. **Runtime CLI flags** — `--permission-mode`, `--model`, `--allowedTools` (highest priority)
+2. **Local config** — `.claude/settings.local.json` (gitignore, personal)
+3. **Project config** — `.claude/settings.json` or `.claude.json` (team-shared)
+4. **User config** — `~/.claude/settings.json` (global)
+5. **Compiled defaults** — Defaults built into the code (lowest priority)
+</Steps>
+
+### Feature-Gated Subsystems
+
+Features activated/deactivated via settings:
+
+| Subsystem | Setting Key | Description |
+|-----------|-------------|-------------|
+| Hooks | `hooks` | Trigger shell commands on tool call events |
+| Plugins | `plugins` | Enable extension plugins |
+| MCP | `mcpServers` | MCP server connection settings |
+| OAuth | `oauth` | OAuth authentication settings |
+| Sandbox | `sandbox` | Filesystem isolation mode |
+
+### API Client Configuration
+
+| Item | Default |
+|------|---------|
+| Base URL | `https://api.anthropic.com` |
+| API Version | `2023-06-01` |
+| Max retries | 2 |
+| Initial backoff | 200ms |
+| Max backoff | 2s |
+| Retryable codes | 408, 409, 429, 500, 502, 503, 504 |
+
+Four authentication methods: None, ApiKey, BearerToken, ApiKey+Bearer. Loaded from environment variable `ANTHROPIC_API_KEY` or `~/.claude/credentials.json`.
+
+---
+
+## Summary — 7 Layers and Course Map
+
+| Layer | Core Concepts | Most Relevant Week |
+|-------|--------------|-------------------|
+| Bootstrap & Session | 7-step initialization, session persistence | Week 4 (loop lifecycle) |
+| Query Engine | Turn loop, budget control, TurnResult | Week 4, Week 5 |
+| Tool System | 40 tools, 3-Layer, ToolSpec | Week 3 (MCP), Week 7 |
+| Permission Model | 3 modes, 4-layer security, Bash safety | Week 2, Week 6 |
+| Context Management | CLAUDE.md hierarchy, compaction, token tracking | Week 5, Week 6, Week 12 |
+| MCP Integration | 6 transports, lifecycle, degraded mode | Week 3 |
+| Agent Orchestration | Sub-agents, worktree, Task Packet | Week 7, Week 8-9 |
