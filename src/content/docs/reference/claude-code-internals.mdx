@@ -172,7 +172,7 @@ Claude Code 세션은 "터미널을 열면 바로 시작"이 아니다. 7단계 
 | 구분 | 블록 수 | 주요 블록 |
 |------|---------|----------|
 | **Always** | 11 | Intro, System Rules, Doing Tasks, Executing Actions with Care, Using Your Tools, Tone and Style, Output Efficiency, Shell Shortcut, Environment Info, Summarize Tool Results 등 |
-| **Conditional** | 18 | Agent Tool, Skills, Memory, MCP Instructions, Git Status, Token Budget, Verification Agent 등 |
+| **Conditional** | 18 | Agent Tool, Skills, Memory, MCP Instructions, Git Status, Effort Level, Verification Agent 등 |
 
 Always 블록만으로 Claude Code의 **기본 성격이 완성**된다 — Intro에서 모델 정체성을 잡고, System Rules에서 도구 규칙을 세우고, Doing Tasks에서 코딩 철학을 심는다. Conditional 블록은 기능 플래그 하나로 런타임에 프롬프트 형태가 완전히 달라진다.
 
@@ -228,7 +228,7 @@ Always 블록만으로 Claude Code의 **기본 성격이 완성**된다 — Intr
 
 **3. Microcompact + Summarize Tool Results** — 오래된 도구 결과를 자동 삭제하되, 중요 정보는 먼저 텍스트로 기록하라는 지시가 짝으로 동작. Anthropic의 tool result clearing 전략이 코드로 구현된 것.
 
-**4. Token Budget** — `+500k` 같은 토큰 예산을 지정하면 모델이 해당 예산을 소진할 때까지 작업을 멈추지 않는다. 장기 실행 세션의 **자율성을 토큰 단위로 제어**.
+**4. Effort Level (구 Token Budget)** — `--effort` 플래그로 `low` / `medium` / `high` / `max` 4단계를 지정한다. 낮은 단계는 빠르고 저렴하며, 높은 단계는 복잡한 문제에 깊은 추론을 제공한다. `max`는 Opus 4.6 전용으로 사고 토큰에 제한을 두지 않는다. `/effort` 커맨드, `CLAUDE_CODE_EFFORT_LEVEL` 환경변수, 설정 파일의 `effortLevel` 필드로도 제어 가능. 비용 상한은 별도로 `--max-budget-usd`로 분리되었다.
 
 #### 강의 연결
 
@@ -237,7 +237,7 @@ Always 블록만으로 Claude Code의 **기본 성격이 완성**된다 — Intr
 | **5주차** | Cache Boundary = 토큰 효율 극대화. Microcompact = Context Rot의 프롬프트 레벨 방어 |
 | **6주차** | Always 블록 = "Sign" 메타포의 뼈대. Variation = 인스트럭션 튜닝의 실제 메커니즘 |
 | **7주차** | Verification Agent = 멀티에이전트 자기검증 패턴의 프롬프트 구현 |
-| **12주차** | Token Budget = 비용/품질 트레이드오프의 런타임 제어 |
+| **12주차** | Effort Level = 비용/품질 트레이드오프의 런타임 제어. `--max-budget-usd`로 비용 상한 분리 |
 
 ### TurnResult — 턴 결과 캡처
 

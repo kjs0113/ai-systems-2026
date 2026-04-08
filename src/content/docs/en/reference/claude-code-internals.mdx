@@ -172,7 +172,7 @@ Of the 29 blocks, 11 are **Always** blocks included in every session, and 18 are
 | Type | Count | Key Blocks |
 |------|-------|-----------|
 | **Always** | 11 | Intro, System Rules, Doing Tasks, Executing Actions with Care, Using Your Tools, Tone and Style, Output Efficiency, Shell Shortcut, Environment Info, Summarize Tool Results, etc. |
-| **Conditional** | 18 | Agent Tool, Skills, Memory, MCP Instructions, Git Status, Token Budget, Verification Agent, etc. |
+| **Conditional** | 18 | Agent Tool, Skills, Memory, MCP Instructions, Git Status, Effort Level, Verification Agent, etc. |
 
 The Always blocks alone **complete Claude Code's base personality** — Intro establishes model identity, System Rules sets tool rules, and Doing Tasks instills coding philosophy. Conditional blocks can completely change the prompt shape at runtime via a single feature flag.
 
@@ -228,7 +228,7 @@ A study comparing system prompts across 6 coding agents found that swapping prom
 
 **3. Microcompact + Summarize Tool Results** — Old tool results are auto-deleted, but a paired instruction ensures important information is first recorded as text. This is Anthropic's tool result clearing strategy implemented in code.
 
-**4. Token Budget** — Specifying a budget like `+500k` makes the model continue working until that budget is exhausted. **Autonomy controlled at the token level** for long-running sessions.
+**4. Effort Level (formerly Token Budget)** — The `--effort` flag sets one of four levels: `low` / `medium` / `high` / `max`. Lower levels are faster and cheaper; higher levels provide deeper reasoning for complex problems. `max` is Opus 4.6 only and places no constraint on thinking tokens. Also configurable via the `/effort` command, `CLAUDE_CODE_EFFORT_LEVEL` environment variable, or the `effortLevel` settings field. Cost capping is now separate via `--max-budget-usd`.
 
 #### Course Connections
 
@@ -237,7 +237,7 @@ A study comparing system prompts across 6 coding agents found that swapping prom
 | **Week 5** | Cache Boundary = maximizing token efficiency. Microcompact = prompt-level defense against Context Rot |
 | **Week 6** | Always blocks = the skeleton of the "Sign" metaphor. Variation = the actual mechanism of instruction tuning |
 | **Week 7** | Verification Agent = prompt implementation of multi-agent self-verification |
-| **Week 12** | Token Budget = runtime control of cost/quality trade-offs |
+| **Week 12** | Effort Level = runtime control of cost/quality trade-offs. Cost capping separated into `--max-budget-usd` |
 
 ### TurnResult — Turn Result Capture
 
