@@ -1,0 +1,9 @@
+iteration,task_id,status,duration_sec,consecutive_failures,gc_ran,subtask_mode,timestamp
+1,optimize_sort,FAIL,1,1,false,False,2026-04-13T15:51:56
+2,optimize_sort,FAIL,0,2,false,False,2026-04-13T15:51:58
+3,optimize_sort,SUCCESS,0,0,true,False,2026-04-13T15:52:02
+4,fix_divide_zero,FAIL,0,1,false,False,2026-04-13T15:52:02
+5,fix_divide_zero,SUCCESS,0,0,false,False,2026-04-13T15:52:04
+6,generate_metrics_report,SUCCESS,1,0,true,False,2026-04-13T15:52:05
+7,autoresearch_demo,SUCCESS,0,0,false,False,2026-04-13T15:52:05
+8,worktree_analysis,SUCCESS,0,0,false,False,2026-04-13T15:52:05

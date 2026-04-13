@@ -1,0 +1,22 @@
+VALIDATION FAILED for task optimize_sort
+VALIDATION FAILED for task optimize_sort
+.F...
+======================================================================
+FAIL: test_divide_by_zero (__main__.TestCalculator.test_divide_by_zero)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/park/Desktop/assignments/week-04/202321010/tasks/test_calculator.py", line 23, in test_divide_by_zero
+    with self.assertRaises(ZeroDivisionError):
+         ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+AssertionError: ZeroDivisionError not raised
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.000s
+
+FAILED (failures=1)
+CMD FAILED (exit 1) for task fix_divide_zero
+.....
+----------------------------------------------------------------------
+Ran 5 tests in 0.000s
+
+OK

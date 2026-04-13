@@ -1,0 +1,56 @@
+{
+  "optimize_sort": {
+    "improved": true,
+    "baseline_name": "bubble_sort",
+    "baseline_sec": 0.025749,
+    "speedup": 747.5,
+    "optimized_name": "timsort",
+    "optimized_sec": 3.4e-05
+  },
+  "long_doc": {
+    "improved": true,
+    "top10_words": [
+      {
+        "word": "def",
+        "count": 254
+      },
+      {
+        "word": "yield",
+        "count": 240
+      },
+      {
+        "word": "set",
+        "count": 232
+      },
+      {
+        "word": "function",
+        "count": 228
+      },
+      {
+        "word": "except",
+        "count": 224
+      },
+      {
+        "word": "await",
+        "count": 222
+      },
+      {
+        "word": "tuple",
+        "count": 222
+      },
+      {
+        "word": "str",
+        "count": 220
+      },
+      {
+        "word": "int",
+        "count": 219
+      },
+      {
+        "word": "type",
+        "count": 217
+      }
+    ],
+    "chunks_processed": 55
+  }
+}

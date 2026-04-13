@@ -1,0 +1,8 @@
+=== Metrics Report ===
+Total iterations : 5
+Successes        : 2
+Failures         : 3
+Success rate     : 40.0%
+Avg duration     : 0.20s
+Max duration     : 1.00s
+Min duration     : 0.00s
