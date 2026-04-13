@@ -1,0 +1,55 @@
+...FFF                                                                   [100%]
+=================================== FAILURES ===================================
+______________________________ test_clamp_inside _______________________________
+
+    def test_clamp_inside():
+>       assert clamp(5.0, 0.0, 10.0) == 5.0
+               ^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_task3_clamp.py:5: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+value = 5.0, low = 0.0, high = 10.0
+
+    def clamp(value: float, low: float, high: float) -> float:
+>       raise NotImplementedError("clamp")
+E       NotImplementedError: clamp
+
+src/calculator.py:24: NotImplementedError
+_______________________________ test_clamp_below _______________________________
+
+    def test_clamp_below():
+>       assert clamp(-3.0, 0.0, 10.0) == 0.0
+               ^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_task3_clamp.py:9: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+value = -3.0, low = 0.0, high = 10.0
+
+    def clamp(value: float, low: float, high: float) -> float:
+>       raise NotImplementedError("clamp")
+E       NotImplementedError: clamp
+
+src/calculator.py:24: NotImplementedError
+_______________________________ test_clamp_above _______________________________
+
+    def test_clamp_above():
+>       assert clamp(99.0, 0.0, 10.0) == 10.0
+               ^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_task3_clamp.py:13: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+value = 99.0, low = 0.0, high = 10.0
+
+    def clamp(value: float, low: float, high: float) -> float:
+>       raise NotImplementedError("clamp")
+E       NotImplementedError: clamp
+
+src/calculator.py:24: NotImplementedError
+=========================== short test summary info ============================
+FAILED tests/test_task3_clamp.py::test_clamp_inside - NotImplementedError: clamp
+FAILED tests/test_task3_clamp.py::test_clamp_below - NotImplementedError: clamp
+FAILED tests/test_task3_clamp.py::test_clamp_above - NotImplementedError: clamp
+3 failed, 3 passed in 0.02s

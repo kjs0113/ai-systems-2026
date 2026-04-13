@@ -1,0 +1,72 @@
+[2026-04-12T23:33:40+09:00] [harness] GC: saved checkpoint task0.py
+[2026-04-12T23:33:40+09:00] [harness] Ralph harness start (MOCK_AGENT=1, STUCK_THRESHOLD=3)
+[2026-04-12T23:33:40+09:00] [harness] Logs: loop_log.txt | metrics: metrics/loop_metrics.csv
+[2026-04-12T23:33:40+09:00] [harness] === global iteration 1/48 | task 1 | failures_on_task=0 ===
+[2026-04-12T23:33:40+09:00] [harness] agent: mock (scripts/mock_agent.py)
+[mock_agent] task=1 failures_on_task=0 shard=False action=noop_explore
+[2026-04-12T23:33:41+09:00] [harness] tests FAILED for task 1
+[2026-04-12T23:33:41+09:00] [harness] packaged error log -> state/error_logs/pytest_20260412_233341.log
+[2026-04-12T23:33:41+09:00] [harness] GC: restored src/calculator.py from checkpoint task0.py
+[2026-04-12T23:33:41+09:00] [harness] === global iteration 2/48 | task 1 | failures_on_task=1 ===
+[2026-04-12T23:33:41+09:00] [harness] backpressure: sleeping 1s (consecutive_failures=1)
+[2026-04-12T23:33:42+09:00] [harness] agent: mock (scripts/mock_agent.py)
+[mock_agent] task=1 failures_on_task=1 shard=False action=noop_explore
+[2026-04-12T23:33:43+09:00] [harness] tests FAILED for task 1
+[2026-04-12T23:33:43+09:00] [harness] packaged error log -> state/error_logs/pytest_20260412_233343.log
+[2026-04-12T23:33:43+09:00] [harness] GC: restored src/calculator.py from checkpoint task0.py
+[2026-04-12T23:33:43+09:00] [harness] === global iteration 3/48 | task 1 | failures_on_task=2 ===
+[2026-04-12T23:33:43+09:00] [harness] backpressure: sleeping 2s (consecutive_failures=2)
+[2026-04-12T23:33:45+09:00] [harness] agent: mock (scripts/mock_agent.py)
+[mock_agent] task=1 failures_on_task=2 shard=False action=noop_explore
+[2026-04-12T23:33:46+09:00] [harness] tests FAILED for task 1
+[2026-04-12T23:33:46+09:00] [harness] packaged error log -> state/error_logs/pytest_20260412_233346.log
+[2026-04-12T23:33:46+09:00] [harness] GC: restored src/calculator.py from checkpoint task0.py
+[2026-04-12T23:33:46+09:00] [harness] === global iteration 4/48 | task 1 | failures_on_task=3 ===
+[2026-04-12T23:33:46+09:00] [harness] STUCK SPLIT activated after 3 consecutive failures (task 1)
+[2026-04-12T23:33:46+09:00] [harness] backpressure: sleeping 3s (consecutive_failures=3)
+[2026-04-12T23:33:49+09:00] [harness] agent: mock (scripts/mock_agent.py)
+[mock_agent] task=1 failures_on_task=3 shard=True action=apply_fix
+[2026-04-12T23:33:50+09:00] [harness] tests PASSED for task 1
+[2026-04-12T23:33:50+09:00] [harness] GC: saved checkpoint task1.py
+[2026-04-12T23:33:50+09:00] [harness] === global iteration 5/48 | task 2 | failures_on_task=0 ===
+[2026-04-12T23:33:50+09:00] [harness] backpressure: sleeping 0s (consecutive_failures=0)
+[2026-04-12T23:33:50+09:00] [harness] agent: mock (scripts/mock_agent.py)
+[mock_agent] task=2 failures_on_task=0 shard=False action=noop_explore
+[2026-04-12T23:33:51+09:00] [harness] tests FAILED for task 2
+[2026-04-12T23:33:51+09:00] [harness] packaged error log -> state/error_logs/pytest_20260412_233351.log
+[2026-04-12T23:33:51+09:00] [harness] GC: restored src/calculator.py from checkpoint task1.py
+[2026-04-12T23:33:51+09:00] [harness] === global iteration 6/48 | task 2 | failures_on_task=1 ===
+[2026-04-12T23:33:51+09:00] [harness] backpressure: sleeping 1s (consecutive_failures=1)
+[2026-04-12T23:33:52+09:00] [harness] agent: mock (scripts/mock_agent.py)
+[mock_agent] task=2 failures_on_task=1 shard=False action=noop_explore
+[2026-04-12T23:33:53+09:00] [harness] tests FAILED for task 2
+[2026-04-12T23:33:53+09:00] [harness] packaged error log -> state/error_logs/pytest_20260412_233353.log
+[2026-04-12T23:33:53+09:00] [harness] GC: restored src/calculator.py from checkpoint task1.py
+[2026-04-12T23:33:53+09:00] [harness] === global iteration 7/48 | task 2 | failures_on_task=2 ===
+[2026-04-12T23:33:53+09:00] [harness] backpressure: sleeping 2s (consecutive_failures=2)
+[2026-04-12T23:33:55+09:00] [harness] agent: mock (scripts/mock_agent.py)
+[mock_agent] task=2 failures_on_task=2 shard=False action=apply_fix
+[2026-04-12T23:33:56+09:00] [harness] tests PASSED for task 2
+[2026-04-12T23:33:56+09:00] [harness] GC: saved checkpoint task2.py
+[2026-04-12T23:33:56+09:00] [harness] === global iteration 8/48 | task 3 | failures_on_task=0 ===
+[2026-04-12T23:33:56+09:00] [harness] backpressure: sleeping 0s (consecutive_failures=0)
+[2026-04-12T23:33:56+09:00] [harness] agent: mock (scripts/mock_agent.py)
+[mock_agent] task=3 failures_on_task=0 shard=False action=noop_explore
+[2026-04-12T23:33:57+09:00] [harness] tests FAILED for task 3
+[2026-04-12T23:33:57+09:00] [harness] packaged error log -> state/error_logs/pytest_20260412_233357.log
+[2026-04-12T23:33:57+09:00] [harness] GC: restored src/calculator.py from checkpoint task2.py
+[2026-04-12T23:33:57+09:00] [harness] === global iteration 9/48 | task 3 | failures_on_task=1 ===
+[2026-04-12T23:33:57+09:00] [harness] backpressure: sleeping 1s (consecutive_failures=1)
+[2026-04-12T23:33:58+09:00] [harness] agent: mock (scripts/mock_agent.py)
+[mock_agent] task=3 failures_on_task=1 shard=False action=noop_explore
+[2026-04-12T23:33:59+09:00] [harness] tests FAILED for task 3
+[2026-04-12T23:33:59+09:00] [harness] packaged error log -> state/error_logs/pytest_20260412_233359.log
+[2026-04-12T23:33:59+09:00] [harness] GC: restored src/calculator.py from checkpoint task2.py
+[2026-04-12T23:34:00+09:00] [harness] === global iteration 10/48 | task 3 | failures_on_task=2 ===
+[2026-04-12T23:34:00+09:00] [harness] stall-check: possible stall — extra cool-down 8s
+[2026-04-12T23:34:08+09:00] [harness] backpressure: sleeping 2s (consecutive_failures=2)
+[2026-04-12T23:34:10+09:00] [harness] agent: mock (scripts/mock_agent.py)
+[mock_agent] task=3 failures_on_task=2 shard=False action=apply_fix
+[2026-04-12T23:34:11+09:00] [harness] tests PASSED for task 3
+[2026-04-12T23:34:11+09:00] [harness] GC: saved checkpoint task3.py
+[2026-04-12T23:34:11+09:00] [harness] all tasks complete — exiting OK

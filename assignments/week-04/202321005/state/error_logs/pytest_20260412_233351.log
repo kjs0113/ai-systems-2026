@@ -1,0 +1,15 @@
+..F                                                                      [100%]
+=================================== FAILURES ===================================
+__________________________ test_fibonacci_base_and_10 __________________________
+
+    def test_fibonacci_base_and_10():
+        assert fibonacci(0) == 0
+        assert fibonacci(1) == 1
+>       assert fibonacci(2) == 1
+E       assert 3 == 1
+E        +  where 3 = fibonacci(2)
+
+tests/test_task2_fibonacci.py:7: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_task2_fibonacci.py::test_fibonacci_base_and_10 - assert 3 == 1
+1 failed, 2 passed in 0.02s

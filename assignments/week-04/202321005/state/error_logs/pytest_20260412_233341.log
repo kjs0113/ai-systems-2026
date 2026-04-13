@@ -1,0 +1,23 @@
+.F                                                                       [100%]
+=================================== FAILURES ===================================
+_______________________________ test_divide_zero _______________________________
+
+    def test_divide_zero():
+        with pytest.raises(ValueError, match="0으로 나눌 수 없습니다"):
+>           divide(10, 0)
+
+tests/test_task1_divide.py:12: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = 10, b = 0
+
+    def divide(a: float, b: float) -> float:
+        # Bug: no zero guard (tests expect ValueError)
+>       return a / b
+               ^^^^^
+E       ZeroDivisionError: division by zero
+
+src/calculator.py:8: ZeroDivisionError
+=========================== short test summary info ============================
+FAILED tests/test_task1_divide.py::test_divide_zero - ZeroDivisionError: divi...
+1 failed, 1 passed in 0.01s
