@@ -1,0 +1,18 @@
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "result": {
+    "resourceTemplates": [
+      {
+        "uriTemplate": "mig://gpu/{gpu_id}/status",
+        "name": "gpu_status_resource",
+        "description": "GPU의 현재 MIG 상태 리소스. 메모리 사용량 포함."
+      },
+      {
+        "uriTemplate": "mig://gpu/{gpu_id}/metrics",
+        "name": "gpu_metrics_resource",
+        "description": "GPU 메트릭 리소스 템플릿 (메모리, 온도, 전력 실시간 수집)."
+      }
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "prompts": [
+      {
+        "name": "gpu_analysis_prompt",
+        "description": "GPU 사용 현황을 분석하는 프롬프트를 생성한다.\nMIG 인스턴스 상태를 포함하여 최적화 제안을 요청한다."
+      }
+    ]
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "model_name": "microsoft/phi-2",
+  "quantization": "4-bit (NF4)",
+  "device": "NVIDIA H100 80GB HBM3",
+  "mig_profile": "N/A (MIG not enabled)",
+  "vram_total_gb": 79.18,
+  "vram_used_after_load_gb": 1.7,
+  "vram_peak_gb": 1.79,
+  "model_size_gb": 1.7,
+  "num_prompts": 5,
+  "total_tokens_generated": 640,
+  "total_time_sec": 19.185,
+  "tokens_per_sec": 33.36,
+  "avg_latency_ms": 3837.0,
+  "first_token_latency_ms": 49.5,
+  "prompt_results": [
+    {
+      "prompt": "Write a Python function that checks if a number is prime:\n```python\ndef is_prime...",
+      "input_tokens": 24,
+      "output_tokens": 128,
+      "time_sec": 6.331,
+      "tokens_per_sec": 20.22,
+      "generated_text_preview": "\n    if n <= 1:\n        return False\n    for i in range(2, int(n**0.5) + 1):\n        if n % i == 0:\n            return False\n    return True\n```\n\n2. Write a Python function that checks if a number is "
+    },
+    {
+      "prompt": "Summarize the concept of GPU Multi-Instance GPU (MIG) technology in 3 sentences:",
+      "input_tokens": 20,
+      "output_tokens": 128,
+      "time_sec": 3.263,
+      "tokens_per_sec": 39.23,
+      "generated_text_preview": "\n\nSolution:\nGPU Multi-Instance GPU (MIG) technology is a technique used in graphics processing units (GPUs) to improve performance and efficiency. It involves dividing the GPU into multiple instances,"
+    },
+    {
+      "prompt": "If a GPU has 80GB of memory and is split into 7 MIG instances of 10GB each, how ...",
+      "input_tokens": 33,
+      "output_tokens": 128,
+      "time_sec": 3.397,
+      "tokens_per_sec": 37.68,
+      "generated_text_preview": "\n\nAnswer:\nThe total memory allocated to the 7 MIG instances is 70GB (7 x 10GB). Therefore, the unallocated memory is 10GB (80GB - 70GB).\n\nFollow-up Questions:\n1. How does the use of MIG impact the per"
+    },
+    {
+      "prompt": "Translate the following to Korean: 'Machine learning models require significant ...",
+      "input_tokens": 20,
+      "output_tokens": 128,
+      "time_sec": 2.943,
+      "tokens_per_sec": 43.5,
+      "generated_text_preview": "\n## INPUT\nMachine learning models require significant computational resources for training and inference.\n##OUTPUT\n배열로 테스트를 위한 에러를 위한 에러를 위한 에러를 위한 에러를 위한 에러를 위한 에러�"
+    },
+    {
+      "prompt": "What is the difference between model parallelism and data parallelism in distrib...",
+      "input_tokens": 16,
+      "output_tokens": 128,
+      "time_sec": 3.251,
+      "tokens_per_sec": 39.37,
+      "generated_text_preview": "\n\nSolution:\nModel parallelism involves training multiple models simultaneously on different devices or nodes, while data parallelism involves training a single model on multiple devices or nodes, with"
+    }
+  ],
+  "torch_version": "2.11.0+cu130",
+  "cuda_version": "13.0",
+  "driver_version": "580.126.09",
+  "success": true,
+  "error": ""
+}

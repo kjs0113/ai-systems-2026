@@ -1,0 +1,138 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "tools": [
+      {
+        "name": "get_mig_status",
+        "description": "지정된 GPU의 MIG 상태를 조회한다.\nMIG 인스턴스 목록, 메모리 사용량, 프로파일 정보를 반환한다.\n\nArgs:\n    gpu_index: GPU 인덱스 (0부터 시작, 기본값 0)",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "gpu_index": {
+              "default": 0,
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "outputSchema": {
+          "properties": {
+            "result": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "type": "object",
+          "x-fastmcp-wrap-result": true
+        },
+        "meta": {
+          "fastmcp": {
+            "tags": []
+          }
+        }
+      },
+      {
+        "name": "get_gpu_metrics",
+        "description": "GPU 메트릭(메모리 사용률, 온도, 전력)을 조회하고,\nthreshold_pct를 초과하는 항목에 경고를 표시한다.\n\nArgs:\n    gpu_index: GPU 인덱스 (0부터 시작)\n    threshold_pct: 경고 임계값 퍼센트 (0-100, 기본값 80)",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "gpu_index": {
+              "default": 0,
+              "type": "integer"
+            },
+            "threshold_pct": {
+              "default": 80.0,
+              "type": "number"
+            }
+          },
+          "type": "object"
+        },
+        "outputSchema": {
+          "properties": {
+            "result": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "type": "object",
+          "x-fastmcp-wrap-result": true
+        },
+        "meta": {
+          "fastmcp": {
+            "tags": []
+          }
+        }
+      },
+      {
+        "name": "admin_reset_gpu",
+        "description": "[ADMINISTRATION] GPU MIG 인스턴스를 리셋한다.\nadmin 역할만 실행 가능하다. student/researcher 역할은 거부된다.\n\nArgs:\n    gpu_index: 리셋할 GPU 인덱스",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "gpu_index": {
+              "default": 0,
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "outputSchema": {
+          "properties": {
+            "result": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "type": "object",
+          "x-fastmcp-wrap-result": true
+        },
+        "meta": {
+          "fastmcp": {
+            "tags": []
+          }
+        }
+      },
+      {
+        "name": "set_session_role",
+        "description": "현재 세션의 TBAC 역할을 설정한다.\n사용 가능한 역할: student, researcher, admin\n\nArgs:\n    role: 역할 이름 (student / researcher / admin)",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "role": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "role"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "properties": {
+            "result": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "type": "object",
+          "x-fastmcp-wrap-result": true
+        },
+        "meta": {
+          "fastmcp": {
+            "tags": []
+          }
+        }
+      }
+    ]
+  }
+}
