@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Requirement Specification Artifact",
+  "type": "object",
+  "properties": {
+    "id": { "type": "string", "pattern": "^REQ-[0-9]{3}$" },
+    "title": { "type": "string" },
+    "status": { "enum": ["draft", "approved", "in-progress", "complete"] },
+    "description": { "type": "string" },
+    "acceptance_criteria": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "assumptions": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "out_of_scope": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "required": ["id", "title", "status", "acceptance_criteria"]
+}

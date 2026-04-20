@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Knowledge Lesson Artifact",
+  "type": "object",
+  "properties": {
+    "id": { "type": "string", "pattern": "^LESSON-[0-9]{3}$" },
+    "title": { "type": "string" },
+    "domain": { "type": "string", "enum": ["API", "UI", "Database", "Security", "Infrastructure"] },
+    "component": { "type": "string" },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "description": { "type": "string" },
+    "lesson_learned": { "type": "string" },
+    "applies_when": { "type": "string" }
+  },
+  "required": ["id", "title", "domain", "lesson_learned"]
+}

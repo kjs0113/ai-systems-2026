@@ -43,3 +43,5 @@ node_modules
 # Large binary artifacts — submit via external links in capstone/projects/[학번]/links.md
 *.mp4
 *.pdf
+__pycache__/
+*.pyc

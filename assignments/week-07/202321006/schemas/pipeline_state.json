@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Global Pipeline State Tracking Artifact",
+  "type": "object",
+  "properties": {
+    "req_id": { "type": "string" },
+    "branch_name": { "type": "string" },
+    "started_at": { "type": "string", "format": "date-time" },
+    "current_phase": { "type": "integer", "minimum": 0, "maximum": 8 },
+    "completed_phases": {
+      "type": "array",
+      "items": { "type": "integer" }
+    },
+    "is_complete": { "type": "boolean" },
+    "phase_history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "phase": { "type": "integer" },
+          "name": { "type": "string" },
+          "completed_at": { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  },
+  "required": ["req_id", "current_phase", "is_complete"]
+}
