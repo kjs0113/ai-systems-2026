@@ -39,7 +39,7 @@ Claude Code의 관측 설계가 텔레메트리 원칙의 실제 구현이다:
 - **토큰 추적 4종**: `input_tokens`, `cache_creation_input_tokens`, `cache_read_input_tokens`, `output_tokens` — 매 API 호출마다 기록
 - **스트리밍 이벤트 6종**: `message_start`, `command_match`, `tool_match`, `permission_denial`, `message_delta`, `message_stop` — 턴 단위 관측
 - **TurnResult 7요소**: input, response, tools, permissions, tokens, termination reason — 구조화된 턴 결과 캡처
-- **비용 계산**: 모델별 가격(Sonnet $3/$15, Haiku $1/$5, Opus $5/$25 per 1M) × 토큰 수. `/cost` 명령으로 실시간 확인
+- **비용 계산**: 모델별 가격(Sonnet $15/$75, Haiku $1/$5 per 1M) × 토큰 수. `/cost` 명령으로 실시간 확인
 - **장애 분류**: MCP 서버 실패를 startup/handshake/config/partial로 구조화 — 텍스트 로그가 아닌 타입화된 이벤트
 
 → 상세: [참고자료 > Claude Code 내부 구조](/reference/claude-code-internals)

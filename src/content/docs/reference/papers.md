@@ -51,8 +51,6 @@ description: AI 시스템 2026 강의 관련 논문, 블로그 포스트, 공식
 - **"How to Write a Great agents.md"** — GitHub Blog (2026) → 6주. 2,500개 레포 분석, 성공 5요소
 - **"AGENTbench"** — ETH Zurich (2026) → 6주. LLM 생성 instruction 파일의 역효과 실증
 - **"Agentic Coding"** — MIT Missing Semester (2026) → 4-6주. instruction files, skills, subagents 정규 강의
-- **"LLM Wiki: Building Persistent Knowledge Systems"** — Andrej Karpathy (2026) → 5주. LLM이 영구 지식 위키를 유지하는 Ingest/Query/Lint 패턴
-- **Graphify** — Safi Shamsi (2026) → 5주. 코드베이스를 지식 그래프로 변환, tree-sitter AST + Leiden 클러스터링, 71.5x 토큰 절감
 - **Claude Code: Deep Dive** — Anthropic Blog (2025) → 1–2주
 
 ## 규제 자료

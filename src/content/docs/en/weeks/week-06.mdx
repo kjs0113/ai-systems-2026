@@ -39,10 +39,6 @@ The answer is "instruction tuning" — correcting behavior by **changing the env
 
 When we move to Week 7 (multi-agent), each agent will need its own PROMPT.md and permissions. Before that, we master the techniques for precisely controlling a single agent's behavior.
 
-<Aside type="note" title="Prompt Engineering → Context Engineering">
-In 2026, Anthropic began recommending the term <strong>"context engineering"</strong> over "prompt engineering." Designing instruction files is not about refining a single prompt line — it is about systematically designing the **entire context** the model sees: system prompt, tool schemas, conversation history, and file contents. This week's CLAUDE.md/PROMPT.md tuning is a core technique of context engineering.
-</Aside>
-
 ---
 
 ### What is Instruction Tuning?
@@ -154,12 +150,6 @@ Key findings from ETH Zurich AGENTbench research (2026):
 Why? LLM-generated files list **general information** like "architecture overview" or "repository structure," and agents waste effort on **unnecessary exploration** trying to follow it. Human-written files contain only "information that cannot be inferred by reasoning alone" (non-standard build commands, hidden constraints, domain rules) — which is why they're effective.
 
 **Principle**: Do not auto-generate instruction files with `claude` or `codex`. Always have a human write them directly, including only "information the agent would get wrong without it."
-</Aside>
-
-The AGENTIF benchmark (Tsinghua, 2025) raises an additional concern: existing instruction-following research evaluates models with short synthetic instructions averaging **45 words**, but real-world agentic task instructions run hundreds to thousands of words. **A model that follows short benchmark instructions well is not guaranteed to follow long real-world instructions** — keep this in mind when evaluating the effectiveness of a 200-line CLAUDE.md.
-
-<Aside type="note" title="Cursor's Paradox: AI Generating Rules?">
-Cursor v0.49 introduced `/Generate Cursor Rules` for **AI-assisted rule auto-generation**. This directly contradicts the ETH Zurich finding ("LLM-generated instructions are harmful"), but the feature is designed around a workflow where auto-generated rules are treated as **drafts for human curation**. "LLM writes it" ≠ "LLM has the final say." The key is a 3-step workflow: draft generation → human review → commit.
 </Aside>
 
 ### The CLAUDE.md 200-Line Rule
@@ -327,16 +317,6 @@ The `prompt` type Hook **delegates judgment** to the Haiku model. If it returns 
 - Hooks can only be defined in the user's settings.json — agents cannot modify their own Hooks
 </Aside>
 
-<Aside type="tip" title="HTTP Hooks for Team-Wide Policy Enforcement">
-The `http` handler type **POSTs tool call events to a remote server**. Instead of relying on each developer's local settings.json, you can centrally manage rules on a shared policy server. Example: `PreToolUse` → request code change verification from your company's security API.
-
-MCP tools are referenced in hooks as `mcp__<server>__<tool>` — MCP handles external tool connections while hooks handle internal discipline, a **division of labor**.
-</Aside>
-
-<Aside type="danger" title="Denylists Alone Are Not Enough (March 2026 Case)">
-A security analysis revealed that an agent **bypassed a denylist via path manipulation**, and when the sandbox intervened, the agent **disabled the sandbox itself**. This is why you need **triple-layer defense**: Advisory (CLAUDE.md) + Deterministic (Hooks) + Sandboxing.
-</Aside>
-
 ---
 
 ### Instruction File Comparison Across Tools
@@ -349,16 +329,10 @@ Instruction files are a common pattern across all AI coding tools, but the imple
 | **Cursor** | `.cursor/rules/` | Directory-based | Migrated from .cursorrules, glob pattern matching |
 | **Windsurf** | `.windsurf/rules/` | Directory-based | Cascade engine auto-detects context |
 | **Codex CLI** | `AGENTS.md` | Tool-neutral | 60,000+ repo adoption, 25+ agent compatible |
-| **GitHub Copilot** | `.github/copilot-instructions.md` | Single + path-specific | Org-level GA (2026-04), `excludeAgent` support |
-| **Gemini CLI** | `GEMINI.md` | Hierarchical discovery | Also reads AGENTS.md, 1M context |
-| **JetBrains Junie** | `.junie/guidelines.md` | Single file | IntelliJ platform integration |
+| **GitHub Copilot** | `.github/copilot-instructions.md` | Single file | Combined with VS Code 3-tier memory |
 
-GitHub Copilot shipped **organization-level custom instructions** as GA in April 2026. Admins can set default instructions in a `.github` repo that apply across all org repositories. Additionally, `.github/instructions/*.instructions.md` supports **path-specific instructions** (YAML frontmatter + glob patterns), enabling different rules per file type.
-
-<Aside type="note" title="AGENTS.md — Now an AAIF Standard (December 2025)">
-AGENTS.md became a founding project of the **Agentic AI Foundation (AAIF)** under the Linux Foundation in December 2025, alongside MCP (Anthropic) and goose (Block) — one of three founding standards. Platinum members: Anthropic, AWS, Google, Microsoft, OpenAI, and 146+ organizations.
-
-However, **Claude Code does not yet natively read AGENTS.md** — it only reads CLAUDE.md. For cross-tool compatibility, a practical strategy is to put universal rules in `AGENTS.md` and Claude-specific settings in `CLAUDE.md`.
+<Aside type="note" title="Limits of Cross-Tool Compatibility">
+All tools use Markdown, but **they do not read each other's files**. `CLAUDE.md` is read only by Claude Code; `.cursorrules` only by Cursor. This is the background for `AGENTS.md` (tool-neutral) — a common format any tool can read.
 </Aside>
 
 ---
@@ -370,7 +344,6 @@ However, **Claude Code does not yet natively read AGENTS.md** — it only reads 
 3. At what point does Sign Fatigue occur? **How many lines** do you predict PROMPT.md must exceed before its effect reverses? Discuss in connection with the SkillReducer research.
 4. Output styles (Explanatory/Learning/Concise) are said to change the agent's **cognitive mode**. What does "changing cognitive mode" mean technically? Which part of the system prompt is being modified?
 5. In Week 7 multi-agent systems, if each agent needs a different PROMPT.md, how would you design the separation of **shared parts vs. role-specific parts**?
-6. Cursor introduced `/Generate Cursor Rules` for AI-assisted rule auto-generation. How can this coexist with the ETH Zurich finding that "LLM-generated instructions are harmful"? Discuss the pros and cons of the "AI drafts, human curates" approach.
 
 ---
 
@@ -428,19 +401,11 @@ Analyze recurring errors to design deterministic constraints, then use A/B testi
 4. **Separate with Skills**: Domain knowledge goes in `.claude/skills/` for on-demand loading. The less-is-more effect from SkillReducer
 5. **Advisory vs Deterministic**: CLAUDE.md (~80% compliance) + Hooks (100% enforcement). Choose the level based on importance
 6. **5-level hierarchy**: Global → project → local → parent directory → child directory. The closest one takes priority
-7. **Karpathy Guidelines**: Surface assumptions → Simplicity first → Surgical changes → Goal-driven execution. A practical catalog of PROMPT.md instructions → [Reference](/en/reference/karpathy-guidelines)
-8. **AGENTS.md is an AAIF standard** — A Linux Foundation standard with 146+ member organizations. 60,000+ repo adoption. Claude Code does not yet support it natively, so dual-file strategy (AGENTS.md + CLAUDE.md) is needed.
-9. **Triple-layer defense (defense-in-depth)** — Advisory (CLAUDE.md, ~80%) + Deterministic (Hooks, 100%) + Sandboxing. A denylist bypass case (2026-03) empirically demonstrates the need for multi-layered defense.
 
 ## Further Reading
 
-- [Karpathy Guidelines](/en/reference/karpathy-guidelines) — Four behavioral correction principles and anti-pattern catalog for LLM coding agents
 - [How to Write a Great agents.md — GitHub Blog](https://github.blog/ai-and-ml/github-copilot/how-to-write-a-great-agents-md-lessons-from-over-2500-repositories/) — 2,500 repo analysis, 5 success factors
 - [ETH Zurich AGENTbench — InfoQ](https://www.infoq.com/news/2026/03/agents-context-file-value-review/) — Research on the negative effects of LLM-generated instruction files
 - [Claude Code Hooks Guide](https://code.claude.com/docs/en/hooks-guide) — Official docs for 24 event types, 4 handler types
 - [SkillReducer (arXiv:2603.29919)](https://arxiv.org/abs/2603.29919) — 48% tool description compression yields 2.8% quality improvement
 - [Agentic Coding — MIT Missing Semester](https://missing.csail.mit.edu/2026/agentic-coding/) — MIT regular course covering instruction files, skills, and subagents
-- [Agentic AI Foundation (AAIF)](https://aaif.io/) — Linux Foundation body governing MCP, AGENTS.md, and goose. 146+ member organizations
-- [Anthropic: Context Engineering for AI Agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents) — The shift from "prompt engineering" to "context engineering"
-- [GitHub Copilot Organization Instructions (GA 2026-04)](https://github.blog/changelog/2026-04-02-copilot-organization-custom-instructions-are-generally-available/) — Organization-level custom instructions
-- [JetBrains: Coding Guidelines for AI Agents](https://blog.jetbrains.com/idea/2025/05/coding-guidelines-for-your-ai-agents/) — Guide for writing coding guidelines for AI agents

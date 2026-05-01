@@ -351,24 +351,11 @@ How agents access external tools and how agents communicate with each other are 
 
 | Protocol | Purpose | Scale | Core Structure |
 |----------|---------|-------|----------------|
-| **MCP** (Anthropic, 2024) | Agent → tool access | 97M+ monthly SDK downloads, 5,800+ servers | Server/Client, Tool/Resource |
-| **A2A** (Google, 2025) | Agent → agent delegation | v0.2, 150+ partner orgs | Task, Artifact, Agent Card |
-| **AG-UI** (CopilotKit, 2025) | Agent → user UI | LangGraph, CrewAI, MS integration | ~16 event types streaming |
+| **MCP** (Anthropic, 2024) | Agent → tool access | 97M+ monthly SDK downloads, 6,400+ servers | Server/Client, Tool/Resource |
+| **A2A** (Google, 2025) | Agent → agent delegation | 150+ partner organizations | Task, Artifact, Agent Card |
 | **Artifact Handoff** (this week) | Agent → agent (file-based) | Project local | Markdown/JSON files |
 
-These three protocols form the **agentic AI protocol stack** — often called "the TCP/IP of agentic AI":
-
-```
-AG-UI  ← Agent ↔ User (real-time streaming, approval UI)
-A2A    ← Agent ↔ Agent (discovery, delegation, task management)
-MCP    ← Agent ↔ Tools (tool invocation, data source access)
-```
-
-MCP was donated to AAIF under the Linux Foundation (December 2025) and is now the industry standard. A2A v0.2 supports stateless interactions and was enhanced at Google I/O with Agent Engine integration. AG-UI, originated from CopilotKit, is an event-driven protocol standardizing bidirectional streaming (SSE/WebSocket) between agent backends and user frontends.
-
-<Aside type="note" title="MCP Transport Evolution: SSE → Streamable HTTP">
-MCP spec 2026-03-26 replaced HTTP+SSE with **Streamable HTTP**. A single endpoint (`/mcp`) enables stateless servers. HTTP+SSE is deprecated with a **June 30, 2026** deadline. Use Streamable HTTP when building new MCP servers.
-</Aside>
+MCP was donated to the Linux Foundation (December 2025) and has established itself as an industry standard. A2A is an agent-to-agent delegation protocol proposed by Google, using Task/Artifact/Agent Card JSON structures to declare agent capabilities and delegate work.
 
 The **artifact handoff** covered this week is the simplest yet most deterministic approach — the filesystem serves as the communication channel, making everything debuggable, auditable, and reproducible.
 
@@ -433,18 +420,6 @@ Add Markdown files to the `.claude/agents/` directory to define specialized agen
   </TabItem>
 </Tabs>
 
-#### Agent Teams — Native Team Mode (Experimental)
-
-If Custom Agents define **individual roles**, Agent Teams provide **team coordination**. An experimental feature enabled via `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`.
-
-| Aspect | Subagents (Agent Tool) | Agent Teams |
-|--------|----------------------|-------------|
-| Execution | Child process within parent session | **Independent context windows** |
-| Communication | Reports only to parent | **Direct messaging** between teammates |
-| Display | Results returned to parent only | Split-pane view with each teammate visible |
-
-Subagents are like microservice calls; Agent Teams are like a Slack channel — teammates see each other's progress and communicate directly when needed. This is the closest native tool for implementing this week's multi-agent pipeline in Claude Code.
-
 This is the role assignment design above — Coder Agent, QA Agent — implemented declaratively in **a single .md file**. The same principle of MCP-governed tool access applies via the `tools` field. The 11 skills of sdlc-toolkit (`/spec`, `/architect`, `/validate`, `/review`, etc.) are production examples that leverage exactly this Skills system.
 
 #### `/simplify` — Built-in QA Agent
@@ -506,19 +481,6 @@ This extends the instruction tuning from Week 6 (adding constraints to PROMPT.md
 <Aside type="tip" title="Why you need to learn both">
 Boris uses `/batch` for simple migrations and custom pipelines for complex feature work. Understanding the **limitations** of native tools is what makes you appreciate **why** full pipelines are necessary. Experience native tools this week, then build full pipelines from scratch in Weeks 8-9.
 </Aside>
-
-#### Anthropic Managed Agents — A Third Option
-
-Launched in April 2026 as a public beta, **Managed Agents** offer a third choice between full pipelines and native tools. Agents run on Anthropic's cloud infrastructure, eliminating the need to build your own agent loop, tool execution, or runtime.
-
-| Aspect | Full Pipeline | Native Tools | Managed Agents |
-|--------|-------------|-------------|---------------|
-| **Infrastructure** | Self-built | Claude Code CLI | Anthropic cloud |
-| **Cost** | API tokens only | API tokens only | <strong>$0.08/session-hour</strong> + tokens |
-| **Isolation** | Git worktrees | Local processes | Cloud sandbox |
-| **Best for** | Custom quality criteria, complex workflows | Personal dev, repetitive tasks | Enterprise deployment, audit trails |
-
-Early adopters: Notion, Asana, Sentry, Rakuten. Handles file I/O, command execution, web browsing, and code execution server-side.
 
 ---
 
@@ -756,8 +718,6 @@ Complete the **design documents** for a multi-agent pipeline. Code implementatio
 5. **Gated pipeline**: A validation gate at each phase transition. Maximum 3 retries before human escalation.
 6. **Parallelization is controlled by the dependency DAG**: Tier 0 (no dependencies) runs in parallel; Tier N (waits for Tier N-1) runs sequentially.
 7. **Knowledge management completes the feedback loop**: The `domain`/`component` tags in LESSON files automatically inject past lessons into future specs and architectures.
-8. **3-layer protocol stack**: MCP (agent↔tools) + A2A (agent↔agent) + AG-UI (agent↔user) = the TCP/IP of agentic AI. MCP transitioning to Streamable HTTP (SSE deprecated 2026-06-30).
-9. **Managed Agents as a third option**: Anthropic cloud-hosted ($0.08/session-hour). Full pipeline (custom) vs native tools (lightweight) vs Managed Agents (enterprise) — a three-way spectrum.
 
 ## Further Reading
 
@@ -767,6 +727,3 @@ Complete the **design documents** for a multi-agent pipeline. Code implementatio
 - [A2A Protocol Specification — Google (2025)](https://google.github.io/A2A/) — Agent-to-Agent communication standard. Task/Artifact/Agent Card structure.
 - [Model Context Protocol — Anthropic](https://modelcontextprotocol.io) — 97M+ monthly SDK downloads. Industry standard for agent → tool access.
 - [SWE-Bench Pro](https://www.swebench.com/) — Agent coding benchmark. Quantitatively measures performance differences between scaffoldings for the same model.
-- [AG-UI Protocol](https://docs.ag-ui.com/introduction) — Agent↔user UI real-time streaming protocol. Started at CopilotKit, integrated with LangGraph/CrewAI/Microsoft
-- [Anthropic Managed Agents](https://platform.claude.com/docs/en/managed-agents/overview) — Cloud-hosted agent infrastructure. $0.08/session-hour, public beta (2026-04)
-- [Claude Code Agent Teams](https://code.claude.com/docs/en/agent-teams) — Native team mode. Independent contexts, direct communication, split-pane display

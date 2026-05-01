@@ -1,6 +1,6 @@
 ---
-title: "Week 13: Capstone Project Kickoff"
-description: Preparing for Ralphthon — individual project kickoff and system architecture design
+title: "Week 13: Capstone Project Design"
+description: Preparing for Ralphthon — team formation, topic selection, and system architecture design
 week: 13
 phase: 5
 phase_title: Capstone Ralphthon
@@ -8,9 +8,9 @@ date: "2026-05-26"
 theory_topics:
   - Ralphthon overview and evaluation criteria
   - System architecture design methodology
-  - From Week 8 proposal to detailed design document
+  - Team collaboration protocols
 lab_topics:
-  - Project scaffolding and environment setup
+  - Team formation and role assignment
   - Writing the architecture design document
 assignment: "Capstone: Architecture Design Document"
 assignment_due: "2026-06-02"
@@ -29,46 +29,28 @@ import { Aside, Steps, Badge, Card, CardGrid } from '@astrojs/starlight/componen
 
 ## What is Ralphthon?
 
-**Ralphthon** is the capstone project for this course. Working **individually**, you will design and implement an **autonomous agentic system that solves a real software problem**, based on the Ralph Loop methodology.
+**Ralphthon** is the capstone project for this course. Working in teams, you will design and implement an **autonomous agentic system that solves a real software problem**, based on the Ralph Loop methodology.
 
 The name is borrowed from the industry term "Hackathon." As the Ralph Loop methodology spread in early 2026, **Ralphthon** culture emerged — and this is your chance to experience it firsthand.
 
-<Aside type="note" title="Week 8 proposal → Week 13 design document">
-The big picture of your topic and architecture was already locked in during the [Week 8 project proposal](/en/weeks/week-08). Week 13 is about expanding that into an **implementation-ready detailed design** — per-agent interfaces, state file schemas, MCP tool lists, test plans.
-</Aside>
-
-## Project Kickoff
+## Team Formation
 
 <CardGrid>
-  <Card title="Format" icon="rocket">
-    **Individual projects**. Implementation begins Week 13, based on the Week 8 approved proposal.
+  <Card title="Team Size" icon="group">
+    Teams of 3–4. Roles: 1 Architect, 2 Engineers, 1 QA/DevOps
   </Card>
-  <Card title="Topic" icon="document">
-    Keep the topic from your Week 8 proposal. Scope adjustments after feedback are allowed.
+  <Card title="Topic Selection" icon="document">
+    A software project that solves a real problem. Requires instructor approval.
   </Card>
 </CardGrid>
 
 ## Recommended Project Ideas
 
-Beyond the cliché "automatic code review," here are 6 ideas that attack **novel problems** with agentic systems. Selected so you can connect this course's core techniques (loops, multi-agent, MCP, knowledge graphs) to real-world problems.
-
-1. **Paper Reproducer Agent** — Given an arXiv PDF, build a dependency environment, run the experiments, and reproduce the headline results (tables/figures). On failure, produce a diagnostic report pinpointing where the divergence occurred (environment, data, hyperparameters, or algorithm). Directly attacks the **research reproducibility** problem.
-
-2. **Personal Knowledge Graph Distiller** — Merge scattered notes from Obsidian, web bookmarks, and note apps into a Graphify-based knowledge graph, identify isolated "lone nodes," and have an LLM propose new connections. Periodically auto-generates a **"forgotten ideas recap"** note. Applies the [Week 5 LLM Wiki pattern](/en/weeks/week-05#persistent-knowledge-systems--the-llm-wiki-pattern).
-
-3. **Docs-Code Drift Detector** — Cross-verify claims in README, docstrings, and API docs against the actual code behavior at the AST level. When inconsistencies are found — e.g., "the doc says `parse_json(str) → dict` but the code returns a list" — auto-generate a fix PR. A **doc-code consistency** agent.
-
-4. **Issue Roundtable** — Given a GitHub Issue, have 4 agents (Planner/Architect/Coder/QA) debate the solution in an **open-discussion format**. When they disagree, log why; once a consensus design emerges, implement, test, and open a PR. The key is that the **decision process is preserved as an auditable conversation log**.
-
-5. **Socratic Homework Tutor** — Evaluate student-submitted code against a rubric but **refuse to hand over the answer** — instead, use Socratic questioning to guide thinking. Dynamically adjust hint strength based on the student's responses, then summarize the path the student took to reach the answer. A deeper application of Week 6's Learning output style.
-
-6. **Dependency Upgrade Context Agent (Dependabot++)** — For npm/pip dependency upgrade proposals, synthesize changelog, breaking changes, actual usage patterns, and test coverage into a **"risk score + stepwise migration plan + expected edit locations."** Goes beyond Dependabot's naive version bumps with **context-aware upgrades**.
-
-<Aside type="tip" title="Topic-selection principles">
-- **Concrete I/O**: "Good results" ❌ → "arXiv 2408.02442 → 85%+ reproduction rate report" ✓
-- **Agentic necessity**: If a single LLM call can solve it, it is not a capstone project
-- **Instructor approval**: To propose a new topic, first get feedback at the Week 8 proposal presentation
-</Aside>
+1. **Autonomous Code Review System** — Automatically reviews GitHub PRs and suggests improvements
+2. **Automatic Test Generator** — Generates pytest tests automatically from an existing codebase
+3. **Documentation Automation** — Automatically updates README and API docs when code changes
+4. **Automatic Bug Fixer** — Reads GitHub Issues and automatically finds and fixes bugs
+5. **Performance Optimization Agent** — Analyzes profiling results and automatically fixes performance bottlenecks
 
 ## Architecture Design Checklist
 
@@ -98,7 +80,7 @@ The architecture design document submitted as the Week 13 assignment must includ
 
 **Submission deadline**: 2026-06-02 23:59
 
-**Submission path**: `capstone/projects/[student-id]/design.md`
+**Submission path**: `capstone/teams/[team-name]/design.md`
 
 **Requirements**:
 1. Problem definition and solution approach

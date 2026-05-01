@@ -41,8 +41,6 @@ description: Academic papers, blog posts, and official documentation for the AI 
 
 - **"The Ralph Loop"** — Geoffrey Huntley (2025) → Core material for Weeks 4–6
 - **"Harness Engineering"** — Geoffrey Huntley (2025) → Week 4
-- **"LLM Wiki: Building Persistent Knowledge Systems"** — Andrej Karpathy (2026) → Week 5. Ingest/Query/Lint pattern for LLM-maintained persistent knowledge wikis
-- **Graphify** — Safi Shamsi (2026) → Week 5. Transform codebases into knowledge graphs, tree-sitter AST + Leiden clustering, 71.5x token savings
 - **Claude Code: Deep Dive** — Anthropic Blog (2025) → Weeks 1–2
 
 ## Regulatory Resources

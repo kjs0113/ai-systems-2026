@@ -42,11 +42,9 @@ Evaluation criteria:
 
 ### 5. Peer Evaluation (6 points)
 
-**Individual project format (2026)**: With no teammates, peer evaluation is aggregated from **mutual evaluation of other students' presentations and deliverables**.
+Each team member evaluates their teammates. Evaluations of other teams' presentations are also included.
 
-- Each student evaluates all other students' presentations (5 criteria, normalized to 100 points)
-- The average becomes your peer evaluation score (out of 6)
-- Evaluation form distributed during Week 16 class
+Peer evaluation submission: [evaluation form link] (distributed during Week 16 class)
 
 ---
 

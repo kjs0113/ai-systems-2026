@@ -218,55 +218,6 @@ client = OpenAI(base_url="http://localhost:8000/v1", api_key="token")
 
 ---
 
-### Graphify
-
-An AI coding assistant skill that transforms codebases and documents into queryable knowledge graphs. Analyzes code structure using tree-sitter AST extraction (23 languages, no LLM calls needed), then builds community detection and interactive visualizations with NetworkX + Leiden clustering.
-
-```bash
-# Install
-pip install graphify-ai
-
-# Build codebase graph
-graphify build ./src --output graph.json
-
-# Generate interactive visualization
-graphify visualize graph.json --output graph.html
-```
-
-**Key features**:
-- tree-sitter based local AST analysis (code never leaves your machine)
-- **71.5x** token reduction on mixed corpora vs raw file reading
-- Confidence tagging: EXTRACTED / INFERRED / AMBIGUOUS
-- SHA256 cache-based incremental updates
-- Integration with Claude Code, Gemini CLI, Codex, OpenCode, and more
-
-> For usage in context management, see [Week 5 lecture](/en/weeks/week-05).
-
----
-
-### Ollama
-
-Local and cloud LLM deployment tool. Run models with a single command, with NVIDIA cloud GPU remote inference support.
-
-```bash
-# Install (macOS)
-brew install ollama
-
-# Install (Linux)
-curl -fsSL https://ollama.com/install.sh | sh
-
-# Run local model
-ollama run gemma4:31b
-
-# Run cloud model (no GPU required)
-ollama launch claude --model gemma4:31b-cloud
-
-# Connect to AI coding CLI
-ollama launch claude --model glm-5.1:cloud
-```
-
----
-
 ### Model Context Protocol (MCP)
 
 The standard protocol for connecting agents to external tools.
@@ -315,8 +266,6 @@ Major coding models that can be deployed locally. Served via vLLM or SGLang with
 
 | Model | Parameters | Active | Context | HuggingFace |
 |-------|-----------|--------|---------|-------------|
-| **Gemma 4** | 31B (Dense) | Full | 256K | `google/gemma-4-31b-it` |
-| **GLM-5.1** | Undisclosed | Undisclosed | 198K | API-only (current) |
 | **Qwen3-Coder** | 235B (MoE) | 22B | 128K | `Qwen/Qwen3-Coder-32B-Instruct` |
 | **DeepSeek V3** | 685B (MoE) | 37B | 128K | `deepseek-ai/DeepSeek-V3` |
 | **GLM-4.7** | ~32B (Dense) | Full | 128K | `THUDM/glm-4-9b-chat` |

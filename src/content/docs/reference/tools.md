@@ -234,55 +234,6 @@ client = OpenAI(base_url="http://localhost:8000/v1", api_key="token")
 
 ---
 
-### Graphify
-
-코드베이스와 문서를 지식 그래프로 변환하는 AI 코딩 어시스턴트 스킬. tree-sitter AST 추출(23개 언어, LLM 호출 불필요)로 코드 구조를 분석하고, NetworkX + Leiden 클러스터링으로 커뮤니티 탐지 및 인터랙티브 시각화를 생성한다.
-
-```bash
-# 설치
-pip install graphify-ai
-
-# 코드베이스 그래프 구축
-graphify build ./src --output graph.json
-
-# 인터랙티브 시각화 생성
-graphify visualize graph.json --output graph.html
-```
-
-**주요 기능**:
-- tree-sitter 기반 로컬 AST 분석 (코드가 외부로 전송되지 않음)
-- 혼합 코퍼스에서 원본 대비 **71.5배** 토큰 절감
-- 신뢰도 태깅: EXTRACTED / INFERRED / AMBIGUOUS
-- SHA256 캐시 기반 증분 업데이트
-- Claude Code, Gemini CLI, Codex, OpenCode 등 연동
-
-> 컨텍스트 관리에서의 활용은 [5주차 강의](/weeks/week-05) 참조.
-
----
-
-### Ollama
-
-로컬 및 클라우드 LLM 배포 도구. 단일 명령으로 모델 실행, NVIDIA 클라우드 GPU 원격 추론 지원.
-
-```bash
-# 설치 (macOS)
-brew install ollama
-
-# 설치 (Linux)
-curl -fsSL https://ollama.com/install.sh | sh
-
-# 로컬 모델 실행
-ollama run gemma4:31b
-
-# 클라우드 모델 (GPU 불필요)
-ollama launch claude --model gemma4:31b-cloud
-
-# AI 코딩 CLI 연동
-ollama launch claude --model glm-5.1:cloud
-```
-
----
-
 ### Model Context Protocol (MCP)
 
 에이전트와 외부 도구를 연결하는 표준 프로토콜.
@@ -331,8 +282,6 @@ pip install opentelemetry-sdk opentelemetry-exporter-prometheus
 
 | 모델 | 파라미터 | 활성 | 컨텍스트 | HuggingFace |
 |------|---------|------|---------|-------------|
-| **Gemma 4** | 31B (Dense) | 전체 | 256K | `google/gemma-4-31b-it` |
-| **GLM-5.1** | 미공개 | 미공개 | 198K | API 전용 (현재) |
 | **Qwen3-Coder** | 235B (MoE) | 22B | 128K | `Qwen/Qwen3-Coder-32B-Instruct` |
 | **DeepSeek V3** | 685B (MoE) | 37B | 128K | `deepseek-ai/DeepSeek-V3` |
 | **GLM-4.7** | ~32B (Dense) | 전체 | 128K | `THUDM/glm-4-9b-chat` |

@@ -1,20 +1,19 @@
 ---
 title: "Week 10: Open-Source Coding LLMs and Local Deployment"
-description: Beyond commercial APIs — deploying open-source LLMs like Gemma 4, GLM-5.1, Qwen3-Coder, and DeepSeek V3 directly, with economic analysis
+description: Beyond commercial APIs — deploying open-source LLMs like Qwen3-Coder, DeepSeek V3, and GLM-4.7 directly, with economic analysis
 week: 10
 phase: 4
 phase_title: Open-Source Models & MLOps
 date: "2026-05-05"
 theory_topics:
-  - The 2026 open-source coding LLM landscape (Gemma 4, GLM-5.1, Qwen3-Coder, DeepSeek V3, GLM-4.7)
+  - The 2026 open-source coding LLM landscape (Qwen3-Coder, DeepSeek V3, GLM-4.7, MiniMax M2.1)
   - Open-source vs commercial API comparison
   - Agentic coding tool ecosystem
 lab_topics:
   - Deploying open-source models with vLLM
-  - Deploying cloud/local models with Ollama
   - Connecting local models in AI coding CLIs
   - Inference server performance benchmarking
-assignment: "Lab 10: Open-Source Model Deployment (vLLM / Ollama)"
+assignment: "Lab 10: vLLM Deployment Practice"
 assignment_due: "2026-05-12"
 difficulty: advanced
 estimated_time: "8 hours"
@@ -39,8 +38,6 @@ Through 2025–2026, open-source coding models reached a level that matches or, 
 
 | Model | Total Params | Active Params | Context | VRAM Requirement (FP16) | License |
 |-------|-------------|--------------|---------|------------------------|---------|
-| **Gemma 4** | 31B (Dense) | Full | 256K | ~20GB (Q4) | Apache 2.0 |
-| **GLM-5.1** | Undisclosed | Undisclosed | 198K | Cloud-only | MIT |
 | **Qwen3-Coder** | 235B (MoE) | 22B | 128K | ~48GB (Q4) | Apache 2.0 |
 | **DeepSeek V3** | 685B (MoE) | 37B | 128K | 350GB+ (Q4, multi-GPU) | DeepSeek |
 | **GLM-4.7** | ~32B | Full | 128K | ~24GB (Q4) | Apache 2.0 |
@@ -51,33 +48,13 @@ Through 2025–2026, open-source coding models reached a level that matches or, 
 
 The latest MoE model specifically fine-tuned for coding and agentic tasks. It delivers performance approaching Claude Sonnet 4 on SWE-bench Verified and provides the strongest coding performance among 32B-class models. Smaller 14B/8B variants deliver practical performance on a single GPU.
 
-#### Gemma 4 (Google)
-
-A 31B dense model built on the same research behind Gemini 3, with a 256K token context window that allows processing entire codebases in a single prompt. It achieves 80% on LiveCodeBench v6, making it the top-performing open-source coding model, along with 89.2% on AIME 2026, 2150 Codeforces ELO, and 85.2% on MMLU Pro, demonstrating strong reasoning capabilities.
-
-Gemma 4 supports native function calling at the model level, simplifying integration with agentic tool-calling pipelines. Lighter variants include a 26B MoE model and E2B/E4B edge models (128K context). It can be deployed via Ollama on the cloud (NVIDIA Blackwell GPUs) or locally. Licensed under Apache 2.0 with no restrictions on commercial use or fine-tuning.
-
-<Aside type="tip" title="Native Function Calling and Agentic Workflows">
-Gemma 4 natively supports function calling at the model level. It can directly generate the structured output covered in [Week 5](/en/weeks/week-05/) without additional parsing, significantly reducing the complexity of agentic tool-calling pipelines.
-</Aside>
-
-#### GLM-5.1 (Z.AI)
-
-The successor to GLM-4.7, specifically designed for long-horizon agentic tasks. MIT licensed with 198K context support. It scores 58.4 on SWE-Bench Pro, surpassing GPT-5.4 (57.7) and Opus 4.6 (57.3), and achieves 69.0 on Terminal Bench 2.0 and 68.7 on cybersecurity benchmarks, both top-tier results.
-
-Its key differentiator is long-horizon execution capability. It can perform 600+ iterations and 6,000+ tool calls in a single session, with performance improving as runtime increases. Currently available via Ollama Cloud and the Z.AI API.
-
-<Aside type="caution" title="Long-Horizon Agent Capabilities and Limitations">
-Z.AI demonstrated GLM-5.1's long-horizon capabilities across three scenarios: vector DB optimization (21.5k QPS over 600 iterations — 6x the best single-session result), GPU kernel optimization (1,000+ turns), and Linux desktop build (8 hours of continuous self-review). These are extreme extensions of the Ralph loop concept from [Week 4](/en/weeks/week-04/), illustrating the current frontier of agent autonomy.
-</Aside>
-
 #### DeepSeek V3 (DeepSeek)
 
 685B MoE, top-tier in math, reasoning, and coding. However, even quantized it requires 350GB+ of VRAM, making an 8×H100-class cluster essentially mandatory. The strongest open model if you have datacenter-scale infrastructure.
 
 #### GLM-4.7 (Zhipu AI)
 
-Dense model with ~32B parameters, runnable on a single 48GB GPU. Its Interleaved Thinking feature delivers high reasoning quality, and it is evaluated at Claude-level on coding benchmarks. Weights are publicly available on HuggingFace/ModelScope. Its successor GLM-5.1 shows significant performance gains on long-horizon agentic tasks (see the GLM-5.1 section above).
+Dense model with ~32B parameters, runnable on a single 48GB GPU. Its Interleaved Thinking feature delivers high reasoning quality, and it is evaluated at Claude-level on coding benchmarks. Weights are publicly available on HuggingFace/ModelScope.
 
 #### MiniMax M2.1
 
@@ -91,12 +68,10 @@ Qwen3-Coder activates only 22B out of 235B parameters for inference. It can run 
 
 | Environment | GPU VRAM | Recommended Models |
 |-------------|---------|-------------------|
-| Personal PC (RTX 4090) | 24GB | Gemma 4 E4B, Qwen3-Coder 14B/8B, GLM-4.7 (Q4) |
-| Workstation (A6000/H100 ×1) | 48–80GB | Gemma 4 31B, Qwen3-Coder 32B, GLM-4.7 (FP16) |
+| Personal PC (RTX 4090) | 24GB | Qwen3-Coder 14B/8B, GLM-4.7 (Q4) |
+| Workstation (A6000/H100 ×1) | 48–80GB | Qwen3-Coder 32B, GLM-4.7 (FP16) |
 | DGX H100 (MIG 2–4 slices) | 160–320GB | DeepSeek-Coder-V2, MiniMax M2.1 |
 | DGX H100 (full 8 GPUs) | 640GB | DeepSeek V3 (Q4) |
-
-> GLM-5.1 is currently available only via Ollama Cloud and the Z.AI API.
 
 ### Open-Source vs Commercial API Comparison
 
@@ -135,8 +110,6 @@ Qwen3-Coder activates only 22B out of 235B parameters for inference. It can run 
       <div class="diagram__col-title diagram__col-title--green">Open Weights Models</div>
       <div class="diagram__node diagram__node--green diagram__node--full">
         <ul>
-          <li>Gemma 4 (Google, 31B Dense, 256K)</li>
-          <li>GLM-5.1 (Z.AI, MIT, 198K)</li>
           <li>Qwen3-Coder (Alibaba, 235B MoE)</li>
           <li>DeepSeek V3 (685B MoE)</li>
           <li>GLM-4.7 (Zhipu AI, ~32B Dense)</li>
@@ -153,7 +126,6 @@ Qwen3-Coder activates only 22B out of 235B parameters for inference. It can run 
           <li>OpenCode (multi-backend TUI)</li>
           <li>Roo Code / Cline (VS Code extensions)</li>
           <li>vLLM / SGLang (inference servers)</li>
-          <li>Ollama (local/cloud deployment)</li>
         </ul>
       </div>
     </div>
@@ -162,7 +134,7 @@ Qwen3-Coder activates only 22B out of 235B parameters for inference. It can run 
 
 <Aside type="note" title="Can Local LLMs Replace Claude Code?">
 Small teams are increasingly using local models to cut API costs of $2K+/month.
-Models like Gemma 4, Qwen3-Coder, and GLM-4.7 show results similar to commercial models for everyday coding tasks (code completion, bug fixing, PR summarization).
+Models like Qwen3-Coder and GLM-4.7 show results similar to commercial models for everyday coding tasks (code completion, bug fixing, PR summarization).
 However, for complex architectural design or large-scale refactoring, Opus/Sonnet-class models still hold the advantage.
 </Aside>
 
@@ -198,15 +170,6 @@ However, for complex architectural design or large-scale refactoring, Opus/Sonne
          --model deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct \
          --tensor-parallel-size 1 \
          --max-model-len 32768 \
-         --port 8000
-       ```
-     </TabItem>
-     <TabItem label="Gemma 4">
-       ```bash
-       python -m vllm.entrypoints.openai.api_server \
-         --model google/gemma-4-31b-it \
-         --tensor-parallel-size 1 \
-         --max-model-len 65536 \
          --port 8000
        ```
      </TabItem>
@@ -261,98 +224,18 @@ However, for complex architectural design or large-scale refactoring, Opus/Sonne
    ```
 </Steps>
 
-### Deploying with Ollama (Cloud/Local)
-
-While vLLM is suited for high-throughput production environments, Ollama offers a simpler setup for development and prototyping. Through its partnership with NVIDIA, Ollama can also run models on cloud GPUs, enabling access to large models without local hardware.
-
-<Steps>
-1. **Install Ollama**
-
-   ```bash
-   # macOS
-   brew install ollama
-
-   # Linux
-   curl -fsSL https://ollama.com/install.sh | sh
-
-   # Verify installation
-   ollama --version
-   ```
-
-2. **Run Cloud Models (No GPU Required)**
-
-   Ollama Cloud performs remote inference on NVIDIA Blackwell GPUs. You get full model performance without local GPU hardware.
-
-   <Tabs>
-     <TabItem label="Gemma 4">
-       ```bash
-       # Gemma 4 31B Cloud — 256K context auto-configured
-       ollama pull gemma4:31b-cloud
-       ollama launch claude --model gemma4:31b-cloud
-       ```
-     </TabItem>
-     <TabItem label="GLM-5.1">
-       ```bash
-       # GLM-5.1 Cloud — 198K context
-       ollama run glm-5.1:cloud
-       ollama launch claude --model glm-5.1:cloud
-       ```
-     </TabItem>
-   </Tabs>
-
-3. **Run Local Models**
-
-   Choose a model size that matches your hardware.
-
-   ```bash
-   # Edge model (10GB+ VRAM) — runs on laptops
-   ollama pull gemma4:e4b
-   ollama launch claude --model gemma4:e4b
-
-   # 26B MoE (18GB+ VRAM)
-   ollama pull gemma4:26b
-   ollama launch claude --model gemma4:26b
-
-   # 31B Dense (20GB+ VRAM) — maximum quality
-   ollama pull gemma4:31b
-   ollama launch claude --model gemma4:31b
-   ```
-
-4. **Connect to AI Coding CLIs**
-
-   Ollama provides an OpenAI-compatible API at `localhost:11434`.
-
-   ```bash
-   # Use Ollama backend in OpenCode
-   export OPENAI_API_BASE="http://127.0.0.1:11434/v1"
-   export OPENAI_API_KEY="ollama"
-   opencode
-   ```
-
-5. **vLLM vs Ollama Comparison**
-
-   | Aspect | vLLM | Ollama |
-   |--------|------|--------|
-   | Setup complexity | Requires CUDA/Python environment | Single command |
-   | Batch processing | High throughput (PagedAttention) | Single-request optimized |
-   | Cloud deployment | Manual server configuration | Ollama Cloud (NVIDIA partnership) |
-   | Model management | Manual download from HuggingFace | `ollama pull` auto-management |
-   | Best for | Production, high concurrency | Development, prototyping, personal use |
-</Steps>
-
 ## Assignment
 
 <div class="assignment-box">
 
-### Lab 10: Open-Source Model Deployment
+### Lab 10: vLLM Deployment Practice
 
 **Submission deadline**: 2026-05-12 23:59
 
 **Requirements**:
-1. Screenshot confirming successful deployment of at least one open-source model with vLLM **or** Ollama
-2. Coding performance comparison between an open-source model (Gemma 4, Qwen3-Coder, or your chosen model) and Claude (5 identical tasks)
+1. Screenshot confirming successful deployment of at least one open-source model with vLLM on the DGX server
+2. Coding performance comparison between an open-source model (Qwen3-Coder or your chosen model) and Claude (5 identical tasks)
 3. Throughput (tokens/sec) benchmark results
 4. Cost analysis: API cost vs DGX operating cost calculation
-5. (Optional) Compare vLLM and Ollama deployment experience — setup difficulty, performance, flexibility
 
 </div>
