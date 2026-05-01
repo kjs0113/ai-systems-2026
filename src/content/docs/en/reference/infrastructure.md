@@ -1,6 +1,6 @@
 ---
 title: Infrastructure Guide
-description: DGX H100, MIG, and Kubernetes operations guide — Jeju Halla University AI Lab environment
+description: DGX H100, MIG, and Kubernetes operations guide — Cheju Halla University AI Lab environment
 ---
 
 ## AI Lab Infrastructure

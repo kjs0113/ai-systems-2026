@@ -37,7 +37,7 @@ Key terms used in this course, arranged alphabetically.
 : DeepSeek's 685B MoE model with 37B active parameters. Top-tier performance on math, reasoning, and coding. Requires an 8×H100-class cluster.
 
 **DGX H100**
-: NVIDIA's enterprise-grade AI server. The model installed in the Jeju Halla University AI Lab. Equipped with 8 H100 GPUs.
+: NVIDIA's enterprise-grade AI server. The model installed in the Cheju Halla University AI Lab. Equipped with 8 H100 GPUs.
 
 **Elicitation**
 : In MCP, a reverse hook by which a server requests confirmation or input directly from the user through the client. It implements Human-in-the-Loop at the protocol level. Used when a server needs user consent before a sensitive operation or needs to collect additional information.

@@ -21,7 +21,7 @@ lastUpdated: 2026-03-03
 
 The AI industry of 2025–2026 has decisively shifted from conversational models to **autonomous agentic systems**. This course is organized around two central themes: **harness engineering** — the discipline of controlling non-deterministic AI agents with deterministic systems — and the **Human-on-the-Loop (HOTL)** paradigm, in which humans take on strategic oversight rather than step-by-step approval.
 
-Students will directly operate the NVIDIA DGX H100 server in the Jeju Halla University AI Lab (partitioned via MIG technology), gaining hands-on experience deploying and running open-source models such as **DeepSeek-Coder-V2** without relying on commercial APIs. The ultimate goal is to design an autonomous software development pipeline (multi-agent SDLC) and implement it in the capstone project **Ralphthon**.
+Students will directly operate the NVIDIA DGX H100 server in the Cheju Halla University AI Lab (partitioned via MIG technology), gaining hands-on experience deploying and running open-source models such as **DeepSeek-Coder-V2** without relying on commercial APIs. The ultimate goal is to design an autonomous software development pipeline (multi-agent SDLC) and implement it in the capstone project **Ralphthon**.
 
 ## Learning Objectives
 
