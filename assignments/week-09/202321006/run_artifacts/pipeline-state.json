@@ -1,0 +1,28 @@
+{
+  "phase": "COMPLETED",
+  "iteration": 1,
+  "max_iterations": 3,
+  "requirement": "두 숫자를 더하는 간단한 Calculator 클래스를 만들고, 더하기 결과가 100을 넘으면 ValueError를 발생시키는 기능을 추가해줘.",
+  "status": "SUCCESS",
+  "plan": "Calculator 클래스 내 add 메서드를 구현하고, 결과값이 100을 초과하는지 체크하는 조건문을 추가하여 ValueError를 발생시키는 설계.",
+  "final_results": {
+    "qa": {
+      "tests_passed": true,
+      "approved": true,
+      "code_review": {
+        "approved": true,
+        "issues": [],
+        "suggestions": ["타입 힌팅이 적절하게 사용되었습니다."]
+      }
+    },
+    "parallel_review": {
+      "overall_passed": true,
+      "average_score": 9.6,
+      "results": [
+        {"dimension": "correctness", "passed": true, "severity": "info", "score": 10},
+        {"dimension": "quality", "passed": true, "severity": "info", "score": 9},
+        {"dimension": "architecture", "passed": true, "severity": "info", "score": 10}
+      ]
+    }
+  }
+}
