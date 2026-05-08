@@ -1,0 +1,19 @@
+(vllm-env) user@dgx-server:~$ python -m vllm.benchmarks.benchmark_throughput \
+  --model Qwen/Qwen3-Coder-32B-Instruct \
+  --num-prompts 100 \
+  --input-len 512 \
+  --output-len 128
+
+================================================================================
+Throughput Benchmark Results
+================================================================================
+Model:                  Qwen/Qwen3-Coder-32B-Instruct
+Number of prompts:      100
+Input length:           512
+Output length:          128
+--------------------------------------------------------------------------------
+Throughput (requests/s): 4.12
+Throughput (tokens/s):   2636.8
+Avg latency (ms):        242.71
+Max latency (ms):        850.12
+================================================================================

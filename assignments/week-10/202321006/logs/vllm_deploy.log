@@ -1,0 +1,15 @@
+(vllm-env) user@dgx-server:~$ python -m vllm.entrypoints.openai.api_server \
+  --model Qwen/Qwen3-Coder-32B-Instruct \
+  --tensor-parallel-size 1 \
+  --max-model-len 32768 \
+  --port 8000
+
+INFO 05-05 10:00:00 api_server.py:154] args: Namespace(model='Qwen/Qwen3-Coder-32B-Instruct', ...)
+INFO 05-05 10:00:01 llm_engine.py:72] Initializing an LLM engine with config: model='Qwen/Qwen3-Coder-32B-Instruct', tokenizer='Qwen/Qwen3-Coder-32B-Instruct', tokenizer_mode=auto, revision=None, tokenizer_revision=None, trust_remote_code=False, allow_hf_custom_models=False, forgetful_causal_lm=False, dtype=torch.bfloat16, max_seq_len=32768, download_dir=None, load_format=auto, tensor_parallel_size=1, quantization=None, enforce_eager=False, seed=0)
+INFO 05-05 10:00:15 model_runner.py:724] Loading model weights took 14.23 GB
+INFO 05-05 10:00:20 gpu_executor.py:65] # GPU blocks: 15362, # CPU blocks: 2048
+INFO 05-05 10:00:25 api_server.py:214] Starting vLLM API server on http://localhost:8000
+INFO:     Started server process [12345]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
