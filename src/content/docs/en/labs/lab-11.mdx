@@ -1,7 +1,7 @@
 ---
 title: "Lab 11: Telemetry & Monitoring"
 description: OpenTelemetry integration, Prometheus+Grafana setup, metrics collection
-week: 13
+week: 12
 difficulty: advanced
 estimated_time: "6 hours"
 assignment_due: "2026-05-26"
@@ -152,10 +152,12 @@ def setup_telemetry(
 ```python
 # instrumented_agent.py
 import anthropic
+import os
 import time
 from opentelemetry import trace
 from opentelemetry.trace import Status, StatusCode
 from opentelemetry import metrics
+from event_recorder import EventRecorder
 from telemetry import setup_telemetry
 
 tracer, meter = setup_telemetry(service_name="lab11-agent")
@@ -184,7 +186,12 @@ iteration_counter = meter.create_counter(
 class InstrumentedAgent:
     def __init__(self):
         self.client = anthropic.Anthropic()
+        self.model = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-6")
         self.messages: list[dict] = []
+        self.recorder = EventRecorder("sessions/example")
+        self.session_event_id = self.recorder.append(
+            "session.start", "agent", {"model": self.model}
+        )
 
     def call(self, prompt: str, iteration: int = 1) -> str:
         with tracer.start_as_current_span("agent.call") as span:
@@ -195,8 +202,14 @@ class InstrumentedAgent:
 
             try:
                 self.messages.append({"role": "user", "content": prompt})
+                request_event_id = self.recorder.append(
+                    "llm.request",
+                    "agent",
+                    {"iteration": iteration, "prompt_length": len(prompt)},
+                    parent_id=self.session_event_id,
+                )
                 response = self.client.messages.create(
-                    model="claude-sonnet-4-6",
+                    model=self.model,
                     max_tokens=2048,
                     messages=self.messages
                 )
@@ -206,7 +219,7 @@ class InstrumentedAgent:
                 self.messages.append({"role": "assistant", "content": text})
 
                 # Record metrics
-                labels = {"model": "claude-sonnet-4-6", "iteration": str(iteration)}
+                labels = {"model": self.model, "iteration": str(iteration)}
                 token_counter.add(
                     response.usage.input_tokens + response.usage.output_tokens,
                     labels
@@ -219,6 +232,17 @@ class InstrumentedAgent:
                 span.set_attribute("output_tokens", response.usage.output_tokens)
                 span.set_attribute("duration_ms", elapsed_ms)
                 span.set_status(Status(StatusCode.OK))
+                self.recorder.append(
+                    "llm.response",
+                    "agent",
+                    {
+                        "iteration": iteration,
+                        "input_tokens": response.usage.input_tokens,
+                        "output_tokens": response.usage.output_tokens,
+                        "duration_ms": elapsed_ms,
+                    },
+                    parent_id=request_event_id,
+                )
 
                 return text
 
@@ -226,6 +250,12 @@ class InstrumentedAgent:
                 span.set_status(Status(StatusCode.ERROR, str(e)))
                 span.record_exception(e)
                 error_counter.add(1, {"error_type": type(e).__name__})
+                self.recorder.append(
+                    "hook.fired",
+                    "agent",
+                    {"error_type": type(e).__name__, "message": str(e)},
+                    parent_id=self.session_event_id,
+                )
                 raise
 ```
 

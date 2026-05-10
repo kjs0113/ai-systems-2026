@@ -21,6 +21,10 @@ import { Steps, Aside, Badge } from '@astrojs/starlight/components';
 
 In agentic systems, automated tests (pytest) verify logical correctness, but quality indicators like **readability, maintainability, and design patterns** are difficult to automate. LLM-as-Judge fills this gap by using Claude as an evaluator.
 
+<Aside type="caution" title="A Judge Is Not a Test">
+An LLM Judge is a probabilistic evaluator. Use it only as a quality-assistance layer after deterministic gates (`pytest`, schema validation, policy checks) have passed.
+</Aside>
+
 ```
 Code + Requirements
       ↓
@@ -39,6 +43,7 @@ QA Pipeline Integration
 # llm_judge.py
 import json
 import re
+import os
 import anthropic
 from dataclasses import dataclass
 
@@ -51,7 +56,20 @@ Evaluate the provided code against the following 5 criteria, scoring each from 1
 4. Robustness: Does it handle edge cases and exceptions?
 5. Maintainability: Is it easy to modify and extend in the future?
 
-You must respond in JSON format only."""
+Respond only with a JSON object using these keys:
+{
+  "scores": {
+    "correctness": 1-10,
+    "readability": 1-10,
+    "efficiency": 1-10,
+    "robustness": 1-10,
+    "maintainability": 1-10
+  },
+  "overall": 1-10,
+  "strengths": ["..."],
+  "improvements": ["..."],
+  "reasoning": "..."
+}"""
 
 
 @dataclass
@@ -85,7 +103,7 @@ class JudgeScore:
 class LLMJudge:
     def __init__(self, model: str = "claude-sonnet-4-6"):
         self.client = anthropic.Anthropic()
-        self.model = model
+        self.model = os.environ.get("ANTHROPIC_MODEL", model)
         self.evaluation_history: list[dict] = []
 
     def evaluate(self, code: str, requirement: str, sample_id: str = "") -> JudgeScore:
@@ -102,16 +120,23 @@ class LLMJudge:
         if not match:
             raise ValueError(f"JSON parsing failed: {text[:200]}")
 
-        data = json.loads(match.group())
+        try:
+            data = json.loads(text)
+        except json.JSONDecodeError:
+            data = json.loads(match.group())
         scores = data.get("scores", {})
 
+        def score(name: str, default: float = 5.0) -> float:
+            value = float(scores.get(name, default))
+            return max(1.0, min(10.0, value))
+
         result = JudgeScore(
-            correctness=scores.get("correctness", 5),
-            readability=scores.get("readability", 5),
-            efficiency=scores.get("efficiency", 5),
-            robustness=scores.get("robustness", 5),
-            maintainability=scores.get("maintainability", 5),
-            overall=data.get("overall", 5.0),
+            correctness=score("correctness"),
+            readability=score("readability"),
+            efficiency=score("efficiency"),
+            robustness=score("robustness"),
+            maintainability=score("maintainability"),
+            overall=max(1.0, min(10.0, float(data.get("overall", 5.0)))),
             strengths=data.get("strengths", []),
             improvements=data.get("improvements", []),
             reasoning=data.get("reasoning", ""),
@@ -224,6 +249,7 @@ Submit a PR to `assignments/lab-12/[student-id]/`:
 - [ ] `samples.py` — 10 code samples (balanced good/medium/poor)
 - [ ] `judge_results.json` — Actual LLM evaluation results
 - [ ] `correlation_analysis.py` — Correlation analysis script
+- [ ] `deterministic_results.md` — Comparison between pytest/schema/policy gate results and Judge results
 - [ ] `README.md` — Correlation coefficient results, bias analysis of LLM Judge, improvement directions
 
 <Aside type="note" title="Grading Points">

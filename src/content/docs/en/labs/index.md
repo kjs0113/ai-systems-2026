@@ -30,18 +30,18 @@ git push origin main
 
 | Lab | Week | Topic | Difficulty | Due Date |
 |-----|------|-------|------------|----------|
-| [Lab 01](/en/labs/lab-01) | Week 1 | Development Environment Setup | Beginner | 3/11 |
+| [Lab 01](/en/labs/lab-01) | Week 1 | Development Environment Setup | Beginner | 3/10 |
 | [Lab 02](/en/labs/lab-02) | Week 2 | First AI Coding Agent | Elementary | 3/17 |
 | [Lab 03](/en/labs/lab-03) | Week 3 | MCP Server Implementation | Elementary | 3/24 |
-| [Lab 04](/en/labs/lab-04) | Week 4 | Ralph Loop Implementation | Intermediate | 4/01 |
-| [Lab 05](/en/labs/lab-05) | Week 5 | Context Management | Intermediate | 4/08 |
-| [Lab 06](/en/labs/lab-06) | Week 6 | Instruction Tuning | Intermediate | 4/15 |
-| [Lab 07](/en/labs/lab-07) | Week 7 | Multi-Agent Pipeline | Advanced | 4/22 |
-| [Lab 08](/en/labs/lab-08) | Week 8 | Planning Agent | Advanced | 4/29 |
-| [Lab 09](/en/labs/lab-09) | Week 9 | QA Agent | Advanced | 5/06 |
-| [Lab 10](/en/labs/lab-10) | Week 10 | vLLM Deployment | Advanced | 5/13 |
-| [Lab 11](/en/labs/lab-11) | Week 12 | Telemetry | Advanced | 5/27 |
-| [Lab 12](/en/labs/lab-12) | Week 12 | LLM-as-Judge | Advanced | 5/27 |
+| [Lab 04](/en/labs/lab-04) | Week 4 | Ralph Loop Implementation | Intermediate | 3/31 |
+| [Lab 05](/en/labs/lab-05) | Week 5 | Context Management | Intermediate | 4/07 |
+| [Lab 06](/en/labs/lab-06) | Week 6 | Instruction Tuning | Intermediate | 4/14 |
+| [Lab 07](/en/labs/lab-07) | Week 7 | Multi-Agent Pipeline | Advanced | 4/21 |
+| [Lab 08](/en/labs/lab-08) | Week 8 | Planning Agent | Advanced | 4/28 |
+| [Lab 09](/en/labs/lab-09) | Week 9 | QA Agent | Advanced | 5/05 |
+| [Lab 10](/en/labs/lab-10) | Week 10 | vLLM Deployment | Advanced | 5/12 |
+| [Lab 11](/en/labs/lab-11) | Week 12 | Telemetry | Advanced | 5/26 |
+| [Lab 12](/en/labs/lab-12) | Week 12 | LLM-as-Judge | Advanced | 5/26 |
 
 ## Grading Criteria
 

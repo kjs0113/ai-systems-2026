@@ -6,7 +6,7 @@ import starlight from '@astrojs/starlight';
 const SEMESTER_START = new Date('2026-03-03'); // 1주차 시작일
 const now = new Date();
 const weekNum = Math.max(1, Math.min(16,
-  Math.floor((now - SEMESTER_START) / (7 * 24 * 60 * 60 * 1000)) + 1
+  Math.floor((now.getTime() - SEMESTER_START.getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1
 ));
 const activePhase = weekNum <= 3 ? 1 : weekNum <= 6 ? 2 : weekNum <= 9 ? 3 : weekNum <= 12 ? 4 : 5;
 

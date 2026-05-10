@@ -45,7 +45,7 @@ MCP는 AI 코딩 에이전트가 외부 도구·데이터 소스와 표준화된
 <Aside type="caution" title="MCP 지원 현황">
 - **Claude Code**: 완전 지원 (`~/.claude/settings.json`)
 - **Gemini CLI**: 지원 (`~/.gemini/settings.json`)
-- **Codex CLI**: 미지원 — MCP 실습은 Claude Code 또는 Gemini CLI로 진행할 것
+- **Codex CLI**: 실험적 지원 (`~/.codex/config.toml`) — 이 실습의 필수 검증은 Claude Code 또는 Gemini CLI 기준으로 진행
 - **OpenCode**: 제한적 지원
 </Aside>
 
@@ -62,6 +62,9 @@ AI 코딩 CLI의 설정 파일에 내장 서버를 추가한다.
   <TabItem label="Gemini CLI">
     설정 파일: `~/.gemini/settings.json`
   </TabItem>
+  <TabItem label="Codex CLI">
+    설정 파일: `~/.codex/config.toml`. Codex MCP 지원은 버전별 차이가 있으므로 `codex mcp list`로 등록 여부를 먼저 확인한다.
+  </TabItem>
 </Tabs>
 
 ```json
@@ -76,10 +79,9 @@ AI 코딩 CLI의 설정 파일에 내장 서버를 추가한다.
       ]
     },
     "git": {
-      "command": "npx",
+      "command": "uvx",
       "args": [
-        "-y",
-        "@modelcontextprotocol/server-git",
+        "mcp-server-git",
         "--repository",
         "/home/[학번]/lab-03"
       ]
@@ -103,10 +105,12 @@ AI 코딩 CLI의 설정 파일에 내장 서버를 추가한다.
    source .venv/bin/activate
 
    # uv 사용 시 (권장)
-   uv add "mcp[cli]" fastmcp
+   uv pip install "mcp[cli]" fastmcp
 
    # pip 사용 시
    pip install fastmcp
+
+   fastmcp version
    ```
 
    ```
@@ -121,7 +125,7 @@ AI 코딩 CLI의 설정 파일에 내장 서버를 추가한다.
    ```bash
    claude mcp list
    # filesystem  npx -y @modelcontextprotocol/server-filesystem ...
-   # git         npx -y @modelcontextprotocol/server-git ...
+   # git         uvx mcp-server-git --repository ...
    ```
 
 3. **파일시스템 서버 테스트**
@@ -159,7 +163,7 @@ ALLOWED_BASE = os.path.realpath(os.path.dirname(__file__))
 def _validate_path(path: str) -> str:
     """경로 순회 공격을 방어한다. 허용된 디렉터리 외부 접근을 차단."""
     real_path = os.path.realpath(path)
-    if not real_path.startswith(ALLOWED_BASE):
+    if os.path.commonpath([ALLOWED_BASE, real_path]) != ALLOWED_BASE:
         raise ValueError(
             f"접근 거부: {path} — 허용 범위({ALLOWED_BASE}) 외부"
         )
@@ -286,7 +290,7 @@ if __name__ == "__main__":
 
 ```bash
 # Inspector 실행
-npx @modelcontextprotocol/inspector python custom_server.py
+npx -y @modelcontextprotocol/inspector python custom_server.py
 
 # 브라우저에서 http://localhost:6274 접속 후:
 # 1. tools/list → run_pytest, count_lines 확인

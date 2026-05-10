@@ -108,6 +108,7 @@ class TokenCounter:
 ```python
 # context_manager.py
 import anthropic
+import os
 from token_counter import TokenCounter
 
 class ContextManager:
@@ -118,6 +119,7 @@ class ContextManager:
 
     def __init__(self, client: anthropic.Anthropic):
         self.client = client
+        self.model = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-6")
         self.messages: list[dict] = []
         self.counter = TokenCounter()
         self.compressed_count = 0
@@ -130,7 +132,7 @@ class ContextManager:
             self._compress_old_messages()
 
         kwargs = {
-            "model": "claude-sonnet-4-6",
+            "model": self.model,
             "max_tokens": 4096,
             "messages": self.messages,
         }
@@ -158,7 +160,7 @@ class ContextManager:
             )
         )
         response = self.client.messages.create(
-            model="claude-sonnet-4-6",
+            model=self.model,
             max_tokens=512,
             messages=[{"role": "user", "content": summary_prompt}]
         )

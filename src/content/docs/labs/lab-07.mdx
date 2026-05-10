@@ -140,6 +140,7 @@ import { Steps, Aside, Tabs, TabItem, Badge } from '@astrojs/starlight/component
 # base_agent.py
 import anthropic
 import json
+import os
 from abc import ABC, abstractmethod
 from pathlib import Path
 from jsonschema import validate, ValidationError
@@ -168,8 +169,9 @@ class BaseAgent(ABC):
 
     def _call(self, system: str, user: str) -> str:
         self.messages.append({"role": "user", "content": user})
+        model = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-6")
         response = self.client.messages.create(
-            model="claude-sonnet-4-6",
+            model=model,
             max_tokens=4096,
             system=system,
             messages=self.messages,

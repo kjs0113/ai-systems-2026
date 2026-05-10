@@ -21,7 +21,8 @@ function getLocalizedPath(code: string): string {
   return `/${code}${pathname}`;
 }
 
-const localeEntries = Object.entries(config.locales);
+type LocaleConfig = NonNullable<typeof config.locales>[string];
+const localeEntries = Object.entries(config.locales ?? {}) as [string, LocaleConfig][];
 ---
 
 {
@@ -30,7 +31,7 @@ const localeEntries = Object.entries(config.locales);
       {localeEntries.map(([code, locale], i) => {
         const isCurrent = code === currentLocale;
         const href = getLocalizedPath(code);
-        const shortLabel = locale!.label === '한국어' ? 'KO' : code.toUpperCase();
+        const shortLabel = locale.label === '한국어' ? 'KO' : code.toUpperCase();
         return (
           <>
             {i > 0 && <span class="lang-divider" aria-hidden="true" />}
