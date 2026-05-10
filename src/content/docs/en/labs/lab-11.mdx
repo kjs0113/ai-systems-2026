@@ -229,7 +229,41 @@ class InstrumentedAgent:
                 raise
 ```
 
-### 4. Grafana Dashboard Provisioning
+### 4. `event_recorder.py` — Replayable Event Log
+
+OpenTelemetry is for live monitoring; Agent OS Runtime's event log is for audit and replay. `instrumented_agent.py` must also write lifecycle events to `.events.jsonl`.
+
+```python
+# event_recorder.py
+import json
+import time
+from pathlib import Path
+from uuid import uuid4
+
+class EventRecorder:
+    def __init__(self, session_dir: str):
+        self.session_dir = Path(session_dir)
+        self.session_dir.mkdir(parents=True, exist_ok=True)
+        self.path = self.session_dir / ".events.jsonl"
+
+    def append(self, event_type: str, actor: str, payload: dict, parent_id: str | None = None) -> str:
+        event = {
+            "id": str(uuid4()),
+            "ts": time.time(),
+            "type": event_type,
+            "actor": actor,
+            "payload": payload,
+            "schema_version": "v1",
+            "parent_id": parent_id,
+        }
+        with self.path.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(event, ensure_ascii=False) + "\n")
+        return event["id"]
+```
+
+Required event types: `session.start`, `llm.request`, `llm.response`, `hook.fired`, `tool.invoke`, `tool.result`, `session.close`. Use [Agent OS Checklist](/en/reference/agent-os-runtime/#checklist) as the replay standard.
+
+### 5. Grafana Dashboard Provisioning
 
 ```json
 // grafana/provisioning/dashboards/agent-dashboard.json
@@ -279,7 +313,7 @@ class InstrumentedAgent:
 }
 ```
 
-### 5. Load Generation Script
+### 6. Load Generation Script
 
 ```python
 # load_generator.py
@@ -327,6 +361,9 @@ Submit a PR to `assignments/lab-11/[student-id]/`:
 - [ ] `prometheus.yml` — Scraping configuration
 - [ ] `telemetry.py` — OTel initialization
 - [ ] `instrumented_agent.py` — Agent instrumented with 4 metrics
+- [ ] `event_recorder.py` — `.events.jsonl` recorder
+- [ ] `sessions/example/.events.jsonl` — execution trace
+- [ ] `replay_snapshot.json` — final state derived from event log
 - [ ] `load_generator.py` — Load generation script
 - [ ] `screenshots/grafana_dashboard.png` — Grafana dashboard screenshot
 - [ ] `screenshots/jaeger_trace.png` — Jaeger trace screenshot

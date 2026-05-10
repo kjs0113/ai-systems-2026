@@ -229,7 +229,41 @@ class InstrumentedAgent:
                 raise
 ```
 
-### 4. Grafana 대시보드 프로비저닝
+### 4. `event_recorder.py` — 재생 가능한 이벤트 로그
+
+OpenTelemetry는 live monitoring용이고, Agent OS Runtime의 event log는 audit/replay용이다. `instrumented_agent.py`는 주요 lifecycle마다 `.events.jsonl`에도 기록해야 한다.
+
+```python
+# event_recorder.py
+import json
+import time
+from pathlib import Path
+from uuid import uuid4
+
+class EventRecorder:
+    def __init__(self, session_dir: str):
+        self.session_dir = Path(session_dir)
+        self.session_dir.mkdir(parents=True, exist_ok=True)
+        self.path = self.session_dir / ".events.jsonl"
+
+    def append(self, event_type: str, actor: str, payload: dict, parent_id: str | None = None) -> str:
+        event = {
+            "id": str(uuid4()),
+            "ts": time.time(),
+            "type": event_type,
+            "actor": actor,
+            "payload": payload,
+            "schema_version": "v1",
+            "parent_id": parent_id,
+        }
+        with self.path.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(event, ensure_ascii=False) + "\n")
+        return event["id"]
+```
+
+필수 event type: `session.start`, `llm.request`, `llm.response`, `hook.fired`, `tool.invoke`, `tool.result`, `session.close`. 재생 기준은 [Agent OS Checklist](/reference/agent-os-runtime/#checklist)를 따른다.
+
+### 5. Grafana 대시보드 프로비저닝
 
 ```json
 // grafana/provisioning/dashboards/agent-dashboard.json
@@ -279,7 +313,7 @@ class InstrumentedAgent:
 }
 ```
 
-### 5. 부하 생성 스크립트
+### 6. 부하 생성 스크립트
 
 ```python
 # load_generator.py
@@ -327,6 +361,9 @@ if __name__ == "__main__":
 - [ ] `prometheus.yml` — 스크레이핑 설정
 - [ ] `telemetry.py` — OTel 초기화
 - [ ] `instrumented_agent.py` — 4개 메트릭 계측된 에이전트
+- [ ] `event_recorder.py` — `.events.jsonl` 기록기
+- [ ] `sessions/example/.events.jsonl` — 실행 trace
+- [ ] `replay_snapshot.json` — event log에서 재계산한 최종 상태
 - [ ] `load_generator.py` — 부하 생성 스크립트
 - [ ] `screenshots/grafana_dashboard.png` — Grafana 대시보드 캡처
 - [ ] `screenshots/jaeger_trace.png` — Jaeger 트레이스 캡처

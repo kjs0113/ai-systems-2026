@@ -228,7 +228,7 @@ A study comparing system prompts across 6 coding agents found that swapping prom
 
 **3. Microcompact + Summarize Tool Results** — Old tool results are auto-deleted, but a paired instruction ensures important information is first recorded as text. This is Anthropic's tool result clearing strategy implemented in code.
 
-**4. Effort Level (formerly Token Budget)** — The `--effort` flag sets one of four levels: `low` / `medium` / `high` / `max`. Lower levels are faster and cheaper; higher levels provide deeper reasoning for complex problems. `max` is Opus 4.6 only and places no constraint on thinking tokens. Also configurable via the `/effort` command, `CLAUDE_CODE_EFFORT_LEVEL` environment variable, or the `effortLevel` settings field. Cost capping is now separate via `--max-budget-usd`.
+**4. Effort Level (formerly Token Budget)** — The `--effort` flag sets one of four levels: `low` / `medium` / `high` / `max`. Lower levels are faster and cheaper; higher levels provide deeper reasoning for complex problems. `max` support depends on the current model and CLI version, so verify current documentation before relying on it. Also configurable via the `/effort` command, `CLAUDE_CODE_EFFORT_LEVEL` environment variable, or the `effortLevel` settings field. Cost capping is now separate via `--max-budget-usd`.
 
 #### Course Connections
 

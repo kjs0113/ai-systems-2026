@@ -18,6 +18,12 @@ description: AI 시스템 2026 강의 주요 용어 정의
 **Agentic System (에이전틱 시스템)**
 : 파일 수정, 코드 실행, API 호출 등 실제 행동을 자율적으로 수행하는 AI 시스템. 단순 텍스트 생성을 넘어 환경과 상호작용한다.
 
+**Agent Ops**
+: 에이전트 시스템의 운영 discipline. 모델 배포보다 tool boundary, permission, event log, replay, policy gate, human override, telemetry를 관리하는 데 초점을 둔다.
+
+**Automatic Prefix Caching**
+: 반복되는 system prompt, tool schema, instruction 파일 등 정적 prefix의 KV cache를 재사용하는 추론 서버 최적화. Ralph 루프처럼 같은 prefix를 반복 호출하는 workload에서 TTFT와 비용을 줄인다.
+
 **Bitter Lesson (비터 레슨)**
 : Rich Sutton(2019)이 제시한 원칙. 연산을 활용하는 일반적 방법이 도메인 지식을 활용하는 특수한 방법보다 궁극적으로 효과적이다. 사전학습 스케일링(GPT-3→GPT-4)은 "학습" 측면, test-time compute scaling(o1, DeepSeek R1)은 "탐색" 측면의 구현이다.
 
@@ -37,7 +43,7 @@ description: AI 시스템 2026 강의 주요 용어 정의
 : 장기 실행 에이전트에서 컨텍스트 창이 실패 시도와 오래된 코드로 채워져 추론 품질이 저하되는 현상.
 
 **Context Window (컨텍스트 창)**
-: LLM이 한 번에 처리할 수 있는 최대 토큰 수. Claude Sonnet 4.6 기준 약 200K 토큰.
+: LLM이 한 번에 처리할 수 있는 최대 토큰 수. 최신 frontier 모델은 수십만~100만 토큰급 창을 제공하지만, 실효 사용량은 tool schema와 안전 마진 때문에 더 작다.
 
 **CUD Operations**
 : Create, Update, Delete 작업. HOTL 거버넌스에서 High Risk로 분류되어 Hard Interrupt가 필요한 작업.
@@ -45,8 +51,11 @@ description: AI 시스템 2026 강의 주요 용어 정의
 **Degraded Mode (부분 장애 모드)**
 : MCP 서버 일부가 실패해도 나머지가 정상 운영되는 모드. 실패 서버는 startup/handshake/config/partial로 분류되며, 가용한 서버의 도구만 등록하여 계속 작동한다. 마이크로서비스의 circuit breaker 패턴과 동일한 원리.
 
-**DeepSeek V3**
-: DeepSeek의 685B MoE 모델. 37B 활성 파라미터로 수학/추론/코딩 최상위권 성능. 8×H100 급 클러스터 필요.
+**DeepSeek-V4**
+: DeepSeek의 최신 V4 오픈웨이트 계열. `DeepSeek-V4-Pro`는 1.6T total / 49B active MoE, `DeepSeek-V4-Flash`는 284B total / 13B active MoE로 공개되어 있으며 1M context, long-context reasoning, coding, agentic task를 강조한다.
+
+**Disaggregated Prefill**
+: LLM serving에서 prefill과 decode 단계를 별도 worker/GPU로 분리하는 아키텍처. 긴 입력과 짧은 응답 요청이 섞인 production workload에서 queue blocking을 줄이는 데 사용한다.
 
 **DGX H100**
 : NVIDIA의 엔터프라이즈급 AI 서버. 제주한라대학교 AI 실습실에 설치된 모델. H100 GPU 8개 탑재.
@@ -96,11 +105,11 @@ description: AI 시스템 2026 강의 주요 용어 정의
 **MIG (Multi-Instance GPU)**
 : NVIDIA GPU를 독립적인 인스턴스로 분할하는 기술. H100에서 최대 7개 인스턴스 생성 가능. 하드웨어 수준 격리 제공.
 
-**MiniMax M2.1**
-: MiniMax의 230B MoE 모델 (10B 활성). 코딩 에이전트와 도구 사용에 특화. 가중치 완전 공개.
+**MiniMax-M2.7**
+: MiniMax의 최신 229B급 agentic 모델 후보. 코딩, 검색, office work, 장기 agentic workflow를 강조하며 vendor benchmark claim은 강의 Lab에서 동일 하네스로 재검증한다.
 
 **MoE (Mixture of Experts)**
-: LLM 아키텍처 중 하나. 전체 파라미터 중 일부만 활성화하여 추론 효율성을 높임. Qwen3-Coder, DeepSeek V3, MiniMax M2.1 등에 적용.
+: LLM 아키텍처 중 하나. 전체 파라미터 중 일부만 활성화하여 추론 효율성을 높임. Qwen3-Coder-Next, DeepSeek-V4, MiniMax-M2.7 등에 적용.
 
 **OBO (On-Behalf-Of)**
 : MCP 서버가 서비스 계정 대신 위임된 사용자/에이전트 ID로 작업하는 인증 패턴. OAuth 2.1 토큰 교환을 통해 "누구를 대신하여" 작업하는지 명시하여, 에이전트 환경에서 발생하는 책임 단절(accountability breakdown) 문제를 해결한다.
@@ -118,16 +127,19 @@ description: AI 시스템 2026 강의 주요 용어 정의
 : Claude Code의 대화 루프 엔진. 사용자 메시지 수신 → 시스템 프롬프트 조립 → API 스트리밍 호출 → 도구 실행 → 결과 추가를 max_turns(기본 8)까지 반복한다. 매 턴마다 TurnResult(input, response, tools, permissions, tokens, termination reason)를 캡처한다.
 
 **Qwen3-Coder**
-: Alibaba의 235B MoE 코딩 특화 모델 (22B 활성, 128K 컨텍스트). SWE-bench에서 상용 모델에 근접하는 성능. Apache 2.0 라이선스.
+: Alibaba의 코딩 특화 MoE 모델 계열. 최신 수업 기준 대표 모델은 `Qwen3-Coder-Next`이며 80B total / 3B active, 256K context, Apache 2.0 라이선스를 제공한다.
 
-**GLM-4.7**
-: Zhipu AI의 ~32B Dense 코딩 모델. Interleaved Thinking 기능으로 추론 품질이 높음. 단일 GPU 구동 가능. HuggingFace/ModelScope 공개.
+**GLM-5.1**
+: Z.ai/Zhipu 계열의 최신 공개 GLM 모델. agentic engineering, coding, terminal task, tool use를 강조하며 최신 GLM 비교 기준으로 사용한다.
 
 **SGLang**
 : vLLM과 함께 대표적인 오픈소스 LLM 추론 프레임워크. RadixAttention 기반 KV 캐시 재사용으로 높은 처리량 제공.
 
 **PagedAttention**
 : vLLM의 핵심 기술. OS의 가상 메모리 페이징을 KV 캐시에 적용하여 메모리 낭비를 4% 이하로 줄임.
+
+**Speculative Decoding**
+: 작은 draft model, n-gram speculation, 또는 multi-token prediction으로 후보 토큰을 먼저 생성하고 큰 모델이 검증하는 추론 가속 기법. 주 목적은 출력 품질을 유지하면서 latency를 줄이는 것이다.
 
 **Agentmaxxing (에이전트맥싱)**
 : 다중 AI 코딩 도구(Claude Code, Codex CLI, Gemini CLI, Cursor 등)를 한 레포에서 동시에 병렬 실행하는 전략. 2026년 초부터 확산. 담당 영역(모듈/파일)을 명확히 분리하지 않으면 머지 충돌이 N² 규모로 폭발한다.
@@ -184,7 +196,7 @@ description: AI 시스템 2026 강의 주요 용어 정의
 : AI Gateway → MCP Gateway → API Gateway의 3중 방어 아키텍처. 1차 AI 게이트웨이가 프롬프트 인젝션/PII를 필터링하고, 2차 MCP 게이트웨이가 TBAC 인가를 수행하며, 3차 API 게이트웨이가 rate limiting을 적용한다. 각 게이트가 독립적 관심사를 담당하여 단일 장애점을 방지한다.
 
 **vLLM**
-: 오픈소스 고처리량 LLM 추론 라이브러리. PagedAttention 알고리즘으로 GPU 메모리 효율성을 극대화.
+: 오픈소스 고처리량 LLM 추론 라이브러리. PagedAttention, automatic prefix caching, speculative decoding, structured outputs, OpenAI-compatible serving, 관측성 예제를 제공한다.
 
 **Workspace Boundary (워크스페이스 경계)**
 : 파일 쓰기가 허용되는 디렉토리 경계. Claude Code의 Permission Enforcer가 symlink escape, `../` 탈출, canonical path 비교로 경계를 검증한다. WorkspaceWrite 모드에서 이 경계 밖 쓰기를 시도하면 사유와 함께 거부된다.

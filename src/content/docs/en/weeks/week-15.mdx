@@ -1,69 +1,196 @@
 ---
 title: "Week 15: System Integration and Final Testing"
-description: Completing the capstone project integration — automated testing, performance measurement, and presentation preparation
+description: Capstone integration — release gates, performance measurement, failure recovery, and presentation rehearsal
 week: 15
 phase: 5
 phase_title: Capstone Ralphthon
 date: "2026-06-09"
 theory_topics:
-  - System integration testing strategies
-  - Performance measurement and report writing
-  - How to structure a presentation
+  - System integration test strategy
+  - Performance measurement and reporting
+  - Presentation structure
 lab_topics:
   - End-to-end integration testing
+  - Release readiness review
   - Presentation rehearsal
 assignment: "Capstone: Final Presentation Materials"
 assignment_due: "2026-06-16"
 difficulty: advanced
-estimated_time: "15 hours"
+estimated_time: 15 hours
 ---
 
-import { Aside, Steps, Badge } from '@astrojs/starlight/components';
+import { Aside, Steps, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
 
 <div class="week-meta">
   <span class="phase-tag">Phase 5</span>
   <Badge text="Week 15" variant="note" />
-  <Badge text="Wrap-up" variant="success" />
+  <Badge text="Finalization" variant="success" />
   <Badge text="Lecture: 2026-06-09" variant="default" />
 </div>
 
-## Integration Testing Checklist
+## Goal of Integration Week
 
-<Steps>
-1. **Functional Testing** — 100% pass rate on each agent's individual functions
+Week 15 is not a feature week. It is the week to turn the closed loop into a **reliable demo and evidence-backed report**.
 
-2. **Integration Testing** — Full pipeline end-to-end execution succeeds 3+ times
-
-3. **Stress Testing** — Verify stability when processing 10 consecutive tasks
-
-4. **Failure Recovery Testing** — Inject intentional failures and verify automatic recovery
-
-5. **Performance Measurement** — Record processing time, token usage, and success rate
-</Steps>
-
-## Presentation Structure
-
-**Recommended presentation structure (15 minutes)**:
-
-1. **Problem Definition** (2 min) — What problem were you trying to solve?
-2. **Architecture** (3 min) — How did you design it? Diagram required.
-3. **Live Demo** (5 min) — Actual agent execution (pre-recorded backup recommended)
-4. **Results and Outcomes** (3 min) — Performance figures, impressive results
-5. **Lessons Learned** (2 min) — What was hardest? What would you do differently?
-
-<Aside type="tip" title="Demo Preparation">
-Live demos can fail unpredictably due to network issues, API errors, and other factors. Always prepare a **pre-recorded video as a backup**.
+<Aside type="caution" title="No new features by default">
+Adding a new agent role, model, or UI in Week 15 usually reduces final presentation reliability. Add only what stabilizes the demo path.
 </Aside>
 
-## Final Submission Checklist
+### Feature freeze rule
 
-| Item | Location | Deadline |
+At the start of Week 15, each team writes `freeze.md`.
+
+| Item | Content |
+|------|---------|
+| Demo path | one happy path that must appear in the presentation |
+| Recovery path | one safe failure-handling path |
+| Frozen features | features that will no longer change |
+| Allowed fixes | bug fixes, test stabilization, documentation, metrics |
+| Explicit cuts | features excluded from the final presentation |
+
+After freeze, a change is allowed only when it improves release gate reliability.
+
+## Release Gate
+
+| Gate | Criteria | Evidence |
 |------|----------|----------|
-| Source code | `capstone/teams/[team-name]/src/` | 6/17 |
-| README | `capstone/teams/[team-name]/README.md` | 6/17 |
-| Presentation slides | `capstone/teams/[team-name]/presentation.pdf` | 6/17 |
-| Final report | `capstone/teams/[team-name]/report.md` | 6/17 |
-| Demo video | `capstone/teams/[team-name]/demo.mp4` | 6/17 |
+| Build/Test | `make test` or equivalent passes | CI log or terminal capture |
+| End-to-end | same task packet passes three times | three run ids |
+| Replay | final state reconstructed from event log | `replay_snapshot.json` |
+| Evaluation | deterministic and judge results recorded | evaluation table |
+| Security | no secrets or out-of-scope writes | checklist |
+| Demo | backup materials work without network | recording/screenshots |
+
+### Release readiness review
+
+Before final rehearsal, run a 20-minute internal release review.
+
+1. Run `make test` or the equivalent command and capture the result.
+2. Run the same task packet three times and record the run ids.
+3. Pick the most recent failed run and explain the failure reason.
+4. Confirm that `replay_snapshot.json` matches the event log.
+5. Put a source run id next to every metric in the slides.
+6. Cross-check secrets, credentials, and out-of-scope writes.
+
+Issues found here outrank new feature work.
+
+## Integration test matrix
+
+<Tabs>
+  <TabItem label="Happy Path">
+    ```text
+    task packet -> planner -> worker -> tests pass -> judge pass -> artifact saved
+    ```
+    Run at least three times.
+  </TabItem>
+  <TabItem label="Failure Path">
+    ```text
+    invalid task -> schema validation fail -> no file write -> run.closed(failed)
+    ```
+    Show that the system stops safely on bad input.
+  </TabItem>
+  <TabItem label="Recovery Path">
+    ```text
+    tests fail -> reviewer says revise -> retry once -> pass or closed(failed)
+    ```
+    Show that retry budget prevents infinite loops.
+  </TabItem>
+</Tabs>
+
+## Performance and cost report
+
+| Metric | Run 1 | Run 2 | Run 3 | Average |
+|--------|------:|------:|------:|--------:|
+| total latency sec | | | | |
+| prompt tokens | | | | |
+| completion tokens | | | | |
+| tool calls | | | | |
+| retry count | | | | |
+| judge score | | | | |
+| pass/fail | | | | |
+
+```text
+commercial_api_cost = input_tokens * input_price + output_tokens * output_price
+local_gpu_cost = gpu_hour_price * elapsed_seconds / 3600
+operator_cost = human_minutes * hourly_rate / 60
+```
+
+<Aside type="tip" title="Cost trap">
+Local models may look cheap per token, but GPU idle time, model loading, operator time, and retries can dominate end-to-end task cost.
+</Aside>
+
+## Final report structure
+
+```markdown
+# Final Report
+
+## 1. Problem and User
+## 2. System Architecture
+## 3. Runtime and Harness Design
+## 4. Evaluation Gates
+## 5. Telemetry Results
+## 6. Failure Cases and Fixes
+## 7. Cost and Performance
+## 8. Limitations
+## 9. What We Would Do Next
+```
+
+## Presentation structure
+
+| Time | Content | Evidence |
+|------|---------|----------|
+| 2 min | Problem | user, recurring task, risk boundary |
+| 3 min | Architecture | agent diagram + runtime layers |
+| 5 min | Live demo | happy path + failure recovery |
+| 3 min | Results | success rate, cost, latency, judge |
+| 2 min | Reflection | failures, scope cuts, next steps |
+
+## Rehearsal checklist
+
+<Steps>
+1. **Cold start rehearsal**
+
+   Start from nothing and prepare the presentation environment.
+
+2. **Time-box rehearsal**
+
+   Present within 15 minutes and finish the demo by minute 12.
+
+3. **Failure injection**
+
+   Run one deliberately bad task and confirm safe failure.
+
+4. **Evidence check**
+
+   Link every metric to a run id, event log, or dashboard screenshot.
+
+5. **Speaker handoff**
+
+   Define transitions between speakers so the presentation can continue if one person is absent.
+</Steps>
+
+## Final deliverables
+
+| Item | Location | Due |
+|------|----------|-----|
+| Source code | `capstone/teams/[team]/runtime/` | 6/16 |
+| README | `capstone/teams/[team]/README.md` | 6/16 |
+| Design document | `capstone/teams/[team]/design.md` | 6/16 |
+| Final report | `capstone/teams/[team]/reports/final-report.md` | 6/16 |
+| Presentation | `capstone/teams/[team]/presentation.pdf` | 6/16 |
+| Demo video | `capstone/teams/[team]/demo.mp4` | 6/16 |
+| Run logs | `capstone/teams/[team]/runs/*.events.jsonl` | 6/16 |
+| Replay snapshot | `capstone/teams/[team]/reports/replay_snapshot.json` | 6/16 |
+
+## Evaluation rubric
+
+| Category | Weight | Evaluation focus |
+|----------|-------:|------------------|
+| Problem and scope | 15% | real recurring task, risk boundary, scope cuts |
+| Harness design | 25% | task packet, gates, retry, replay |
+| Implementation | 25% | E2E run, tests, reliability |
+| Observability and evaluation | 20% | telemetry, judge, cost/performance evidence |
+| Presentation and reflection | 15% | clarity, failure discussion, next improvements |
 
 ## Assignment
 
@@ -71,8 +198,12 @@ Live demos can fail unpredictably due to network issues, API errors, and other f
 
 ### Capstone: Final Presentation Materials
 
-**Submission deadline**: 2026-06-16 23:59
+**Due**: 2026-06-16 23:59
 
-**Requirements**: Complete all items in the final submission checklist above
+**Requirements**:
+1. Complete all final deliverables.
+2. Include the release gate checklist.
+3. Include metrics linked to run ids.
+4. Include a 15-minute slide deck and 90-second backup demo video.
 
 </div>

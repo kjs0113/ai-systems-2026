@@ -171,6 +171,7 @@ export default defineConfig({
             { label: '참고자료 홈', translations: { en: 'Reference Home' }, link: '/reference' },
             { label: '개발 도구', translations: { en: 'Development Tools' }, link: '/reference/tools' },
             { label: 'AI 코딩 도구 선택', translations: { en: 'AI Coding Tool Selection' }, link: '/reference/tool-selection' },
+            { label: 'Agent OS Runtime', translations: { en: 'Agent OS Runtime' }, link: '/reference/agent-os-runtime' },
             { label: '논문 & 자료', translations: { en: 'Papers & Resources' }, link: '/reference/papers' },
             { label: '용어집', translations: { en: 'Glossary' }, link: '/reference/glossary' },
             { label: '인프라 가이드', translations: { en: 'Infrastructure Guide' }, link: '/reference/infrastructure' },

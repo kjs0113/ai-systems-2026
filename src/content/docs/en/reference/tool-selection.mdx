@@ -15,7 +15,7 @@ This course uses **Claude Code** as the primary recommended tool, but most labs 
 | **Install** | `pnpm add -g @anthropic-ai/claude-code` | `pnpm add -g @google/gemini-cli` | `pnpm add -g @openai/codex` | `brew install opencode` |
 | **Run** | `claude "prompt"` | `gemini` (interactive) | `codex "prompt"` | `opencode` (TUI) |
 | **Headless** | `claude --print --no-color` | pipe support | `codex --approval-mode full-auto` | `opencode serve` (API) |
-| **MCP Support** | Full | Supported | Not supported | Limited |
+| **MCP Support** | Full | Supported | Supported | Limited |
 | **Project Instruction File** | `CLAUDE.md` | `GEMINI.md` | `AGENTS.md` | — |
 | **Context Window** | 200K | 1M | 192K | Model-dependent |
 | **Cost** | API key required | Free (1,000 req/day) | ChatGPT Plus or API key | Free (local models available) |
@@ -130,8 +130,8 @@ Each tool reads a specific file in the project root to pass project-specific ins
 
 <Aside type="note" title="Course Recommendations">
 - Lab instructions and code examples in this course are written for **Claude Code**.
-- MCP-related labs (Lab 03) can only be fully completed with **Claude Code or Gemini CLI**.
-- Codex CLI does not support MCP, so Lab 03 must be done with an alternative tool.
+- MCP-related labs (Lab 03) can be completed with **Claude Code, Gemini CLI, or Codex CLI**.
+- Codex registers MCP servers in `~/.codex/config.toml` or project-scoped `.codex/config.toml`. Use `/mcp` in the TUI to inspect active servers.
 - If using a different tool, translate commands and flags to match that tool's syntax.
 </Aside>
 

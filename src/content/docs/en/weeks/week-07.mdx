@@ -488,6 +488,10 @@ Boris uses `/batch` for simple migrations and custom pipelines for complex featu
 
 The key to inter-agent communication is **structured artifacts**. Not natural-language messages, but schema-defined files that move between agents.
 
+<Aside type="tip" title="Canonical Runtime Contract">
+The default handoff pattern for this week is Agent OS Runtime's **Lead → Planner → Worker → Reviewer** flow. Lead emits `lead_directive_v1`, Planner emits `plan_v1`, Worker emits `worker_report_v1`, and Reviewer emits `review_result_v1`. The full contracts and role prompts are self-contained in [Agent OS Contracts](/en/reference/agent-os-runtime/#contracts).
+</Aside>
+
 <Tabs>
   <TabItem label="Requirement Spec">
     ```yaml

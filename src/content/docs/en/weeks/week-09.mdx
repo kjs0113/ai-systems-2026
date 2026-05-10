@@ -74,6 +74,7 @@ Using Claude Code's model routing feature, a more powerful model can be assigned
 
 ```python
 # qa_agent.py
+import os
 import subprocess
 import anthropic
 from pathlib import Path
@@ -97,7 +98,7 @@ class QAAgent:
     def code_review(self, diff: str) -> str:
         """Claude를 통한 코드 리뷰"""
         response = self.client.messages.create(
-            model="claude-opus-4-6",
+            model=os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5"),
             max_tokens=2048,
             system="""당신은 시니어 소프트웨어 엔지니어입니다.
 코드 diff를 검토하고 다음을 확인하세요:
@@ -132,6 +133,7 @@ We now implement the 3-parallel reviewer pattern designed in Week 7. Three persp
 ```python
 # parallel_reviewer.py
 import concurrent.futures
+import os
 import anthropic
 from dataclasses import dataclass
 from typing import Literal
@@ -150,7 +152,7 @@ class ParallelReviewer:
 
     def _call_claude(self, system: str, user: str) -> str:
         response = self.client.messages.create(
-            model="claude-opus-4-6",
+            model=os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5"),
             max_tokens=1024,
             system=system,
             messages=[{"role": "user", "content": user}]

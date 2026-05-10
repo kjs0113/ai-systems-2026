@@ -488,6 +488,10 @@ Boris는 단순한 마이그레이션에 `/batch`를, 복잡한 기능 개발에
 
 에이전트 간 통신의 핵심은 **구조화된 아티팩트**다. 자연어 메시지가 아니라, 스키마가 정의된 파일이 에이전트 사이를 이동한다.
 
+<Aside type="tip" title="Canonical Runtime Contract">
+이번 주의 handoff 기본형은 Agent OS Runtime의 **Lead → Planner → Worker → Reviewer** 흐름이다. Lead는 `lead_directive_v1`, Planner는 `plan_v1`, Worker는 `worker_report_v1`, Reviewer는 `review_result_v1`을 출력한다. 전체 계약과 role prompt는 [Agent OS Contracts](/reference/agent-os-runtime/#contracts)에 self-contained로 정리되어 있다.
+</Aside>
+
 <Tabs>
   <TabItem label="Requirement Spec">
     ```yaml

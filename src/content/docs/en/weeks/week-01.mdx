@@ -66,7 +66,7 @@ The AI industry reached a fundamental inflection point in 2025–2026. The era o
     - LLM = autonomous execution agent
     - Humans as strategic supervisors
     - AI directly modifies files, runs tests, and deploys
-    - SWE-bench Verified success rate 79.2% (Claude Opus 4.6 Thinking)
+    - SWE-bench Verified success rate in the 79% range (frontier reasoning model + agent harness)
   </Card>
 </CardGrid>
 
@@ -210,7 +210,7 @@ Knowing the benchmarks for actual agent capabilities helps you distinguish real 
 **SWE-bench Verified** — benchmark for autonomously resolving real GitHub issues:
 - Early 2024: top systems ~15%
 - Late 2025: surpassing 50%
-- Early 2026: 79.2% (Claude Opus 4.6 Thinking)
+- Early 2026: frontier systems reported in the 79% range
 
 Real-world data is also accumulating:
 - **Devin**: Initial 15% success rate (Answer.AI test) → 67% PR merge rate by late 2025
@@ -221,10 +221,10 @@ Real-world data is also accumulating:
 
 A notable 2026 development is that open-source models have approached commercial-level quality. Of the 204 AI coding tools currently tracked, 95% are open-source.
 
-Key open-source coding models:
-- **Qwen3-Coder** (235B MoE, 22B active) — approaches commercial models on SWE-bench, Apache 2.0
-- **DeepSeek V3** (685B MoE, 37B active) — top-tier for math, reasoning, and coding with maximum cost efficiency
-- **GLM-4.7** (32B Dense) — can run on a single GPU, Interleaved Thinking
+Key open-weight coding models:
+- **Qwen3-Coder-Next** — 80B total / 3B active, 256K context, designed for coding agents and local development
+- **DeepSeek-V4-Pro / Flash** — 1.6T/284B MoE, 1M context, focused on long-context reasoning and agentic tasks
+- **GLM-5.1 / MiniMax-M2.7** — candidates for agentic engineering, terminal tasks, and long tool-use workflows
 
 Why we deploy open-source models in this course: **cost**, **privacy** (campus data stays local), and **customizability** (tuned to our learning environment). In Weeks 10–11 we deploy these models on the DGX H100 server.
 

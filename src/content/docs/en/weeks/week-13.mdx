@@ -1,24 +1,25 @@
 ---
 title: "Week 13: Capstone Project Design"
-description: Preparing for Ralphthon — team formation, topic selection, and system architecture design
+description: Ralphthon preparation — problem framing, Agent OS Runtime architecture, team contracts, and acceptance criteria
 week: 13
 phase: 5
 phase_title: Capstone Ralphthon
 date: "2026-05-26"
 theory_topics:
-  - Ralphthon overview and evaluation criteria
-  - System architecture design methodology
-  - Team collaboration protocols
+  - Ralphthon overview and grading criteria
+  - Agent OS Runtime-based system design
+  - Team protocols and artifact contracts
 lab_topics:
   - Team formation and role assignment
-  - Writing the architecture design document
+  - Architecture design document
+  - Task packets and acceptance gates
 assignment: "Capstone: Architecture Design Document"
 assignment_due: "2026-06-02"
 difficulty: advanced
-estimated_time: "10 hours"
+estimated_time: 10 hours
 ---
 
-import { Aside, Steps, Badge, Card, CardGrid } from '@astrojs/starlight/components';
+import { Aside, Steps, Badge, Card, CardGrid, Tabs, TabItem } from '@astrojs/starlight/components';
 
 <div class="week-meta">
   <span class="phase-tag">Phase 5</span>
@@ -29,48 +30,196 @@ import { Aside, Steps, Badge, Card, CardGrid } from '@astrojs/starlight/componen
 
 ## What is Ralphthon?
 
-**Ralphthon** is the capstone project for this course. Working in teams, you will design and implement an **autonomous agentic system that solves a real software problem**, based on the Ralph Loop methodology.
+**Ralphthon** is the course capstone. Unlike a normal hackathon, the deliverable is not just an app. The deliverable is a **repeatable agentic system** that takes a task, acts, checks itself, logs what happened, and can be replayed.
 
-The name is borrowed from the industry term "Hackathon." As the Ralph Loop methodology spread in early 2026, **Ralphthon** culture emerged — and this is your chance to experience it firsthand.
+<Aside type="note" title="Capstone goal">
+The final question is not "did AI write a lot of code?" The question is whether humans defined the requirements and boundaries while agents executed under a harness that enforced quality and safety.
+</Aside>
 
-## Team Formation
+### Conditions for a good topic
+
+| Condition | Meaning | Bad example |
+|----------|---------|-------------|
+| Repeatable | the task appears more than once | one-off demo |
+| Verifiable | tests, rubrics, judge, or review can evaluate it | "write something good" |
+| Bounded | files, tools, and permissions can be scoped | unrestricted internet automation |
+| Recoverable | bad outputs can be rolled back or retried | direct DB mutation |
+| Team-splittable | planner/worker/reviewer/operator work can separate | one person does everything |
+
+## Capstone structure through Agent OS Runtime
+
+The design document must map at least five of these seven layers.
+
+| Layer | What to define |
+|------|----------------|
+| L1 Tool Boundary | allowed and denied tools |
+| L2 Skill/Instruction | role instructions, rubrics, prompts |
+| L3 Agent Role | Lead, Planner, Worker, Reviewer, Operator |
+| L4 Event Store | `.events.jsonl`, replay snapshot |
+| L5 Policy Gate | tests, lint, approvals, budget, secret scan |
+| L6 Orchestration | handoff sequence, retry, escalation |
+| L7 Artifact | PR, report, dashboard, demo, final presentation |
+
+See [Agent OS 7-Layer Architecture](/en/reference/agent-os-runtime/#7-layer-architecture) for the full layer model.
+
+### Recommended team roles
 
 <CardGrid>
-  <Card title="Team Size" icon="group">
-    Teams of 3–4. Roles: 1 Architect, 2 Engineers, 1 QA/DevOps
+  <Card title="Lead / Architect" icon="group">
+    Owns problem framing, scope control, and final design decisions.
   </Card>
-  <Card title="Topic Selection" icon="document">
-    A software project that solves a real problem. Requires instructor approval.
+  <Card title="Harness Engineer" icon="seti:config">
+    Implements task packets, event store, policy gates, retry, and rollback.
+  </Card>
+  <Card title="Agent Engineer" icon="seti:code">
+    Implements role prompts, tool policy, model routing, and CLI/API integration.
+  </Card>
+  <Card title="QA / Operator" icon="seti:check">
+    Owns tests, judge rubrics, telemetry dashboards, and demo reliability.
   </Card>
 </CardGrid>
 
-## Recommended Project Ideas
+### Suggested project ideas
 
-1. **Autonomous Code Review System** — Automatically reviews GitHub PRs and suggests improvements
-2. **Automatic Test Generator** — Generates pytest tests automatically from an existing codebase
-3. **Documentation Automation** — Automatically updates README and API docs when code changes
-4. **Automatic Bug Fixer** — Reads GitHub Issues and automatically finds and fixes bugs
-5. **Performance Optimization Agent** — Analyzes profiling results and automatically fixes performance bottlenecks
+1. Autonomous PR review system.
+2. Test generation agent for existing codebases.
+3. Documentation drift detector and updater.
+4. Bug triage plus patch proposal agent.
+5. Performance optimization agent.
+6. Course content validation agent for MDX links and stale technical tables.
+7. MCP security audit agent.
 
-## Architecture Design Checklist
+### MVP scope decision
+
+A strong capstone does not start by promising a complete product. Separate what must remain from what can be cut.
+
+| Scope | Example | Decision rule |
+|-------|---------|---------------|
+| Must have | task packet, single worker loop, deterministic gate, event log | without this, there is no closed loop |
+| Should have | reviewer/judge, replay snapshot, simple dashboard | strengthens final evidence |
+| Could have | web UI, multi-model router, agent marketplace | only if time remains |
+| Won't have | fully autonomous deployment, external account automation, complex delegation | too risky or too expensive |
+
+The Week 13 design document must include `Won't have`. A plan without scope cuts is a wish list, not an execution plan.
+
+### Task Packet Design
+
+```yaml
+task_id: capstone-017
+objective: "Add retry handling to the GitHub issue importer"
+scope:
+  files:
+    - src/importer/github.py
+    - tests/test_github_importer.py
+allowed_tools:
+  - read_file
+  - edit_file
+  - run_tests
+acceptance:
+  - "pytest tests/test_github_importer.py passes"
+  - "No network call in unit tests"
+  - "Retry count is configurable"
+budget:
+  max_turns: 6
+  max_tokens: 120000
+escalation:
+  ask_human_if:
+    - "API contract must change"
+    - "Secret or credential is required"
+```
+
+### Architecture Decision Record
+
+Each team must keep at least three ADRs for important choices.
+
+```markdown
+# ADR-001: Use vLLM OpenAI-compatible API
+
+## Context
+We need to compare local and commercial models through the same harness.
+
+## Decision
+Expose local models through vLLM's OpenAI-compatible API and route calls through one client wrapper.
+
+## Consequences
+- Good: model providers can be swapped without changing agent code.
+- Bad: model-specific tool-call parsers still require configuration.
+```
+
+### Design document structure
+
+<Tabs>
+  <TabItem label="Required outline">
+    ```markdown
+    # Team Name Capstone Design
+
+    ## 1. Problem
+    ## 2. Users and Risk Boundary
+    ## 3. Agent Architecture
+    ## 4. Runtime Layers
+    ## 5. Task Packet Schema
+    ## 6. Evaluation Gates
+    ## 7. Telemetry and Replay
+    ## 8. Implementation Plan
+    ## 9. Demo Scenario
+    ```
+  </TabItem>
+  <TabItem label="Diagram example">
+    ```mermaid
+    flowchart LR
+      Lead --> Planner
+      Planner --> Worker
+      Worker --> Reviewer
+      Reviewer --> Gate{Tests + Judge}
+      Gate -->|pass| Artifact
+      Gate -->|fail| Planner
+      Worker --> Events[(events.jsonl)]
+      Gate --> Events
+    ```
+  </TabItem>
+</Tabs>
+
+<Aside type="caution" title="Cut during design">
+A small closed loop matters more than a large ambition. If the MVP cannot run in Week 14, Week 15 integration will fail. Start with one demo path and one recovery path.
+</Aside>
+
+### Risk Register
+
+Risks must be operational, not abstract. Each one needs a trigger, owner, and response.
+
+| Risk | Trigger | Owner | Response |
+|------|---------|-------|----------|
+| model repeatedly breaks JSON schema | invalid JSON rate > 20% | Agent Engineer | add structured output or repair step |
+| no quality evidence | deterministic gate is empty | QA / Operator | write smoke tests and fixtures |
+| scope creep | happy path has not passed by Week 14 | Lead | remove all Could have items |
+| cost spike | token budget exceeded per run | Harness Engineer | enforce max turns, trim context, cache prefix |
+| unstable demo | 1+ failure in 3 repeated runs | QA / Operator | shorten live demo and prepare recording |
+
+This table flows directly into the Week 14 progress report and Week 15 release gate.
+
+## Practicum
 
 <Steps>
-1. **Problem Definition** — Clearly define the real problem to solve and the criteria for success
+1. **Frame the team problem**
 
-2. **Agent Role Design** — How many agents? What are each agent's roles and responsibilities?
+   Pick one real recurring task and define the user in one sentence.
 
-3. **Data Flow Design** — Define the artifact formats passed between agents
+2. **Write success criteria**
 
-4. **Harness Design** — Backpressure mechanisms, garbage collection policies
+   Replace "good" with five pass/fail criteria.
 
-5. **Infrastructure Design** — Which MIG slices? Which models?
+3. **Split agent roles**
 
-6. **Evaluation Method** — How will the system's performance be measured?
+   Choose only the roles you need: Lead, Planner, Worker, Reviewer, Operator.
+
+4. **Map runtime layers**
+
+   Decide which files, scripts, logs, and policies belong in each layer.
+
+5. **Fix the demo path**
+
+   Choose one happy path and one failure-recovery path for the final demo.
 </Steps>
-
-<Aside type="note" title="Design Document Requirements">
-The architecture design document submitted as the Week 13 assignment must include an agent interaction diagram, a data flow diagram, and a rationale for technology stack choices.
-</Aside>
 
 ## Assignment
 
@@ -78,15 +227,16 @@ The architecture design document submitted as the Week 13 assignment must includ
 
 ### Capstone: Architecture Design Document
 
-**Submission deadline**: 2026-06-02 23:59
+**Due**: 2026-06-02 23:59
 
-**Submission path**: `capstone/teams/[team-name]/design.md`
+**Path**: `capstone/teams/[team-name]/design.md`
 
 **Requirements**:
-1. Problem definition and solution approach
-2. Agent architecture diagram
-3. Technology stack selection and rationale
-4. Week-by-week implementation plan
-5. Definition of success metrics
+1. Problem definition, user, and risk boundary.
+2. Agent architecture diagram.
+3. At least five Agent OS Runtime layers mapped to your system.
+4. Task packet schema and three examples.
+5. Deterministic gate + LLM Judge + human review criteria.
+6. Week 14-16 implementation plan and demo script draft.
 
 </div>

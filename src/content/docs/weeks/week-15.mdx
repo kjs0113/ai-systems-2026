@@ -1,6 +1,6 @@
 ---
 title: "15주차: 시스템 통합과 최종 테스트"
-description: 캡스톤 프로젝트 통합 완성 — 자동 테스트, 성능 측정, 발표 준비
+description: 캡스톤 프로젝트 통합 완성 — release gate, 성능 측정, 실패 복구, 발표 리허설
 week: 15
 phase: 5
 phase_title: 캡스톤 Ralphthon
@@ -11,6 +11,7 @@ theory_topics:
   - 발표 자료 구성법
 lab_topics:
   - End-to-end 통합 테스트
+  - release readiness review
   - 발표 리허설
 assignment: "캡스톤: 최종 발표 자료"
 assignment_due: "2026-06-16"
@@ -18,7 +19,7 @@ difficulty: 고급
 estimated_time: 15시간
 ---
 
-import { Aside, Steps, Badge } from '@astrojs/starlight/components';
+import { Aside, Steps, Badge, Card, CardGrid, Tabs, TabItem } from '@astrojs/starlight/components';
 
 <div class="week-meta">
   <span class="phase-tag">Phase 5</span>
@@ -27,43 +28,181 @@ import { Aside, Steps, Badge } from '@astrojs/starlight/components';
   <Badge text="강의일: 2026-06-09" variant="default" />
 </div>
 
-## 통합 테스트 체크리스트
+## 통합 주간의 목표
 
-<Steps>
-1. **기능 테스트** — 각 에이전트 개별 기능 100% 통과
+15주차는 기능 추가 주간이 아니다. 이미 만든 closed loop를 **신뢰 가능한 데모와 보고서**로 만드는 주간이다. 새 기능을 추가하기보다 실패율을 줄이고, 수치를 정리하고, 발표 흐름을 고정한다.
 
-2. **통합 테스트** — 전체 파이프라인 end-to-end 실행 3회 이상 성공
+<Aside type="caution" title="새 기능 금지 원칙">
+15주차에 새 agent role, 새 모델, 새 UI를 추가하면 대부분 최종 발표 안정성이 떨어진다. 새 기능은 "demo path를 더 안정적으로 만드는 경우"에만 허용한다.
+</Aside>
 
-3. **스트레스 테스트** — 연속 10개 태스크 처리 시 안정성 확인
+### Feature freeze 원칙
 
-4. **실패 복구 테스트** — 의도적 실패 주입 후 자동 복구 확인
+15주차 시작 시점에 각 팀은 `freeze.md`를 작성한다.
 
-5. **성능 측정** — 처리 시간, 토큰 사용량, 성공률 기록
-</Steps>
+| 항목 | 작성 내용 |
+|------|----------|
+| Demo path | 발표에서 반드시 보여줄 1개 happy path |
+| Recovery path | 실패를 안전하게 처리하는 1개 path |
+| Frozen features | 더 이상 바꾸지 않을 기능 목록 |
+| Allowed fixes | 버그 수정, 테스트 안정화, 문서/수치 정리 |
+| Explicit cuts | 최종 발표에서 제외할 기능 |
+
+freeze 이후의 변경은 `release gate` 통과율을 높일 때만 허용한다.
+
+## Release Gate
+
+최종 제출 전 다음 gate를 모두 통과해야 한다.
+
+| Gate | 기준 | 증거 |
+|------|------|------|
+| Build/Test | `make test` 또는 동등 명령 통과 | CI 로그 또는 터미널 캡처 |
+| End-to-end | 같은 task packet 3회 연속 실행 | run id 3개 |
+| Replay | event log에서 최종 상태 재구성 | `replay_snapshot.json` |
+| Evaluation | deterministic + judge 결과 기록 | 평가표 |
+| Security | secret, credential, out-of-scope write 없음 | 체크리스트 |
+| Demo | 네트워크 없이 설명 가능한 백업 자료 | 녹화본/스크린샷 |
+
+### Release readiness review
+
+최종 리허설 전 팀 내부에서 20분짜리 release review를 진행한다.
+
+1. `make test` 또는 동등 명령을 실행하고 결과를 캡처한다.
+2. 같은 task packet을 3회 실행하고 run id를 기록한다.
+3. 가장 최근 실패 run을 하나 골라 failure reason을 설명한다.
+4. `replay_snapshot.json`이 event log와 일치하는지 확인한다.
+5. 발표 슬라이드의 모든 수치 옆에 source run id를 붙인다.
+6. secret, credential, out-of-scope write가 없는지 서로 교차 검토한다.
+
+이 review에서 발견된 문제는 새 기능보다 우선한다.
+
+## 통합 테스트 매트릭스
+
+<Tabs>
+  <TabItem label="Happy Path">
+    ```text
+    task packet -> planner -> worker -> tests pass -> judge pass -> artifact saved
+    ```
+    최소 3회 반복 실행한다. 세 번 중 한 번이라도 실패하면 failure reason을 기록하고 원인을 수정한다.
+  </TabItem>
+  <TabItem label="Failure Path">
+    ```text
+    invalid task -> schema validation fail -> no file write -> run.closed(failed)
+    ```
+    잘못된 입력에서 시스템이 안전하게 멈추는지 보여준다.
+  </TabItem>
+  <TabItem label="Recovery Path">
+    ```text
+    tests fail -> reviewer says revise -> retry once -> pass or closed(failed)
+    ```
+    retry budget이 무한 루프를 막는지 확인한다.
+  </TabItem>
+</Tabs>
+
+## 성능/비용 보고서
+
+각 팀은 최소 다음 표를 포함한다.
+
+| 지표 | Run 1 | Run 2 | Run 3 | 평균 |
+|------|------:|------:|------:|-----:|
+| total latency sec | | | | |
+| prompt tokens | | | | |
+| completion tokens | | | | |
+| tool calls | | | | |
+| retry count | | | | |
+| judge score | | | | |
+| pass/fail | | | | |
+
+비용은 정확한 청구액보다 **비교 가능한 계산식**이 중요하다.
+
+```text
+commercial_api_cost = input_tokens * input_price + output_tokens * output_price
+local_gpu_cost = gpu_hour_price * elapsed_seconds / 3600
+operator_cost = human_minutes * hourly_rate / 60
+```
+
+<Aside type="tip" title="운영 비용의 함정">
+로컬 모델은 토큰당 비용이 낮아 보여도 GPU idle time, 모델 로딩 시간, 운영자 시간, 실패 재시도 비용을 합치면 비싸질 수 있다. 최종 보고서에서는 token cost만이 아니라 end-to-end task cost를 비교한다.
+</Aside>
+
+## 최종 보고서 구조
+
+```markdown
+# Final Report
+
+## 1. Problem and User
+## 2. System Architecture
+## 3. Runtime and Harness Design
+## 4. Evaluation Gates
+## 5. Telemetry Results
+## 6. Failure Cases and Fixes
+## 7. Cost and Performance
+## 8. Limitations
+## 9. What We Would Do Next
+```
 
 ## 발표 자료 구성
 
-**권장 발표 구조 (15분)**:
+권장 발표 구조는 15분이다.
 
-1. **문제 정의** (2분) — 어떤 문제를 해결하려 했나?
-2. **아키텍처** (3분) — 어떻게 설계했나? 다이어그램 필수
-3. **라이브 데모** (5분) — 실제 에이전트 실행 (사전 녹화 권장)
-4. **결과 및 성과** (3분) — 성능 수치, 인상적인 결과
-5. **배운 점** (2분) — 가장 어려웠던 점, 다시 한다면?
+| 시간 | 내용 | 증거 |
+|------|------|------|
+| 2분 | 문제 정의 | 사용자/반복 업무/위험 경계 |
+| 3분 | 아키텍처 | agent diagram + runtime layers |
+| 5분 | 라이브 데모 | happy path + failure recovery |
+| 3분 | 결과 | 성공률, 비용, latency, judge 결과 |
+| 2분 | 회고 | 실패와 scope cut, 다음 개선 |
 
 <Aside type="tip" title="데모 준비">
-라이브 데모는 네트워크 문제, API 오류 등 예측 불가한 실패가 발생할 수 있다. 반드시 **사전 녹화본을 백업**으로 준비하라.
+라이브 데모는 네트워크, API, GPU queue, time limit 때문에 실패할 수 있다. 반드시 90초 내 녹화본과 주요 스크린샷을 백업으로 준비한다.
 </Aside>
+
+## 발표 리허설 체크리스트
+
+<Steps>
+1. **cold start rehearsal**
+
+   아무 것도 켜지 않은 상태에서 발표 환경을 시작해 본다.
+
+2. **time-box rehearsal**
+
+   15분 제한으로 발표하고, 12분 지점에서 demo가 끝나도록 조정한다.
+
+3. **failure injection**
+
+   일부러 실패 task를 넣고 시스템이 안전하게 멈추는 장면을 확인한다.
+
+4. **evidence check**
+
+   모든 수치가 run id, event log, dashboard screenshot과 연결되는지 확인한다.
+
+5. **speaker handoff**
+
+   팀원 간 발표 전환 문장을 정하고, 한 명이 빠져도 발표가 이어지도록 한다.
+</Steps>
 
 ## 최종 제출물 목록
 
 | 항목 | 위치 | 마감 |
 |------|------|------|
-| 소스 코드 | `capstone/teams/[팀명]/src/` | 6/17 |
-| README | `capstone/teams/[팀명]/README.md` | 6/17 |
-| 발표 자료 | `capstone/teams/[팀명]/presentation.pdf` | 6/17 |
-| 최종 보고서 | `capstone/teams/[팀명]/report.md` | 6/17 |
-| 데모 영상 | `capstone/teams/[팀명]/demo.mp4` | 6/17 |
+| 소스 코드 | `capstone/teams/[팀명]/runtime/` | 6/16 |
+| README | `capstone/teams/[팀명]/README.md` | 6/16 |
+| 설계 문서 | `capstone/teams/[팀명]/design.md` | 6/16 |
+| 최종 보고서 | `capstone/teams/[팀명]/reports/final-report.md` | 6/16 |
+| 발표 자료 | `capstone/teams/[팀명]/presentation.pdf` | 6/16 |
+| 데모 영상 | `capstone/teams/[팀명]/demo.mp4` | 6/16 |
+| 실행 로그 | `capstone/teams/[팀명]/runs/*.events.jsonl` | 6/16 |
+| replay snapshot | `capstone/teams/[팀명]/reports/replay_snapshot.json` | 6/16 |
+
+## 평가 루브릭
+
+| 항목 | 비중 | 평가 포인트 |
+|------|-----:|------------|
+| 문제 정의와 범위 | 15% | 실제 반복 업무, 위험 경계, scope cut |
+| 하네스 설계 | 25% | task packet, gate, retry, replay |
+| 구현 완성도 | 25% | E2E 실행, 테스트, 안정성 |
+| 관측성과 평가 | 20% | telemetry, judge, 비용/성능 지표 |
+| 발표와 회고 | 15% | 명확성, 실패 공유, 다음 개선 |
 
 ## 과제 (Assignment)
 
@@ -73,6 +212,10 @@ import { Aside, Steps, Badge } from '@astrojs/starlight/components';
 
 **제출 마감**: 2026-06-16 23:59
 
-**요구사항**: 위 제출물 목록 전체 완성
+**요구사항**:
+1. 최종 제출물 목록 전체 완성
+2. release gate 체크리스트 포함
+3. run id가 연결된 성능/비용/품질 수치 포함
+4. 15분 발표 자료와 90초 백업 데모 영상 포함
 
 </div>

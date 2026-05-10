@@ -87,7 +87,7 @@ import { Aside, Steps, Badge, Card, CardGrid } from '@astrojs/starlight/componen
 
 | 모델 | 공식 컨텍스트 | 실효 사용량 |
 |------|-------------|-----------|
-| Claude Opus/Sonnet 4.6 | 1M 토큰 | ~600-700K |
+| Claude 계열 최신 frontier 모델 | 1M 토큰급 | ~600-700K |
 | GPT-5.4 | 1M 토큰 | ~600-700K |
 | Gemini 2.5 Pro | 1M 토큰 | ~600-700K |
 
@@ -354,12 +354,13 @@ users[3]{id,name,email}:
    Claude Code 세션에서 `/cost` 명령을 실행하여 현재 세션의 토큰 사용량을 확인한다. 10턴 대화 후 다시 측정하여 증가량을 기록한다.
 
    ```python
+   import os
    import anthropic
 
    def count_tokens(messages: list) -> int:
        client = anthropic.Anthropic()
        response = client.messages.count_tokens(
-           model="claude-opus-4-6",
+           model=os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5"),
            messages=messages
        )
        return response.input_tokens

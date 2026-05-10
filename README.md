@@ -14,8 +14,8 @@
 | 1 | 1–3주 | 에이전틱 시스템 기초 — HOTL, MIG, MCP |
 | 2 | 4–6주 | 하네스 엔지니어링 — Ralph 루프, 컨텍스트 관리, 인스트럭션 튜닝 |
 | 3 | 7–9주 | 멀티에이전트 SDLC — 플래닝/QA 에이전트 |
-| 4 | 10–12주 | 오픈소스 모델 & MLOps — DeepSeek-Coder-V2, vLLM, LLM-as-Judge |
-| 5 | 13–16주 | 캡스톤 Ralphthon — 설계 → 실행 → 발표 |
+| 4 | 10–12주 | 오픈웨이트 모델 & MLOps — Qwen3-Coder-Next, DeepSeek-V4, GLM-5.1, MiniMax-M2.7, vLLM, telemetry, LLM-as-Judge |
+| 5 | 13–16주 | 캡스톤 Ralphthon — Agent OS Runtime 기반 설계 → 실행 → 통합 → 발표 |
 
 16주차 강의노트 · Lab 12개 · 캡스톤 프로젝트 포함 (총 44페이지)
 

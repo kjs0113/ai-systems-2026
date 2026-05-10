@@ -1,24 +1,25 @@
 ---
 title: "13주차: 캡스톤 프로젝트 설계"
-description: Ralphthon 준비 — 팀 구성, 주제 선정, 시스템 아키텍처 설계
+description: Ralphthon 준비 — 문제 정의, Agent OS Runtime 아키텍처, 팀 계약, 성공 기준 설계
 week: 13
 phase: 5
 phase_title: 캡스톤 Ralphthon
 date: "2026-05-26"
 theory_topics:
   - Ralphthon 개요와 평가 기준
-  - 시스템 아키텍처 설계 방법론
-  - 팀 협업 프로토콜
+  - Agent OS Runtime 기반 시스템 설계
+  - 팀 협업 프로토콜과 산출물 계약
 lab_topics:
   - 팀 구성 및 역할 분담
   - 아키텍처 설계 문서 작성
+  - task packet과 acceptance gate 정의
 assignment: "캡스톤: 아키텍처 설계 문서"
 assignment_due: "2026-06-02"
 difficulty: 고급
 estimated_time: 10시간
 ---
 
-import { Aside, Steps, Badge, Card, CardGrid } from '@astrojs/starlight/components';
+import { Aside, Steps, Badge, Card, CardGrid, Tabs, TabItem } from '@astrojs/starlight/components';
 
 <div class="week-meta">
   <span class="phase-tag">Phase 5</span>
@@ -29,48 +30,198 @@ import { Aside, Steps, Badge, Card, CardGrid } from '@astrojs/starlight/componen
 
 ## Ralphthon이란?
 
-**Ralphthon**은 이 강의의 캡스톤 프로젝트다. Ralph 루프 방법론을 기반으로 **실제 소프트웨어 문제를 해결하는 자율 에이전틱 시스템**을 팀으로 설계하고 구현한다.
+**Ralphthon**은 Ralph 루프 방법론을 기반으로 실제 소프트웨어 문제를 해결하는 팀 캡스톤이다. 일반 해커톤과 다른 점은 결과물이 "앱 하나"가 아니라 **반복 실행 가능한 에이전트 시스템**이라는 점이다.
 
-업계의 해커톤(Hackathon)에서 차용한 이름으로, 2026년 초 Ralph 루프 방법론이 확산되면서 생겨난 **Ralphthon** 문화를 직접 체험하는 기회다.
+<Aside type="note" title="캡스톤의 목표">
+최종 평가는 "AI가 코드를 많이 썼는가"가 아니다. 목표는 사람이 요구사항과 경계를 정의하고, 에이전트가 반복 실행하며, 하네스가 품질과 안전을 강제하는 시스템을 만드는 것이다.
+</Aside>
 
-## 팀 구성
+### 좋은 주제의 조건
+
+| 조건 | 설명 | 나쁜 예 |
+|------|------|--------|
+| 반복 가능 | 같은 유형의 작업이 여러 번 발생한다 | 한 번만 쓰는 데모 |
+| 검증 가능 | 테스트, rubric, judge, human review가 가능하다 | "좋은 글을 써줘" |
+| 경계 명확 | 파일/도구/권한 범위를 제한할 수 있다 | 전체 인터넷을 마음대로 조작 |
+| 실패 복구 가능 | 잘못된 출력이 나와도 rollback/retry 가능하다 | DB를 바로 수정 |
+| 팀 역할 분리 | planner/worker/reviewer/operator가 나뉜다 | 한 사람이 모든 것 수행 |
+
+## Agent OS Runtime으로 보는 캡스톤 구조
+
+13주차 설계 문서는 다음 7개 계층 중 최소 5개를 명시해야 한다.
+
+| 계층 | 캡스톤에서 정의할 것 |
+|------|--------------------|
+| L1 Tool Boundary | 어떤 도구를 허용/금지할 것인가 |
+| L2 Skill/Instruction | 역할별 instruction, rubric, prompt |
+| L3 Agent Role | Lead, Planner, Worker, Reviewer, Operator |
+| L4 Event Store | `.events.jsonl`, replay snapshot |
+| L5 Policy Gate | tests, lint, approval, budget, secret scan |
+| L6 Orchestration | handoff 순서, retry, escalation |
+| L7 Artifact | PR, report, dashboard, demo, final presentation |
+
+> 자세한 계층 설명은 [Agent OS 7-Layer Architecture](/reference/agent-os-runtime/#7-layer-architecture)를 참고한다.
+
+### 권장 팀 역할
 
 <CardGrid>
-  <Card title="팀 규모" icon="group">
-    3–4인 팀 구성. 역할: 아키텍트 1명, 엔지니어 2명, QA/DevOps 1명
+  <Card title="Lead / Architect" icon="group">
+    문제 정의, 범위 관리, 최종 설계 책임. scope creep을 막고 acceptance criteria를 고정한다.
   </Card>
-  <Card title="주제 선정" icon="document">
-    실제 문제를 해결하는 소프트웨어 프로젝트. 교수 승인 필요.
+  <Card title="Harness Engineer" icon="seti:config">
+    task packet, event store, policy gate, retry/rollback 로직을 구현한다.
+  </Card>
+  <Card title="Agent Engineer" icon="seti:code">
+    role prompt, tool policy, model routing, CLI 연동을 구현한다.
+  </Card>
+  <Card title="QA / Operator" icon="seti:check">
+    테스트, judge rubric, telemetry dashboard, 발표 데모 안정성을 책임진다.
   </Card>
 </CardGrid>
 
-## 추천 프로젝트 아이디어
+### 추천 프로젝트 아이디어
 
-1. **자율 코드 리뷰 시스템** — GitHub PR을 자동으로 리뷰하고 개선 제안
-2. **테스트 자동 생성기** — 기존 코드베이스에서 pytest 테스트 자동 생성
-3. **문서화 자동화** — 코드 변경 시 README와 API 문서 자동 업데이트
-4. **버그 자동 수정기** — GitHub Issue를 읽고 자동으로 버그를 찾아 수정
-5. **성능 최적화 에이전트** — 프로파일링 결과를 분석하고 성능 병목 자동 수정
+1. **자율 코드 리뷰 시스템** — GitHub PR을 읽고 risk-ranked review comment를 생성한다.
+2. **테스트 자동 생성기** — 기존 코드에서 missing branch를 찾아 pytest를 생성한다.
+3. **문서화 자동화** — 코드 변경 후 README/API docs를 갱신하고 drift를 감지한다.
+4. **버그 triage + patch agent** — issue를 task packet으로 바꾸고 작은 patch를 제안한다.
+5. **성능 최적화 에이전트** — benchmark regression을 찾고 candidate fix를 만든다.
+6. **강의 자료 검증 에이전트** — MDX 링크, frontmatter, outdated 기술 표를 검사한다.
+7. **MCP 보안 감사 에이전트** — MCP server manifest와 tool descriptions에서 위험 패턴을 찾는다.
 
-## 아키텍처 설계 체크리스트
+### MVP 범위 결정
+
+좋은 캡스톤은 처음부터 완성형 제품을 선언하지 않는다. 다음 표처럼 반드시 남길 것과 과감히 버릴 것을 분리한다.
+
+| 구분 | 예시 | 판단 기준 |
+|------|------|----------|
+| Must have | task packet, single worker loop, deterministic gate, event log | 없으면 closed loop가 아님 |
+| Should have | reviewer/judge, replay snapshot, simple dashboard | 최종 평가 증거가 강해짐 |
+| Could have | web UI, multi-model router, agent marketplace | 시간이 남을 때만 |
+| Won't have | 완전 자율 배포, 외부 계정 자동 조작, 복잡한 권한 위임 | 위험과 구현 비용이 과함 |
+
+13주차 설계 문서에는 `Won't have`가 반드시 있어야 한다. scope cut이 없는 계획은 실행 계획이 아니라 희망 목록이다.
+
+### Task Packet 설계
+
+자연어 한 문장으로 에이전트를 호출하면 결과가 흔들린다. 캡스톤에서는 모든 작업을 task packet으로 전달한다.
+
+```yaml
+task_id: capstone-017
+objective: "Add retry handling to the GitHub issue importer"
+scope:
+  files:
+    - src/importer/github.py
+    - tests/test_github_importer.py
+allowed_tools:
+  - read_file
+  - edit_file
+  - run_tests
+acceptance:
+  - "pytest tests/test_github_importer.py passes"
+  - "No network call in unit tests"
+  - "Retry count is configurable"
+budget:
+  max_turns: 6
+  max_tokens: 120000
+escalation:
+  ask_human_if:
+    - "API contract must change"
+    - "Secret or credential is required"
+```
+
+### Architecture Decision Record
+
+각 팀은 중요한 결정을 ADR로 남긴다. 최소 3개가 필요하다.
+
+```markdown
+# ADR-001: Use vLLM OpenAI-compatible API
+
+## Context
+We need to compare local and commercial models through the same harness.
+
+## Decision
+Expose local models through vLLM's OpenAI-compatible API and route calls through one client wrapper.
+
+## Consequences
+- Good: model provider can be swapped without changing agent code.
+- Bad: model-specific tool-call parsers still require configuration.
+```
+
+### 설계 문서 구조
+
+<Tabs>
+  <TabItem label="필수 목차">
+    ```markdown
+    # Team Name Capstone Design
+
+    ## 1. Problem
+    ## 2. Users and Risk Boundary
+    ## 3. Agent Architecture
+    ## 4. Runtime Layers
+    ## 5. Task Packet Schema
+    ## 6. Evaluation Gates
+    ## 7. Telemetry and Replay
+    ## 8. Implementation Plan
+    ## 9. Demo Scenario
+    ```
+  </TabItem>
+  <TabItem label="다이어그램 예시">
+    ```mermaid
+    flowchart LR
+      Lead --> Planner
+      Planner --> Worker
+      Worker --> Reviewer
+      Reviewer --> Gate{Tests + Judge}
+      Gate -->|pass| Artifact
+      Gate -->|fail| Planner
+      Worker --> Events[(events.jsonl)]
+      Gate --> Events
+    ```
+  </TabItem>
+</Tabs>
+
+<Aside type="caution" title="설계 단계에서 줄일 것">
+큰 꿈보다 작은 closed loop가 중요하다. 14주차에 바로 실행 가능한 MVP가 없으면 15주차 통합이 무너진다. 주제는 작게, gate는 명확하게, demo path는 한 개로 시작한다.
+</Aside>
+
+### Risk Register
+
+설계 문서에는 리스크를 추상적으로 쓰지 않는다. 각 리스크는 trigger, owner, response를 가진다.
+
+| Risk | Trigger | Owner | Response |
+|------|---------|-------|----------|
+| 모델 출력이 JSON schema를 반복 위반 | invalid JSON rate > 20% | Agent Engineer | structured output 또는 repair step 추가 |
+| 테스트가 없어서 품질 평가 불가 | deterministic gate가 비어 있음 | QA / Operator | 최소 smoke test와 fixture 작성 |
+| scope creep | 14주차까지 happy path 미통과 | Lead | Could have 항목 전부 제거 |
+| 비용 폭증 | run당 token budget 초과 | Harness Engineer | max_turns, context trim, cache prefix 적용 |
+| 데모 불안정 | 같은 task 3회 중 1회 이상 실패 | QA / Operator | live demo 축소, 녹화본 준비 |
+
+이 표는 14주차 중간 보고서와 15주차 release gate의 입력으로 그대로 이어진다.
+
+## 실습 (Practicum)
 
 <Steps>
-1. **문제 정의** — 해결하려는 실제 문제와 성공 기준 명확화
+1. **팀 문제 정의**
 
-2. **에이전트 역할 설계** — 몇 개 에이전트? 각 역할과 책임?
+   실제 반복 업무를 하나 고르고, 사용자를 한 문장으로 정의한다.
 
-3. **데이터 흐름 설계** — 에이전트 간 아티팩트 형식 정의
+2. **성공 기준 작성**
 
-4. **하네스 설계** — Backpressure 메커니즘, Garbage Collection 정책
+   "좋다" 대신 pass/fail 가능한 기준 5개를 만든다.
 
-5. **인프라 설계** — 어느 MIG 슬라이스? 어느 모델?
+3. **agent role 분해**
 
-6. **평가 방법** — 시스템 성능을 어떻게 측정할 것인가?
+   Lead, Planner, Worker, Reviewer, Operator 중 필요한 역할만 선택한다.
+
+4. **runtime layer 매핑**
+
+   각 계층에 어떤 파일, 스크립트, 로그, 정책이 들어갈지 정한다.
+
+5. **demo path 고정**
+
+   최종 발표에서 보여줄 happy path 1개와 failure recovery path 1개를 정한다.
 </Steps>
-
-<Aside type="note" title="설계 문서 요구사항">
-13주차 과제로 제출하는 아키텍처 설계 문서에는 반드시 에이전트 상호작용 다이어그램, 데이터 흐름도, 기술 스택 선택 근거가 포함되어야 한다.
-</Aside>
 
 ## 과제 (Assignment)
 
@@ -83,10 +234,11 @@ import { Aside, Steps, Badge, Card, CardGrid } from '@astrojs/starlight/componen
 **제출 경로**: `capstone/teams/[팀명]/design.md`
 
 **요구사항**:
-1. 문제 정의 및 해결 접근법
-2. 에이전트 아키텍처 다이어그램
-3. 기술 스택 선택 및 근거
-4. 주차별 구현 계획
-5. 성공 지표 정의
+1. 문제 정의 및 사용자/위험 경계
+2. agent architecture diagram
+3. Agent OS Runtime 7계층 중 최소 5계층 매핑
+4. task packet schema와 예시 3개
+5. deterministic gate + LLM Judge + human review 기준
+6. 14-16주차 구현 계획과 demo script 초안
 
 </div>

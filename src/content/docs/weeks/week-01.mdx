@@ -66,7 +66,7 @@ import { Aside, Steps, Tabs, TabItem, Card, CardGrid, Badge } from '@astrojs/sta
     - LLM = 자율 실행 에이전트
     - 인간은 전략적 감독자
     - AI가 파일 수정·테스트·배포 직접 수행
-    - SWE-bench Verified 성공률 79.2% (Claude Opus 4.6 Thinking)
+    - SWE-bench Verified 성공률 79%대 (frontier reasoning model + agent harness)
   </Card>
 </CardGrid>
 
@@ -210,7 +210,7 @@ AI 코딩 도구 시장은 2026년 기준 USD 34.58B 규모로 성장했다. 아
 **SWE-bench Verified** — 실제 GitHub 이슈를 자율적으로 해결하는 벤치마크:
 - 2024년 초: 상위 시스템 ~15%
 - 2025년 말: 50% 돌파
-- 2026년 초: 79.2% (Claude Opus 4.6 Thinking)
+- 2026년 초: 79%대 frontier system 보고
 
 실전 데이터도 축적되고 있다:
 - **Devin**: 초기 성공률 15%(Answer.AI 테스트) → 2025년 말 PR 머지율 67%로 개선
@@ -221,10 +221,10 @@ AI 코딩 도구 시장은 2026년 기준 USD 34.58B 규모로 성장했다. 아
 
 2026년의 주목할 변화는 오픈소스 모델이 상용 수준에 근접했다는 것이다. 현재 추적되는 204개 AI 코딩 도구 중 95%가 오픈소스다.
 
-핵심 오픈소스 코딩 모델:
-- **Qwen3-Coder** (235B MoE, 22B 활성) — SWE-bench에서 상용 모델에 근접, Apache 2.0
-- **DeepSeek V3** (685B MoE, 37B 활성) — 수학·추론·코딩 최상위, 비용 효율 극대화
-- **GLM-4.7** (32B Dense) — 단일 GPU 구동 가능, Interleaved Thinking
+핵심 오픈웨이트 코딩 모델:
+- **Qwen3-Coder-Next** — 80B total / 3B 활성, 256K context, coding agent와 local development 지향
+- **DeepSeek-V4-Pro / Flash** — 1.6T/284B MoE, 1M context, long-context reasoning과 agentic task 지향
+- **GLM-5.1 / MiniMax-M2.7** — agentic engineering, terminal task, 장기 tool-use workflow 후보
 
 이 강의에서 오픈소스 모델을 직접 배포하는 이유: **비용**, **프라이버시**(교내 데이터가 외부로 나가지 않음), **커스터마이징**(학습 환경에 맞춘 조정). 10–11주차에서 DGX H100 서버에 이 모델들을 배포한다.
 

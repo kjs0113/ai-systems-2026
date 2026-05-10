@@ -1,18 +1,18 @@
 ---
 title: "10주차: 오픈소스 코딩 LLM과 로컬 배포"
-description: 상용 API를 넘어 — Qwen3-Coder, DeepSeek V3, GLM-4.7 등 오픈소스 LLM 직접 배포와 경제성 분석
+description: 상용 API를 넘어 — 최신 오픈웨이트 모델, AI 코딩 CLI, vLLM 기반 로컬 추론 운영 설계
 week: 10
 phase: 4
 phase_title: 오픈소스 모델 & MLOps
 date: "2026-05-05"
 theory_topics:
-  - 2026 오픈소스 코딩 LLM 지형 (Qwen3-Coder, DeepSeek V3, GLM-4.7, MiniMax M2.1)
-  - 오픈소스 vs 상용 API 비교
-  - 에이전틱 코딩 도구 생태계
+  - 2026 오픈웨이트 코딩 LLM 지형
+  - 상용 API, 클라우드 에이전트, 로컬 모델의 선택 기준
+  - vLLM/SGLang 기반 OpenAI 호환 추론 서버
 lab_topics:
-  - vLLM으로 오픈소스 모델 배포
+  - vLLM으로 오픈웨이트 모델 배포
   - AI 코딩 CLI에서 로컬 모델 연동
-  - 추론 서버 성능 벤치마크
+  - 추론 서버 성능/비용 벤치마크
 assignment: "Lab 10: vLLM 배포 실습"
 assignment_due: "2026-05-12"
 difficulty: 고급
@@ -30,200 +30,271 @@ import { Aside, Steps, Badge, Card, CardGrid, Tabs, TabItem } from '@astrojs/sta
 
 ## 이론 (Theory)
 
-### 2026 오픈소스 코딩 LLM 지형
+### 2026 오픈웨이트 코딩 LLM 지형
 
-2025–2026년을 거치며 오픈소스 코딩 모델이 상용 모델(Claude, GPT-4o)과 대등하거나 일부 벤치마크에서 앞서는 수준에 도달했다. MoE(Mixture-of-Experts) 아키텍처가 주류로 자리잡아, 거대한 전체 파라미터 대비 소수의 활성 파라미터만 사용하여 효율적 추론이 가능해졌다.
+2026년의 핵심 변화는 "오픈소스 모델도 쓸 만하다"가 아니라 **오픈웨이트 모델이 실제 에이전트 하네스 안에서 상용 모델과 경쟁한다**는 점이다. 모델 자체의 코딩 성능뿐 아니라 tool calling, long context, 추론 서버 호환성, 라이선스, 운영비가 함께 비교 대상이 되었다.
 
-#### 주요 모델 비교
-
-| 모델 | 총 파라미터 | 활성 파라미터 | 컨텍스트 | VRAM 요건 (FP16) | 라이선스 |
-|------|-----------|-------------|---------|-----------------|---------|
-| **Qwen3-Coder** | 235B (MoE) | 22B | 128K | ~48GB (Q4) | Apache 2.0 |
-| **DeepSeek V3** | 685B (MoE) | 37B | 128K | 350GB+ (Q4, 멀티 GPU) | DeepSeek |
-| **GLM-4.7** | ~32B | 전체 | 128K | ~24GB (Q4) | Apache 2.0 |
-| **MiniMax M2.1** | 230B (MoE) | 10B | 128K | ~80GB+ | Apache 2.0 |
-| **DeepSeek-Coder-V2** | 236B (MoE) | 21B | 128K | ~48GB (Q4) | DeepSeek |
-
-#### Qwen3-Coder (Alibaba)
-
-코딩과 에이전틱 태스크에 특화 튜닝된 최신 MoE 모델. SWE-bench Verified에서 Claude Sonnet 4에 근접하는 성능을 보여주며, 32B 급 모델 중 가장 강력한 코딩 성능을 제공한다. 14B/8B 소형 버전도 단일 GPU에서 실용적 성능을 낸다.
-
-#### DeepSeek V3 (DeepSeek)
-
-685B MoE로 수학/추론/코딩에서 최상위권. 다만 양자화해도 350GB+ VRAM이 필요하여 8×H100 급 클러스터 환경이 사실상 필수. 데이터센터 규모 인프라가 있다면 최강의 오픈 모델.
-
-#### GLM-4.7 (Zhipu AI)
-
-Dense 모델로 ~32B 파라미터, 단일 48GB GPU에서 구동 가능. Interleaved Thinking(교차 사고) 기능으로 추론 품질이 높고, 코딩 벤치마크에서 Claude 수준으로 평가된다. HuggingFace/ModelScope에서 가중치 공개.
-
-#### MiniMax M2.1
-
-230B MoE, 10B 활성. 코딩 에이전트와 도구 사용에 특화 설계. 가중치 완전 공개. 추론 시 MoE 덕분에 활성 파라미터는 작지만, 전체 모델 로딩에 80GB+ VRAM 필요.
-
-<Aside type="tip" title="MoE 아키텍처의 효율성">
-Qwen3-Coder는 235B 파라미터 중 22B만 활성화하여 추론한다. H100 1개(80GB)로도 운영 가능하며, 4-bit 양자화 시 RTX 4090(24GB) 수준에서도 구동할 수 있다.
+<Aside type="note" title="오픈소스와 오픈웨이트 구분">
+대부분의 최신 모델은 학습 코드/데이터 전체가 공개된 open source가 아니라, 가중치와 추론 사용권이 공개된 **open weights**에 가깝다. 이 강의에서는 실무 정확성을 위해 "오픈웨이트 모델"이라는 표현을 기본으로 사용한다.
 </Aside>
 
-#### 하드웨어별 실행 가능 모델 가이드
+#### 주요 모델 비교 (2026-05 기준)
 
-| 환경 | GPU VRAM | 추천 모델 |
-|------|---------|----------|
-| 개인 PC (RTX 4090) | 24GB | Qwen3-Coder 14B/8B, GLM-4.7 (Q4) |
-| 워크스테이션 (A6000/H100 1개) | 48–80GB | Qwen3-Coder 32B, GLM-4.7 (FP16) |
-| DGX H100 (MIG 2–4슬라이스) | 160–320GB | DeepSeek-Coder-V2, MiniMax M2.1 |
-| DGX H100 (전체 8GPU) | 640GB | DeepSeek V3 (Q4) |
+| 모델 | 공개 단위 | 파라미터 | 컨텍스트 | 강점 | 운영 메모 |
+|------|-----------|---------|---------|------|----------|
+| **Qwen3-Coder-Next** | Apache 2.0 | 80B MoE, 3B 활성 | 256K | agentic coding, tool calling, local development | 이전 480B-A35B보다 작고 빠른 최신 coding-agent 후보 |
+| **DeepSeek-V4-Pro / Flash** | 공개 모델 카드 | 1.6T/284B MoE | 1M | long-context reasoning, coding, agentic task | Pro는 품질, Flash는 효율 지향. V3.2보다 최신 기준 |
+| **GLM-5.1** | 공개 가중치 | 모델 카드 기준 최신 GLM 계열 | long-context agent work | agentic engineering, coding, tool use | 최신 GLM 계열 비교 기준 |
+| **MiniMax-M2.7** | 공개 모델 카드 | 230B급 MoE 계열 | 장문 agentic workflow | coding, search, office work, long-horizon agents | M2.5보다 최신 MiniMax agentic 후보 |
+| **DeepSeek-Coder-V2-Lite** | DeepSeek | 16B/236B 계열 | 128K | 단일 GPU 실습, 코드 수정/완성 | 교육용 Lab에 적합. frontier 성능 비교용은 아님 |
 
-### 오픈소스 vs 상용 API 비교
+#### 모델 카드를 읽는 순서
+
+최신 모델 카드는 벤치마크 표보다 운영 제약을 먼저 읽어야 한다. 수업에서는 다음 순서로 후보를 평가한다.
+
+| 확인 순서 | 질문 | 탈락 신호 |
+|-----------|------|----------|
+| License | 수업/연구/상용 PoC에 쓸 수 있는가? | 재배포·서비스 사용 조건이 불명확함 |
+| Serving support | vLLM, SGLang, Transformers 중 무엇을 공식 지원하는가? | 공식 예제가 없고 community patch만 존재함 |
+| Tool format | tool call, JSON mode, reasoning output을 어떻게 표현하는가? | parser를 매번 ad hoc으로 고쳐야 함 |
+| Context policy | 최대 context와 권장 운영 context가 다른가? | 1M context를 표기하지만 실제 GPU 예산이 없음 |
+| Failure behavior | OOM, invalid JSON, refusal, timeout이 어떻게 나타나는가? | 실패가 구조화되지 않아 retry 판단이 어려움 |
+
+모델 표에서 "최신"이라고 적힌 항목은 강의 기준 시점의 후보 목록이다. 실제 캡스톤에서는 모델 이름보다 **같은 task packet을 같은 harness로 실행한 재현 결과**가 선택 근거가 된다.
+
+#### Qwen3-Coder
+
+Qwen3-Coder-Next는 80B total / 3B active MoE 모델이며, 256K context와 agentic coding/tool calling을 전면에 둔다. 대형 이전 세대보다 작고 빠른 최신 coding-agent 후보로, 수업에서는 최신 Qwen 계열 비교 기준으로 사용한다.
+
+운영 관점에서 Qwen3-Coder의 의미는 단순히 "코드를 잘 쓴다"가 아니다. 긴 저장소 컨텍스트, 함수 호출 포맷, vLLM/SGLang 배포 지원이 결합되어 **로컬 또는 기관 서버에서 agentic coding harness를 구성할 수 있는 후보**가 되었다.
+
+#### DeepSeek-V4
+
+DeepSeek-V4-Pro와 DeepSeek-V4-Flash는 DeepSeek 조직의 최신 V4 계열 모델 카드로 확인된다. 1.6T/284B MoE와 1M context를 내세우며, V4-Pro는 품질과 장문 reasoning, V4-Flash는 효율과 throughput 후보로 구분한다.
+
+| 계열 | 강의 내 사용 |
+|------|-------------|
+| DeepSeek-Coder-V2-Lite | 실습 서버에서 구동하기 쉬운 교육용 모델 |
+| DeepSeek-V4-Pro | 최신 DeepSeek frontier 비교 기준 |
+| DeepSeek-V4-Flash | 비용/처리량 비교 기준 |
+| DeepSeek 이전 세대 | long-context 기준선 비교용 |
+
+#### GLM-5.1
+
+GLM-5.1은 최신 공개 GLM 계열로, agentic engineering과 coding workflow를 비교할 때 우선 확인할 모델이다. 실무 교훈은 동일하다. 최신 모델은 단순히 `model=`만 바꿔서 끝나지 않고, **하네스가 모델별 tool/reasoning parser와 serving 옵션을 알아야 한다**.
+
+#### MiniMax-M2.7
+
+MiniMax-M2.7은 MiniMax의 최신 agentic workflow 후보로 확인된다. 코딩뿐 아니라 검색, office work, 장기 agentic task를 강조한다. 모델 카드의 성능 수치는 vendor claim이므로 강의에서는 그대로 성능 순위로 받아들이지 않는다. 대신 10주차 Lab에서 동일 태스크를 같은 하네스, 같은 예산, 같은 평가 기준으로 비교한다.
+
+<Aside type="caution" title="벤치마크 수치를 읽는 법">
+SWE-bench, Terminal-Bench, BrowseComp 수치는 하네스, 프롬프트, tool policy, retry budget에 크게 의존한다. 모델 표는 "어떤 후보를 실험할 것인가"를 정하는 용도이고, 최종 선택은 우리 환경에서 재현한 Lab 결과로 판단한다.
+</Aside>
+
+### 모델 선택은 하네스 선택이다
+
+오픈웨이트 모델 도입은 "API 비용을 아끼자"로 끝나지 않는다. 실제 선택지는 세 가지다.
 
 <CardGrid>
-  <Card title="상용 API (Claude, GPT-4)" icon="external">
-    - 장점: 즉시 사용, 유지보수 불필요
-    - 단점: 데이터 프라이버시, 비용 예측 불가, API 제한
-    - 비용: ~$15/1M 토큰 (input)
+  <Card title="상용 API" icon="external">
+    Claude, GPT, Gemini API를 직접 사용한다. 품질과 운영 편의성은 높지만 데이터 경계, 비용 예측, rate limit을 관리해야 한다.
   </Card>
-  <Card title="오픈소스 (DeepSeek + vLLM)" icon="laptop">
-    - 장점: 완전한 제어, 데이터 내부 보관, 비용 예측 가능
-    - 단점: 초기 설정 비용, 유지보수 필요
-    - 비용: H100 서버 비용만 (토큰당 ~$0.001)
+  <Card title="클라우드 에이전트" icon="rocket">
+    Codex Web/App, Claude Code on the Web, GitHub Agent HQ처럼 원격 sandbox와 GitHub 연동을 사용한다. 비동기 작업과 리뷰 흐름에 강하다.
+  </Card>
+  <Card title="로컬 추론" icon="laptop">
+    vLLM/SGLang으로 OpenAI 호환 API를 제공한다. 기관 데이터 경계와 예측 가능한 GPU 비용이 장점이지만 운영 복잡도가 커진다.
   </Card>
 </CardGrid>
 
-### 에이전틱 코딩 도구 생태계 (2026)
+#### 선택 매트릭스
+
+| 기준 | 상용 API | 클라우드 에이전트 | 로컬 추론 |
+|------|----------|------------------|----------|
+| 시작 속도 | 매우 빠름 | 빠름 | 느림 |
+| 데이터 통제 | 낮음-중간 | 중간 | 높음 |
+| 장기 비용 | 사용량 의존 | 좌석/사용량 의존 | GPU 고정비 중심 |
+| 최신 모델 접근 | 빠름 | 빠름 | 모델 공개 후 가능 |
+| 운영 난이도 | 낮음 | 중간 | 높음 |
+| 강의 실습 가치 | API 설계 | workflow 설계 | MLOps/infra 이해 |
+
+### 에이전틱 코딩 도구 생태계
 
 <div class="diagram">
   <div class="diagram__title">AGENTIC CODING TOOL ECOSYSTEM (2026)</div>
   <div class="diagram__cols diagram__cols--3">
     <div>
-      <div class="diagram__col-title diagram__col-title--blue">상용 (Commercial)</div>
+      <div class="diagram__col-title diagram__col-title--blue">Agent Harness</div>
       <div class="diagram__node diagram__node--blue diagram__node--full">
         <ul>
-          <li>Claude Code (Anthropic)</li>
-          <li>Gemini CLI (Google, 무료)</li>
-          <li>Codex CLI (OpenAI)</li>
-          <li>Cursor (GPT-4o)</li>
-          <li>GitHub Copilot</li>
-          <li>Amazon Q</li>
+          <li>Claude Code: subagents, hooks, skills, MCP</li>
+          <li>Codex CLI/App/Web: sandbox, AGENTS.md, MCP, subagents</li>
+          <li>Gemini CLI: 1M context, Google Search grounding, MCP</li>
+          <li>GitHub Agent HQ: GitHub 안의 Claude/Codex 선택 실행</li>
         </ul>
       </div>
     </div>
     <div>
-      <div class="diagram__col-title diagram__col-title--green">오픈소스 모델 (Open Weights)</div>
+      <div class="diagram__col-title diagram__col-title--green">Open-Weight Models</div>
       <div class="diagram__node diagram__node--green diagram__node--full">
         <ul>
-          <li>Qwen3-Coder (Alibaba, 235B MoE)</li>
-          <li>DeepSeek V3 (685B MoE)</li>
-          <li>GLM-4.7 (Zhipu AI, ~32B Dense)</li>
-          <li>MiniMax M2.1 (230B MoE)</li>
-          <li>DeepSeek-Coder-V2 (236B MoE)</li>
-          <li>Qwen3 14B/8B (경량)</li>
+          <li>Qwen3-Coder-Next</li>
+          <li>DeepSeek-V4-Pro / Flash</li>
+          <li>GLM-5.1</li>
+          <li>MiniMax-M2.7</li>
+          <li>DeepSeek-Coder-V2-Lite</li>
         </ul>
       </div>
     </div>
     <div>
-      <div class="diagram__col-title diagram__col-title--purple">오픈소스 도구 (Open Tools)</div>
+      <div class="diagram__col-title diagram__col-title--purple">Serving + Control Plane</div>
       <div class="diagram__node diagram__node--purple diagram__node--full">
         <ul>
-          <li>OpenCode (다중 백엔드 TUI)</li>
-          <li>Roo Code / Cline (VS Code 확장)</li>
-          <li>vLLM / SGLang (추론 서버)</li>
+          <li>vLLM / SGLang: OpenAI-compatible serving</li>
+          <li>LiteLLM / gateway: routing, budget, policy</li>
+          <li>OpenTelemetry: trace, metrics, logs</li>
+          <li>Agent OS Runtime: event store, contracts, replay</li>
         </ul>
       </div>
     </div>
   </div>
 </div>
 
-<Aside type="note" title="로컬 LLM으로 Claude Code 대체?">
-소규모 팀이 월 $2K+ API 비용을 절감하기 위해 로컬 모델을 사용하는 사례가 늘고 있다.
-Qwen3-Coder, GLM-4.7 등은 일상적 코딩 작업(코드 완성, 버그 수정, PR 요약)에서
-상용 모델과 유사한 결과를 보여준다.
-단, 복잡한 아키텍처 설계나 대규모 리팩토링에서는 여전히 Opus/Sonnet급 모델이 우위.
-</Aside>
-
 > 터미널 기반 AI 코딩 CLI 도구 비교는 [AI 코딩 도구 선택 가이드](/reference/tool-selection) 참조.
+
+### OpenAI 호환 API가 표준 인터페이스가 되는 이유
+
+vLLM과 SGLang은 대부분 OpenAI-compatible `/v1/chat/completions` 또는 Responses 스타일 클라이언트 패턴을 지원한다. 이 인터페이스를 쓰면 하네스는 모델 제공자에 덜 묶인다.
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="http://localhost:8000/v1",
+    api_key="local-dev-token",
+)
+
+response = client.chat.completions.create(
+    model="Qwen/Qwen3-Coder-Next",
+    messages=[
+        {"role": "system", "content": "You are a careful coding agent."},
+        {"role": "user", "content": "Add tests for the parser edge cases."},
+    ],
+    temperature=0.2,
+)
+```
+
+핵심은 추상화 계층이다.
+
+| 계층 | 책임 |
+|------|------|
+| Agent CLI | 파일 읽기/쓰기, 명령 실행, 사용자 승인, 작업 흐름 |
+| Gateway | 모델 라우팅, 예산, rate limit, audit |
+| Serving | batching, KV cache, speculative decoding, GPU scheduling |
+| Model | 토큰 생성, tool-call JSON, reasoning output |
+
+#### 모델 어댑터 체크리스트
+
+OpenAI 호환 API는 공통 출발점일 뿐이다. 하네스가 모델을 실제로 바꿔 끼우려면 adapter가 다음 항목을 흡수해야 한다.
+
+| 항목 | 구현 기준 |
+|------|----------|
+| Model alias | `local-coder`, `qwen3-coder`, `glm-5.1`처럼 강의/실습용 이름을 고정한다 |
+| Message template | system/developer/user/tool 메시지가 모델별 chat template과 충돌하지 않게 한다 |
+| Tool parser | 함수 호출 JSON, XML-like block, plain text plan을 모델별로 파싱한다 |
+| Retry policy | timeout, invalid JSON, context overflow, refusal을 서로 다른 failure reason으로 기록한다 |
+| Token accounting | prompt/completion/cache token을 run id와 연결한다 |
+| Evaluation hook | 동일 task packet을 상용 API와 로컬 모델에 반복 실행할 수 있게 한다 |
+
+이 체크리스트가 없으면 "모델 교체 가능"은 실제 운영 속성이 아니라 코드 주석에 머문다.
 
 ## 실습 (Practicum)
 
-### vLLM으로 오픈소스 모델 배포
+### vLLM으로 오픈웨이트 모델 배포
 
 <Steps>
-1. **DGX 서버에서 vLLM 설치**
+1. **환경 확인**
 
    ```bash
-   # MIG 슬라이스 내에서
-   pip install vllm
+   nvidia-smi
+   python --version
+   uv venv .venv
+   source .venv/bin/activate
+   uv pip install vllm openai
    ```
 
-2. **모델 선택 및 서버 실행**
+2. **실습 모델 선택**
 
    <Tabs>
-     <TabItem label="Qwen3-Coder (권장)">
+     <TabItem label="교육용 권장">
        ```bash
-       python -m vllm.entrypoints.openai.api_server \
-         --model Qwen/Qwen3-Coder-32B-Instruct \
-         --tensor-parallel-size 1 \
+       vllm serve deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct \
+         --served-model-name local-coder \
          --max-model-len 32768 \
          --port 8000
        ```
      </TabItem>
-     <TabItem label="DeepSeek-Coder-V2">
+     <TabItem label="Qwen3-Coder-Next">
        ```bash
-       python -m vllm.entrypoints.openai.api_server \
-         --model deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct \
-         --tensor-parallel-size 1 \
-         --max-model-len 32768 \
+       vllm serve Qwen/Qwen3-Coder-Next \
+         --served-model-name qwen3-coder \
+         --tensor-parallel-size 2 \
+         --max-model-len 65536 \
          --port 8000
        ```
      </TabItem>
-     <TabItem label="GLM-4.7">
+     <TabItem label="GLM-5.1">
        ```bash
-       python -m vllm.entrypoints.openai.api_server \
-         --model THUDM/glm-4-9b-chat \
-         --tensor-parallel-size 1 \
-         --max-model-len 32768 \
+       vllm serve zai-org/GLM-5.1 \
+         --served-model-name glm-5.1 \
+         --tensor-parallel-size 4 \
+         --enable-auto-tool-choice \
          --port 8000
        ```
      </TabItem>
    </Tabs>
 
-3. **OpenAI 호환 API로 테스트**
-
-   ```python
-   import openai
-
-   client = openai.OpenAI(
-       base_url="http://localhost:8000/v1",
-       api_key="token-abc"
-   )
-
-   response = client.chat.completions.create(
-       model="Qwen/Qwen3-Coder-32B-Instruct",  # 실행 중인 모델명
-       messages=[{"role": "user", "content": "Python으로 퀵소트 구현해줘"}]
-   )
-   print(response.choices[0].message.content)
-   ```
-
-4. **AI 코딩 CLI에서 로컬 모델 사용**
-
-   vLLM의 OpenAI 호환 API를 통해 Claude Code, OpenCode 등에서 로컬 모델을 백엔드로 사용할 수 있다.
+3. **OpenAI 호환 API 테스트**
 
    ```bash
-   # OpenCode에서 로컬 vLLM 연결
-   export OPENAI_API_BASE="http://localhost:8000/v1"
-   export OPENAI_API_KEY="token-abc"
-   opencode
+   curl http://localhost:8000/v1/chat/completions \
+     -H "Content-Type: application/json" \
+     -d '{
+       "model": "local-coder",
+       "messages": [
+         {"role": "user", "content": "Python으로 stable topological sort를 구현해줘"}
+       ],
+       "temperature": 0.2
+     }'
    ```
 
-5. **성능 벤치마크**
+4. **동일 태스크 비교**
+
+   각 팀은 같은 5개 태스크를 상용 API 1개와 로컬 모델 1개에 실행한다.
+
+   | 태스크 | 평가 기준 |
+   |--------|----------|
+   | 버그 수정 | 테스트 통과 여부 |
+   | 리팩터링 | 동작 보존 + 가독성 |
+   | 테스트 생성 | 커버리지와 edge case |
+   | 문서 업데이트 | 변경 반영 정확도 |
+   | CLI 기능 추가 | 요구사항 충족 + UX |
+
+5. **비용/처리량 측정**
 
    ```bash
-   # 처리량 벤치마크
-   python -m vllm.benchmarks.benchmark_throughput \
-     --model Qwen/Qwen3-Coder-32B-Instruct \
+   python -m vllm.benchmarks.benchmark_serving \
+     --backend openai-chat \
+     --base-url http://localhost:8000 \
+     --model local-coder \
      --num-prompts 100 \
-     --input-len 512 \
-     --output-len 128
+     --request-rate 4
    ```
 </Steps>
+
+<Aside type="tip" title="Lab에서 중요한 것">
+최신 모델 이름을 많이 아는 것보다, 같은 태스크를 같은 하네스와 같은 평가 기준으로 돌려서 **우리 환경에서의 재현 가능한 선택 근거**를 만드는 것이 중요하다.
+</Aside>
 
 ## 과제 (Assignment)
 
@@ -234,9 +305,20 @@ Qwen3-Coder, GLM-4.7 등은 일상적 코딩 작업(코드 완성, 버그 수정
 **제출 마감**: 2026-05-12 23:59
 
 **요구사항**:
-1. DGX 서버에 vLLM으로 오픈소스 모델 1개 이상 구동 성공 스크린샷
-2. 오픈소스 모델(Qwen3-Coder 또는 선택 모델) vs Claude 코딩 성능 비교 (동일 태스크 5개)
-3. 처리량(tokens/sec) 벤치마크 결과
-4. 비용 분석: API 비용 vs DGX 운영 비용 계산
+1. DGX 또는 로컬 GPU에서 vLLM 서버 구동 로그
+2. OpenAI 호환 API 호출 결과 3개 이상
+3. 상용 모델 1개 vs 오픈웨이트 모델 1개 동일 태스크 5개 비교
+4. 처리량(tokens/sec), 지연시간, 실패율, 비용 추정 표
+5. 최종 선택: 어떤 모델을 어떤 작업에 쓸 것인지에 대한 근거
 
 </div>
+
+## 최신 참고자료
+
+- [Qwen3-Coder-Next](https://huggingface.co/Qwen/Qwen3-Coder-Next)
+- [DeepSeek-V4-Pro](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro)
+- [DeepSeek-V4-Flash](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash)
+- [GLM-5.1](https://huggingface.co/zai-org/GLM-5.1)
+- [MiniMax-M2.7](https://huggingface.co/MiniMaxAI/MiniMax-M2.7)
+- [Codex MCP documentation](https://developers.openai.com/codex/mcp)
+- [vLLM OpenAI-compatible server](https://docs.vllm.ai/en/latest/serving/openai_compatible_server/)

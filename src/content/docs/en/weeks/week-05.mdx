@@ -87,7 +87,7 @@ Frontier model context windows as of 2026:
 
 | Model | Official Context | Effective Usage |
 |-------|-----------------|-----------------|
-| Claude Opus/Sonnet 4.6 | 1M tokens | ~600-700K |
+| current Claude frontier family | 1M-token class | ~600-700K |
 | GPT-5.4 | 1M tokens | ~600-700K |
 | Gemini 2.5 Pro | 1M tokens | ~600-700K |
 
@@ -355,12 +355,13 @@ Measure context usage directly and compare before and after compaction to experi
    Run the `/cost` command in a Claude Code session to check the current session's token usage. After 10 turns of conversation, measure again and record the increase.
 
    ```python
+   import os
    import anthropic
 
    def count_tokens(messages: list) -> int:
        client = anthropic.Anthropic()
        response = client.messages.count_tokens(
-           model="claude-opus-4-6",
+           model=os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5"),
            messages=messages
        )
        return response.input_tokens

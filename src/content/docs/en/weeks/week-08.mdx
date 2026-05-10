@@ -92,6 +92,7 @@ The artifact schema designed in Week 7 is implemented as code here. The spec.md 
 
 ```python
 # planner_agent.py
+import os
 import anthropic
 import json
 from pathlib import Path
@@ -127,7 +128,7 @@ class PlannerAgent:
         codebase = self.analyze_codebase(project_root)
 
         response = self.client.messages.create(
-            model="claude-opus-4-6",
+            model=os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5"),
             max_tokens=4096,
             system=SYSTEM_PROMPT,
             messages=[{
@@ -379,7 +380,7 @@ class SpecValidator:
                          failures: list[str]) -> dict:
         feedback = "\n".join(f"- {f}" for f in failures)
         response = self.client.messages.create(
-            model="claude-opus-4-6",
+            model=os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5"),
             max_tokens=2048,
             messages=[{
                 "role": "user",

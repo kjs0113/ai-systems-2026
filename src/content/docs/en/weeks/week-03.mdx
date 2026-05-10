@@ -784,6 +784,10 @@ Configuration for connecting MCP servers in Claude Desktop or Claude Code:
 }
 ```
 
+<Aside type="note" title="Agent OS Runtime perspective">
+This week, MCP should be understood as a **capability boundary**, not just a way to attach tools. In Agent OS Runtime, every tool call passes through `allowed-tools` scope, input/output schemas, `PreToolUse`/`PostToolUse` hooks, and `tool.invoke`/`tool.result` events. This becomes L1 in the [Agent OS 7-Layer Architecture](/en/reference/agent-os-runtime/#7-layer-architecture).
+</Aside>
+
 ---
 
 ### Discussion Questions

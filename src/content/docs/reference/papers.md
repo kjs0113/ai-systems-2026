@@ -18,7 +18,11 @@ description: AI 시스템 2026 강의 관련 논문, 블로그 포스트, 공식
 
 | 제목 | 저자 | 연도 | 관련 주차 |
 |------|------|------|---------|
+| Qwen3-Coder-Next Model Card | Qwen Team | 2026 | 10주 |
+| DeepSeek-V4-Pro / DeepSeek-V4-Flash Model Cards | DeepSeek-AI | 2026 | 10주 |
 | DeepSeek-Coder-V2 | DeepSeek-AI | 2024 | 10주 |
+| GLM-5.1 Model Card | Z.ai | 2026 | 10주 |
+| MiniMax-M2.7 Model Card | MiniMaxAI | 2026 | 10주 |
 | Code Llama | Rozière et al. | 2023 | 10주 |
 | SWE-bench | Jimenez et al. | 2024 | 9주 |
 | SWE-bench Pro | OpenAI et al. | 2026 | 4, 9주 |
@@ -39,6 +43,7 @@ description: AI 시스템 2026 강의 관련 논문, 블로그 포스트, 공식
 |------|------|------|---------|
 | vLLM: PagedAttention | Kwon et al. | 2023 | 11주 |
 | Efficiently Scaling Transformer Inference | Pope et al. | 2023 | 11주 |
+| vLLM Automatic Prefix Caching / Speculative Decoding / Disaggregated Prefill Docs | vLLM Project | 2026 | 11주 |
 
 ## 블로그 포스트 & 실전 자료
 
@@ -52,6 +57,9 @@ description: AI 시스템 2026 강의 관련 논문, 블로그 포스트, 공식
 - **"AGENTbench"** — ETH Zurich (2026) → 6주. LLM 생성 instruction 파일의 역효과 실증
 - **"Agentic Coding"** — MIT Missing Semester (2026) → 4-6주. instruction files, skills, subagents 정규 강의
 - **Claude Code: Deep Dive** — Anthropic Blog (2025) → 1–2주
+- **GitHub Agent HQ** — GitHub Blog (2026) → 10주. GitHub 안에서 Claude/Codex agent 선택 실행
+- **Codex Cloud / CLI / MCP Docs** — OpenAI Developers (2026) → 10주. sandbox, AGENTS.md, MCP, subagents
+- **Gemini CLI Docs** — Google (2026) → 10주. 1M context, Search grounding, MCP, extensions
 
 ## 규제 자료
 
@@ -63,6 +71,8 @@ description: AI 시스템 2026 강의 관련 논문, 블로그 포스트, 공식
 - [Anthropic Claude Documentation](https://docs.anthropic.com)
 - [Gemini CLI (Google)](https://github.com/google-gemini/gemini-cli) — Google의 AI 코딩 CLI
 - [Codex CLI (OpenAI)](https://github.com/openai/codex) — OpenAI의 터미널 코딩 에이전트
+- [OpenAI Codex MCP Documentation](https://developers.openai.com/codex/mcp)
+- [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/)
 - [Model Context Protocol Specification](https://modelcontextprotocol.io/specification/2025-11-25)
 - [vLLM Documentation](https://docs.vllm.ai)
 - [NVIDIA MIG User Guide](https://docs.nvidia.com/datacenter/tesla/mig-user-guide/)

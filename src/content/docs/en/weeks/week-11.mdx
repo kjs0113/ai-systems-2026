@@ -1,24 +1,25 @@
 ---
 title: "Week 11: High-Throughput Inference Optimization with vLLM"
-description: CUDA optimization, PagedAttention, batch processing — operating a production LLM server
+description: Beyond PagedAttention — prefix caching, speculative decoding, disaggregated prefill, and observable LLM serving
 week: 11
 phase: 4
 phase_title: Open-Source Models & MLOps
 date: "2026-05-12"
 theory_topics:
-  - PagedAttention algorithm
-  - CUDA memory optimization
-  - Batch processing and scheduling
+  - vLLM V1 serving architecture
+  - KV cache, prefix caching, and speculative decoding
+  - Disaggregated prefill and production observability
 lab_topics:
-  - vLLM configuration optimization
-  - Multi-model serving
-assignment: "Ongoing practicum (Lab 11 preparation)"
+  - Optimize vLLM settings
+  - Serve multiple models and tenants
+  - Observe serving with Prometheus and Grafana
+assignment: "In-class practicum (Lab 11 preparation)"
 assignment_due: "2026-05-19"
 difficulty: advanced
-estimated_time: "6 hours"
+estimated_time: 6 hours
 ---
 
-import { Aside, Steps, Badge } from '@astrojs/starlight/components';
+import { Aside, Steps, Badge, Card, CardGrid, Tabs, TabItem } from '@astrojs/starlight/components';
 
 <div class="week-meta">
   <span class="phase-tag">Phase 4</span>
@@ -29,92 +30,224 @@ import { Aside, Steps, Badge } from '@astrojs/starlight/components';
 
 ## Theory
 
-### PagedAttention: vLLM's Core Innovation
+### The inference server is the operating system for the model
 
-Traditional LLM inference allocates the KV cache (Key-Value Cache) as contiguous memory blocks, resulting in severe memory waste. vLLM's **PagedAttention** applies the OS virtual memory paging concept to the KV cache.
+Deploying an LLM is not just loading weights. Service quality depends on the serving layer.
 
-<div class="diagram">
-  <div class="diagram__compare">
-    <div class="diagram__node--red" style="padding:0.875rem 1rem;border-radius:0.625rem;border:1px solid rgba(239,68,68,0.25);">
-      <span class="diagram__compare__label" style="color:#EF4444;">Traditional Approach</span>
-      <span class="diagram__node__label" style="font-size:0.85rem;">[KV Cache: 100% reserved]</span>
-      <span class="diagram__node__sub">Actual usage: 30% &#x2192; Wasted: 70%</span>
-    </div>
-    <div class="diagram__node--green" style="padding:0.875rem 1rem;border-radius:0.625rem;border:1px solid rgba(34,197,94,0.25);">
-      <span class="diagram__compare__label" style="color:#22C55E;">PagedAttention</span>
-      <span class="diagram__node__label" style="font-size:0.85rem;">[Block 1] [Block 2] [Block 3]</span>
-      <span class="diagram__node__sub">Dynamic allocation as needed &#x2192; Wasted: ~4%</span>
-    </div>
-  </div>
-</div>
+| Operational problem | Serving responsibility |
+|--------------------|------------------------|
+| GPU memory pressure | KV cache management, quantization, tensor parallelism |
+| Request latency | continuous batching, chunked prefill, speculative decoding |
+| Repeated prompt cost | automatic prefix caching |
+| Long-context bursts | prefill/decode separation and context policy |
+| Failure analysis | metrics, traces, request logs, token accounting |
 
-### vLLM Optimization Configuration
+vLLM wraps these concerns behind an OpenAI-compatible API so that the agent harness can keep one interface while changing models.
 
-```python
-# Production vLLM configuration
-from vllm import LLM, SamplingParams
+### PagedAttention: the starting point
 
-llm = LLM(
-    model="deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct",
-    # Memory settings
-    gpu_memory_utilization=0.90,  # Use 90% of GPU memory
-    max_model_len=32768,
-    # Performance optimization
-    enable_prefix_caching=True,   # Cache repeated prompts
-    enable_chunked_prefill=True,  # Chunked prefill
-    # MIG environment
-    tensor_parallel_size=1,       # 1 MIG slice
-)
+Traditional inference reserves large contiguous KV cache regions. Different request lengths cause fragmentation. vLLM's **PagedAttention** breaks KV cache into blocks, similar to virtual memory pages, and links only the blocks a request needs.
 
-# Batch processing
-requests = [
-    "Implement quicksort in Python",
-    "Implement binary search in JavaScript",
-    "Implement an HTTP server in Go",
-]
+PagedAttention is the baseline. The 2026 operations question is **which optimization to enable for which workload**.
 
-sampling_params = SamplingParams(
-    temperature=0.1,  # Low temperature for code generation
-    top_p=0.9,
-    max_tokens=1024,
-)
+### Five optimization levers
 
-outputs = llm.generate(requests, sampling_params)
-```
+<CardGrid>
+  <Card title="Automatic Prefix Caching" icon="seti:config">
+    Reuses KV cache for repeated system prompts, tool schemas, and project instructions. Ralph loops benefit when the static prefix is long.
+  </Card>
+  <Card title="Chunked Prefill" icon="seti:clock">
+    Splits long prefill work into chunks so a single long request does not block the whole queue.
+  </Card>
+  <Card title="Speculative Decoding" icon="rocket">
+    Uses a draft model or n-gram speculation to propose tokens that the target model verifies, reducing latency.
+  </Card>
+  <Card title="Disaggregated Prefill" icon="seti:database">
+    Separates prefill and decode onto different workers or GPUs for mixed long-context workloads.
+  </Card>
+  <Card title="Structured Outputs" icon="seti:json">
+    Enforces JSON schemas, tool calls, or reasoning outputs at the serving boundary to reduce parser failures.
+  </Card>
+</CardGrid>
 
-<Aside type="tip" title="Leveraging Prefix Caching">
-In the Ralph Loop, the system prompt (PROMPT.md) is identical on every loop iteration.
-Setting `enable_prefix_caching=True` reuses the system prompt KV cache, improving throughput by 2–5x.
+<Aside type="tip" title="Ralph loops and prefix caching">
+Ralph loops repeatedly send the same PROMPT.md, project instructions, and tool schemas. The longer that stable prefix is, the more valuable automatic prefix caching becomes.
 </Aside>
 
-### Multi-Model Serving Across MIG Slices
+### Choose optimizations by workload
+
+Turning on every option is not optimization. Identify the bottleneck first, then enable one lever at a time.
+
+| Workload | Main bottleneck | First option to try | Metric to watch |
+|----------|-----------------|---------------------|-----------------|
+| long repository context + short patch | prefill cost | prefix caching, chunked prefill | TTFT, cache hit ratio |
+| many short requests | batching efficiency | continuous batching, tuned `max_num_seqs` | throughput, queue time |
+| mixed long summaries and short coding requests | long prefill blocking | chunked prefill, disaggregated prefill | p95 latency, queue time |
+| interactive coding assistant | first-token delay | speculative decoding, smaller max tokens | TTFT, perceived latency |
+| strict JSON or tool output | parser failure | structured outputs and tool parser config | invalid JSON rate |
+
+The lab report should not say only "we enabled option X." It should show how the bottleneck metric changed before and after.
+
+### Example server configurations
+
+<Tabs>
+  <TabItem label="Single GPU Lab">
+    ```bash
+    vllm serve deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct \
+      --served-model-name local-coder \
+      --max-model-len 32768 \
+      --gpu-memory-utilization 0.90 \
+      --enable-prefix-caching \
+      --port 8000
+    ```
+  </TabItem>
+  <TabItem label="Multi GPU Qwen">
+    ```bash
+    vllm serve Qwen/Qwen3-Coder-Next \
+      --served-model-name qwen3-coder \
+      --tensor-parallel-size 2 \
+      --max-model-len 65536 \
+      --enable-prefix-caching \
+      --enable-chunked-prefill \
+      --port 8000
+    ```
+  </TabItem>
+  <TabItem label="GLM Tool Calling">
+    ```bash
+    vllm serve zai-org/GLM-5.1 \
+      --served-model-name glm-5.1 \
+      --tensor-parallel-size 4 \
+      --enable-auto-tool-choice \
+      --port 8000
+    ```
+  </TabItem>
+</Tabs>
+
+### Measure throughput and latency together
+
+| Metric | Meaning | Bad signal |
+|--------|---------|-----------|
+| TTFT | Time to first token | long prefill blocks the queue |
+| TPOT | Time per output token | low decode utilization |
+| Throughput | tokens/sec | weak batching or memory fragmentation |
+| Queue time | waiting before execution | excessive concurrency |
+| Cache hit ratio | prefix reuse | unstable prompt assembly |
+| Error rate | timeout/OOM/parser failures | capacity or format mismatch |
+
+### Admission control and context budget
+
+When a serving system slows down, accepting every request can make the whole classroom unusable. Production serving decides before execution whether a request should run.
+
+| Control | Example policy |
+|---------|----------------|
+| Maximum input length | course-level limit below `max_model_len` |
+| Concurrency | separate team queues from the global queue |
+| Priority | demo and replay requests before experimental batches |
+| Timeout | record prefill timeout and decode timeout separately |
+| Fallback | reroute to a smaller local model or commercial API |
+
+From the Agent OS Runtime perspective, admission control is a policy gate. Rejecting a request can be a successful boundary-preserving event, not merely a failure.
+
+### Multi-tenant serving
+
+DGX classroom operations are more stable when teams have clear resource boundaries.
 
 ```bash
-# Student A: Qwen3-Coder (MIG slice 1, 3g.40gb)
-CUDA_VISIBLE_DEVICES=MIG-GPU-xxx python -m vllm.entrypoints.openai.api_server \
-  --model Qwen/Qwen3-Coder-32B-Instruct --port 8001
+# Team A: teaching model
+CUDA_VISIBLE_DEVICES=MIG-GPU-a vllm serve deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct \
+  --served-model-name team-a-coder \
+  --max-model-len 16384 \
+  --port 8001
 
-# Student B: GLM-4.7 (MIG slice 2, 3g.40gb)
-CUDA_VISIBLE_DEVICES=MIG-GPU-yyy python -m vllm.entrypoints.openai.api_server \
-  --model THUDM/glm-4-9b-chat --port 8002
-
-# Student C: DeepSeek-Coder-V2-Lite (MIG slice 3, 2g.20gb)
-CUDA_VISIBLE_DEVICES=MIG-GPU-zzz python -m vllm.entrypoints.openai.api_server \
-  --model deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct --port 8003
+# Team B: larger model
+CUDA_VISIBLE_DEVICES=MIG-GPU-b vllm serve Qwen/Qwen3-Coder-30B-A3B-Instruct \
+  --served-model-name team-b-coder \
+  --max-model-len 32768 \
+  --port 8002
 ```
+
+<Aside type="caution" title="MIG and tensor parallelism">
+MIG is useful for hardware isolation. It is not the default answer for splitting one large model across slices. For large tensor-parallel models, prefer full GPUs or a planned multi-GPU setup.
+</Aside>
+
+### Observability first
+
+Every serving request should produce at least:
+
+```json
+{
+  "request_id": "run-20260512-001",
+  "model": "local-coder",
+  "prompt_tokens": 1842,
+  "completion_tokens": 419,
+  "ttft_ms": 820,
+  "tpot_ms": 34,
+  "cache_hit": true,
+  "finish_reason": "stop"
+}
+```
+
+The serving layer records tokens and latency. The agent runtime records tool calls, approvals, tests, and replay state.
 
 ## Practicum
 
 <Steps>
-1. **Apply vLLM Optimization Settings** — Compare configurations for `gpu_memory_utilization` and `enable_prefix_caching`
+1. **Run a baseline server**
 
-2. **Implement Batch Processing** — Handle concurrent requests and measure throughput
+   ```bash
+   vllm serve deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct \
+     --served-model-name local-coder \
+     --max-model-len 32768 \
+     --port 8000
+   ```
 
-3. **Verify Prefix Caching Effect** — Measure cache hit rate using a Ralph Loop simulation
+2. **Compare prefix caching on/off**
 
-4. **Performance Profiling** — Monitor GPU utilization with `nvidia-smi dmon`
+   Send 20 requests with the same system prompt and repository summary. Compare TTFT, throughput, and cache hits.
+
+3. **Compare chunked prefill**
+
+   Mix long repository summaries with short code requests and measure queue time.
+
+4. **Write an OpenAI-compatible client**
+
+   ```python
+   from openai import OpenAI
+   import time
+
+   client = OpenAI(base_url="http://localhost:8000/v1", api_key="local")
+   started = time.perf_counter()
+   response = client.chat.completions.create(
+       model="local-coder",
+       messages=[{"role": "user", "content": "Write a pytest fixture example."}],
+       temperature=0.2,
+   )
+   print(time.perf_counter() - started, response.choices[0].message.content[:200])
+   ```
+
+5. **Prepare the dashboard**
+
+   Record `ttft_ms`, `tokens/sec`, `error_rate`, and `cache_hit`. Week 12 connects these values to traces and event logs.
 </Steps>
 
-## Preview of Next Week
+## Operations Checklist
 
-In Week 12, we will build a **telemetry system** on top of this vLLM server and implement an **LLM-as-Judge** evaluation framework.
+| Item | Passing evidence |
+|------|------------------|
+| Model loading | cold start and warm restart time recorded |
+| API compatibility | OpenAI client chat completion succeeds |
+| Stability | 0-2 timeouts/OOMs per 100 requests |
+| Cost | GPU-hour cost compared with API cost |
+| Observability | request_id, model, tokens, latency recorded |
+| Security | file/network permissions separated |
+
+## Next Week
+
+Week 12 builds telemetry, event stores, and LLM-as-Judge quality gates on top of this serving layer.
+
+## Current References
+
+- [vLLM Automatic Prefix Caching](https://docs.vllm.ai/en/latest/features/automatic_prefix_caching/)
+- [vLLM Speculative Decoding](https://docs.vllm.ai/en/latest/features/speculative_decoding/)
+- [vLLM Disaggregated Prefill](https://docs.vllm.ai/en/latest/features/disagg_prefill/)
+- [vLLM OpenTelemetry POC](https://docs.vllm.ai/en/latest/examples/observability/setup_opentelemetry_poc/)

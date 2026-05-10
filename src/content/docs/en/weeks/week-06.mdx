@@ -232,7 +232,7 @@ If output styles change the **direction**, effort levels adjust the **depth**.
 | `low` | Simple lookups, type checks | Minimal | `claude --effort low "Return type of this function?"` |
 | `medium` | General code changes | Moderate | `claude --effort medium "Add tests"` |
 | `high` | Architecture design, complex debugging | High | `claude --effort high "Design async refactoring"` |
-| `max` | Maximum reasoning depth (Opus 4.6 exclusive) | Maximum (10x+) | `claude --effort max "Security vulnerability analysis"` |
+| `max` | Maximum reasoning depth (supported models only) | Maximum (10x+) | `claude --effort max "Security vulnerability analysis"` |
 
 Practical effort level use in Ralph loops: start with `low` in early iterations (exploration phase), then switch to `high` for core implementation — this optimizes token cost across the loop.
 
@@ -315,6 +315,10 @@ The `prompt` type Hook **delegates judgment** to the Haiku model. If it returns 
 - A PreToolUse Hook deny **always takes priority** over a permission rule allow — Hooks can tighten constraints but cannot loosen them
 - Use the `if` field (v2.1.85+) to match only specific patterns: `"if": "Bash(git *)"` → triggers only on git commands
 - Hooks can only be defined in the user's settings.json — agents cannot modify their own Hooks
+</Aside>
+
+<Aside type="note" title="Markdown-SSOT Skill Runtime">
+Agent OS Runtime generalizes CLAUDE.md/PROMPT.md into `SKILL.md`. Skill frontmatter declares `triggers`, `allowed-tools`, and `schema_version`; the runtime validates it with `skill_frontmatter_v1` and scopes the available tools. Instruction tuning therefore becomes executable as [Markdown-SSOT plus hook-gated policy](/en/reference/agent-os-runtime/#contracts).
 </Aside>
 
 ---

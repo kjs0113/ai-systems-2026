@@ -1,24 +1,25 @@
 ---
 title: "Week 12: Telemetry and LLM-as-Judge"
-description: Measuring agent system quality — OpenTelemetry integration and automated evaluation frameworks
+description: Measuring agent system quality with OpenTelemetry, event stores, automated evaluation gates, and replayable operations
 week: 12
 phase: 4
 phase_title: Open-Source Models & MLOps
 date: "2026-05-19"
 theory_topics:
-  - Telemetry design principles
-  - LLM-as-Judge evaluation methodology
-  - Cost optimization strategies
+  - Agent telemetry design
+  - OpenTelemetry and append-only event logs
+  - LLM-as-Judge quality gates and limitations
 lab_topics:
-  - OpenTelemetry integration
-  - LLM-as-Judge implementation
+  - Integrate OpenTelemetry
+  - Write Agent OS Runtime event traces
+  - Implement LLM-as-Judge and correlation analysis
 assignment: "Lab 11 + Lab 12"
 assignment_due: "2026-05-26"
 difficulty: advanced
-estimated_time: "8 hours"
+estimated_time: 8 hours
 ---
 
-import { Aside, Steps, Badge } from '@astrojs/starlight/components';
+import { Aside, Steps, Badge, Card, CardGrid } from '@astrojs/starlight/components';
 
 <div class="week-meta">
   <span class="phase-tag">Phase 4</span>
@@ -29,99 +30,202 @@ import { Aside, Steps, Badge } from '@astrojs/starlight/components';
 
 ## Theory
 
-### Telemetry: The Eyes and Ears of HOTL
+### Observability is the nervous system of HOTL
 
-In the HOTL architecture, **real-time telemetry** is essential for a human supervisor to trust the agents.
+In a human-on-the-loop system, the human does not approve every tool call. The system runs autonomously inside boundaries, while telemetry and gates expose abnormal behavior.
+
+| Observable | Question | Example |
+|------------|----------|---------|
+| Trace | Where did time go? | agent_loop -> model_call -> tool_call -> test |
+| Metrics | Is this within normal range? | success_rate, token_usage, ttft_ms |
+| Logs | What happened? | permission denied, tool timeout |
+| Event store | Can we reconstruct the run? | `.events.jsonl`, replay snapshot |
+| Evaluation | Is the result usable? | tests, lint, LLM-as-Judge, human review |
+
+<Aside type="note" title="Span vs. event log">
+OpenTelemetry spans answer "what is slow right now." Agent OS Runtime `.events.jsonl` answers "what exactly happened in this run." Week 12 uses both: OTel for live monitoring, and an [append-only event store](/en/reference/agent-os-runtime/#7-layer-architecture) for audit and replay.
+</Aside>
+
+### Break agent runs into spans
+
+```text
+agent.run
+  planner.step
+  model.call
+  tool.invoke
+  tool.result
+  acceptance.test
+  judge.evaluate
+  artifact.write
+```
+
+Each span should share `run_id`, `task_id`, `agent_role`, `model`, `repository`, and `commit_sha`.
+
+#### Minimum span attributes
+
+Telemetry is not "more logs." It is a stable set of keys that make analysis possible.
+
+| Attribute | Example | Why it matters |
+|-----------|---------|----------------|
+| `run.id` | `run-20260519-001` | connects event log, dashboard, and report |
+| `task.id` | `capstone-017` | compares repeated runs of the same task |
+| `agent.role` | `worker` | separates planner, worker, and reviewer failures |
+| `model.name` | `local-coder` | compares model cost and quality |
+| `tool.name` | `run_tests` | identifies slow or risky tools |
+| `gate.result` | `pass`, `revise`, `fail` | supports release readiness decisions |
+| `artifact.path` | `artifacts/run-001.patch` | traces final outputs |
+
+Without these keys, Week 15 reports will have numbers but no connected evidence.
 
 ```python
-# telemetry.py — OpenTelemetry-based agent monitoring
 from opentelemetry import trace, metrics
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.metrics import MeterProvider
 
-tracer = trace.get_tracer("ralph-loop")
-meter = metrics.get_meter("ralph-loop")
+tracer = trace.get_tracer("agent-runtime")
+meter = metrics.get_meter("agent-runtime")
 
-# Key metrics
-loop_counter = meter.create_counter("ralph.loop.count")
-token_usage = meter.create_histogram("ralph.tokens.used")
-success_rate = meter.create_gauge("ralph.success.rate")
+loop_counter = meter.create_counter("agent.loop.count")
+token_usage = meter.create_histogram("agent.tokens.used")
 
-def traced_agent_loop(task: str):
-    with tracer.start_as_current_span("agent_loop") as span:
-        span.set_attribute("task.description", task)
-
-        # Execute the loop
-        result = run_ralph_loop(task)
-
-        # Record metrics
+def traced_agent_loop(task: dict):
+    with tracer.start_as_current_span("agent.run") as span:
+        span.set_attribute("task.id", task["id"])
+        span.set_attribute("task.objective", task["objective"])
+        result = run_agent(task)
         loop_counter.add(1, {"status": "success" if result.passed else "failure"})
-        token_usage.record(result.tokens_used)
-
+        token_usage.record(result.tokens_used, {"model": result.model})
         span.set_attribute("result.passed", result.passed)
-        span.set_attribute("tokens.used", result.tokens_used)
-
         return result
 ```
 
-### LLM-as-Judge Evaluation Framework
+### Event store: replayable operations
 
-Use an LLM to automatically evaluate **code quality, readability, and design patterns** that are difficult to verify with automated tests alone.
+OpenTelemetry is excellent for live monitoring, but it is not the full source of truth for reconstructing an agent run. Append-only event logs preserve the exact sequence.
 
-```python
-# llm_judge.py
-import anthropic
-
-JUDGE_SYSTEM_PROMPT = """You are a senior software engineer with 10 years of experience.
-Evaluate the given code on the following criteria, scoring each from 1 to 10:
-
-1. Correctness: Does the code correctly implement the requirements?
-2. Readability: Is the code easy to read?
-3. Efficiency: Are there any unnecessary computations?
-4. Robustness: Are edge cases handled?
-5. Maintainability: Will the code be easy to modify in the future?
-
-Output format:
-{
-  "scores": {"correctness": 8, "readability": 7, ...},
-  "overall": 7.5,
-  "strengths": ["...", "..."],
-  "improvements": ["...", "..."]
-}"""
-
-class LLMJudge:
-    def __init__(self):
-        self.client = anthropic.Anthropic()
-
-    def evaluate(self, code: str, requirement: str) -> dict:
-        import json
-        response = self.client.messages.create(
-            model="claude-opus-4-6",
-            max_tokens=1024,
-            system=JUDGE_SYSTEM_PROMPT,
-            messages=[{
-                "role": "user",
-                "content": f"Requirement: {requirement}\n\nCode:\n```python\n{code}\n```"
-            }]
-        )
-        return json.loads(response.content[0].text)
+```json
+{"type":"run.started","run_id":"r-001","task_id":"t-017","model":"local-coder"}
+{"type":"tool.invoke","run_id":"r-001","tool":"read_file","input":{"path":"src/app.py"}}
+{"type":"tool.result","run_id":"r-001","tool":"read_file","status":"ok","bytes":1842}
+{"type":"test.result","run_id":"r-001","command":"pytest","passed":false,"failed":2}
+{"type":"judge.result","run_id":"r-001","overall":7.2,"verdict":"revise"}
+{"type":"run.closed","run_id":"r-001","status":"failed","reason":"tests_failed"}
 ```
 
-<Aside type="caution" title="Limitations of LLM-as-Judge">
-An LLM Judge may be biased toward surface-level code style over logical correctness.
-It should be used in conjunction with automated tests (pytest) to be trustworthy.
+```python
+def replay(events: list[dict]) -> dict:
+    state = {"closed": False, "tools": [], "tests": [], "judge": None}
+    for event in events:
+        match event["type"]:
+            case "tool.result":
+                state["tools"].append(event)
+            case "test.result":
+                state["tests"].append(event)
+            case "judge.result":
+                state["judge"] = event
+            case "run.closed":
+                state["closed"] = True
+                state["status"] = event["status"]
+    return state
+```
+
+### LLM-as-Judge is an evaluator, not a test
+
+LLM-as-Judge evaluates qualities that deterministic tests miss, such as readability and design fit. It should not replace tests, policy checks, or human ownership.
+
+| Gate | Type | Example |
+|------|------|---------|
+| Static | deterministic | ruff, mypy, eslint, schema validation |
+| Runtime | deterministic | pytest, integration test, smoke test |
+| Policy | deterministic/approval | secret scan, permission boundary |
+| Judge | probabilistic | readability, maintainability, design fit |
+| Human | final authority | capstone acceptance, production release |
+
+<Aside type="caution" title="Judge bias">
+LLM judges can overrate long, polished, or familiar-looking answers. Interpret judge scores together with tests, telemetry, and human review.
 </Aside>
+
+### Judge calibration
+
+A judge prompt is not a one-time document. Teams need a small gold set to understand where the judge fails.
+
+| Step | Action | Failure signal |
+|------|--------|----------------|
+| Build gold set | prepare 10 samples already scored by humans | examples are all too good or too bad |
+| Blind scoring | judge scores without seeing human scores | all scores cluster around 7-9 |
+| Correlation | compare human and judge scores | low correlation or one criterion overrated |
+| Error analysis | classify false pass and false fail cases | prompt changes do not address the errors |
+| Rubric update | clarify criteria and examples | scoring remains vague |
+
+The capstone goal is not a perfect judge. The goal is to know where the judge fails and make the gate policy absorb that limitation.
+
+### Judge prompt and JSON output
+
+```python
+JUDGE_SYSTEM_PROMPT = """You are a senior software engineering evaluator.
+Score the submitted change from 1 to 10 for each criterion.
+Return strict JSON only.
+
+Criteria:
+1. correctness
+2. test_quality
+3. maintainability
+4. robustness
+5. observability
+"""
+
+def gate(judge: dict, tests_passed: bool) -> str:
+    if not tests_passed:
+        return "fail"
+    if judge["overall"] < 7.0:
+        return "revise"
+    if judge["scores"].get("correctness", 0) < 7:
+        return "revise"
+    return "pass"
+```
+
+### Record human override
+
+Humans must be able to override tests or judge verdicts, but the override should become an auditable event rather than a silent overwrite.
+
+```json
+{"type":"human.override","run_id":"r-001","from":"revise","to":"pass","reason":"known flaky integration test; deterministic unit tests passed","approver":"instructor"}
+```
+
+Overrides preserve human authority and create data for improving next week's gates.
+
+### Build an evaluation set
+
+Each team needs at least 10 samples.
+
+| Sample type | Why it matters |
+|------------|----------------|
+| Clearly good code | checks false negatives |
+| Clearly bad code | checks false positives |
+| Tests pass but design is poor | shows judge value |
+| Looks good but behavior is wrong | prevents judge overtrust |
+| Security or permission issue | shows policy gate necessity |
 
 ## Practicum
 
 <Steps>
-1. **OpenTelemetry Integration** — Add tracing and metrics to the Ralph Loop
+1. **Write trace wrappers**
 
-2. **Dashboard Setup** — Real-time monitoring with Grafana + Prometheus
+   Create spans for `agent.run`, `model.call`, `tool.invoke`, `acceptance.test`, and `judge.evaluate`.
 
-3. **LLM-as-Judge Implementation** — Complete the `LLMJudge` class and evaluate real code
+2. **Write an event writer**
 
-4. **Cost Optimization Analysis** — Analyze the token usage vs code quality trade-off
+   Append `run.started`, `tool.invoke`, `tool.result`, `test.result`, `judge.result`, and `run.closed` to `.events.jsonl`.
+
+3. **Generate a replay snapshot**
+
+   Build `replay_snapshot.json` from the event log and verify that the run is closed.
+
+4. **Implement LLM Judge**
+
+   Produce strict JSON scores for 10 code samples.
+
+5. **Analyze correlation**
+
+   Compare human scores and judge scores. Revise the rubric where correlation is weak.
 </Steps>
 
 ## Assignment
@@ -130,15 +234,25 @@ It should be used in conjunction with automated tests (pytest) to be trustworthy
 
 ### Lab 11: Telemetry & Lab 12: LLM-as-Judge
 
-**Submission deadline**: 2026-05-26 23:59
+**Due**: 2026-05-26 23:59
 
-**Lab 11 Requirements**:
-1. Ralph Loop with OpenTelemetry integration
-2. Grafana dashboard screenshot (loop_count, token_usage, success_rate)
+**Lab 11 requirements**:
+1. Ralph loop or agent harness with OpenTelemetry tracing.
+2. Grafana/Prometheus screenshot or CSV-based dashboard.
+3. Agent OS Runtime-style `.events.jsonl`.
+4. `replay_snapshot.json` recalculated from the event log.
 
-**Lab 12 Requirements**:
-1. Complete `LLMJudge` implementation
-2. Automated evaluation results for 10 code samples
-3. Correlation analysis between LLM Judge and human evaluator scores
+**Lab 12 requirements**:
+1. `LLMJudge` that returns strict JSON.
+2. Automated evaluation results for 10 code samples.
+3. Comparison table: deterministic tests vs. LLM Judge vs. human review.
+4. Rationale for integrating judge results into a gate policy rather than using them alone.
 
 </div>
+
+## Current References
+
+- [OpenAI Agents SDK Tracing](https://openai.github.io/openai-agents-python/tracing/)
+- [OpenAI Evals best practices](https://platform.openai.com/docs/guides/evals)
+- [vLLM Prometheus and Grafana](https://docs.vllm.ai/en/latest/examples/observability/prometheus_grafana/)
+- [Agent OS Runtime Layers](/en/reference/agent-os-runtime/#7-layer-architecture)
