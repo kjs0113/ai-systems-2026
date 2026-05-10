@@ -6,108 +6,200 @@ phase: 5
 phase_title: Capstone Ralphthon
 date: "2026-06-09"
 theory_topics:
-  - System integration test strategy
+  - System integration testing strategy
   - Performance measurement and reporting
   - Presentation structure
 lab_topics:
-  - End-to-end integration testing
+  - End-to-end integration tests
   - Release readiness review
   - Presentation rehearsal
-assignment: "Capstone: Final Presentation Materials"
+assignment: "Capstone: final presentation package"
 assignment_due: "2026-06-16"
 difficulty: advanced
 estimated_time: 15 hours
 ---
 
-import { Aside, Steps, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
+import { Aside, Steps, Badge, Card, CardGrid, Tabs, TabItem } from '@astrojs/starlight/components';
 
 <div class="week-meta">
   <span class="phase-tag">Phase 5</span>
   <Badge text="Week 15" variant="note" />
-  <Badge text="Finalization" variant="success" />
+  <Badge text="Wrap-up" variant="success" />
   <Badge text="Lecture: 2026-06-09" variant="default" />
 </div>
 
-## Goal of Integration Week
+## Theory
 
-Week 15 is not a feature week. It is the week to turn the closed loop into a **reliable demo and evidence-backed report**.
+### Learning Objectives
 
-<Aside type="caution" title="No new features by default">
-Adding a new agent role, model, or UI in Week 15 usually reduces final presentation reliability. Add only what stabilizes the demo path.
+<CardGrid>
+  <Card title="Concepts" icon="open-book">
+    Explain how a release gate differs from a deterministic gate and compare four integration-test strategies — smoke, integration, soak, chaos.
+  </Card>
+  <Card title="Design" icon="seti:config">
+    Author a feature-freeze policy and a release-readiness checklist, and structure the presentation with the STAR framework.
+  </Card>
+  <Card title="Implementation" icon="pencil">
+    Pass release-gate items — three repeats of the same task packet, replay snapshot verification, automated failure-recovery path — using code and evidence.
+  </Card>
+  <Card title="Operations" icon="rocket">
+    Attach token, cost, latency, and failure-rate tables to the slides with source run ids, turning a "results page" into a "traceable results page".
+  </Card>
+</CardGrid>
+
+---
+
+### The integration week's purpose
+
+Week 15 is not for adding features. It is for turning the closed loop you already built into **a trustworthy demo and report**. Reduce failure rate, finalize the numbers, and lock the presentation flow rather than adding capability.
+
+<Aside type="caution" title="No-new-feature rule">
+Adding a new agent role, model, or UI in Week 15 usually destabilizes the final demo. New work is allowed only if it makes the demo path more reliable.
 </Aside>
 
-### Feature freeze rule
+#### Week 15 flow
 
-At the start of Week 15, each team writes `freeze.md`.
+<div class="diagram">
+  <div class="diagram__title">Week 15 — Integration to Presentation</div>
+  <div class="diagram__flow">
+    <div class="diagram__node diagram__node--blue diagram__node--full">
+      <span class="diagram__node__label">① Declare feature freeze</span>
+      <span class="diagram__node__sub">freeze.md authored · scope cuts confirmed</span>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--cyan diagram__node--full">
+      <span class="diagram__node__label">② Run the integration matrix</span>
+      <span class="diagram__node__sub">smoke · integration · soak · chaos</span>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--purple diagram__node--full">
+      <span class="diagram__node__label">③ Pass the release gate</span>
+      <span class="diagram__node__sub">build/test · 3× E2E · replay · evaluation · security · demo</span>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--orange diagram__node--full">
+      <span class="diagram__node__label">④ Performance / cost report</span>
+      <span class="diagram__node__sub">latency / tokens / cost / judge / pass-fail</span>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--green diagram__node--full">
+      <span class="diagram__node__label">⑤ Presentation rehearsal (STAR)</span>
+      <span class="diagram__node__sub">cold start · time-box · failure injection · evidence check</span>
+    </div>
+  </div>
+</div>
+
+### Release-gate design principles
+
+A release gate is not a single test — it is a **policy that bundles multiple gates**, each with one of three characters: deterministic, probabilistic, or approval.
+
+| Gate | Type | Pass criterion | Example |
+|------|------|----------------|---------|
+| Build/Test | deterministic | exit code 0 | `make test`, `pytest` |
+| Schema | deterministic | JSON Schema validates | task packet, judge output |
+| Replay | deterministic | event log → snapshot identical | `replay()` output match |
+| Performance | deterministic-ish | threshold check | p95 latency < N |
+| Judge | probabilistic | overall ≥ 7.0 etc. | LLM Judge JSON |
+| Security | approval | manual checklist signed | secret scan + manual review |
+| Demo | approval | live demo + recorded backup | 90-second video |
+
+<Aside type="note" title="Probabilistic gates are reinforcing signals">
+Judge or LLM scores never replace deterministic gates. Even if the judge passes, if build/test fails, the gate fails.
+</Aside>
+
+### Feature-freeze policy
+
+Each team writes `freeze.md` at the start of Week 15.
 
 | Item | Content |
 |------|---------|
-| Demo path | one happy path that must appear in the presentation |
-| Recovery path | one safe failure-handling path |
-| Frozen features | features that will no longer change |
-| Allowed fixes | bug fixes, test stabilization, documentation, metrics |
-| Explicit cuts | features excluded from the final presentation |
+| Demo path | the one happy path the presentation must show |
+| Recovery path | the one failure-handling path |
+| Frozen features | features that will not change anymore |
+| Allowed fixes | bug fixes, test stabilization, doc / number polish |
+| Explicit cuts | features intentionally excluded from the final demo |
 
-After freeze, a change is allowed only when it improves release gate reliability.
+After the freeze, changes are allowed only if they raise the release-gate pass rate.
 
-## Release Gate
+### Release-gate procedure
 
-| Gate | Criteria | Evidence |
-|------|----------|----------|
-| Build/Test | `make test` or equivalent passes | CI log or terminal capture |
-| End-to-end | same task packet passes three times | three run ids |
-| Replay | final state reconstructed from event log | `replay_snapshot.json` |
-| Evaluation | deterministic and judge results recorded | evaluation table |
-| Security | no secrets or out-of-scope writes | checklist |
-| Demo | backup materials work without network | recording/screenshots |
+Pass every gate before final submission.
 
-### Release readiness review
+| Gate | Criterion | Evidence |
+|------|-----------|----------|
+| Build/Test | `make test` (or equivalent) passes | CI log or terminal capture |
+| End-to-end | three repeats of the same task packet | three run ids |
+| Replay | reconstruct final state from the event log | `replay_snapshot.json` |
+| Evaluation | record deterministic + judge results | evaluation table |
+| Security | no secret, credential, or out-of-scope writes | checklist |
+| Demo | offline-explainable backup material | recording / screenshots |
 
-Before final rehearsal, run a 20-minute internal release review.
+#### Release readiness review
 
-1. Run `make test` or the equivalent command and capture the result.
+Before the final rehearsal, run a 20-minute internal release review.
+
+1. Run `make test` (or equivalent) and capture the result.
 2. Run the same task packet three times and record the run ids.
-3. Pick the most recent failed run and explain the failure reason.
-4. Confirm that `replay_snapshot.json` matches the event log.
-5. Put a source run id next to every metric in the slides.
-6. Cross-check secrets, credentials, and out-of-scope writes.
+3. Pick the most recent failed run and explain its failure reason.
+4. Confirm the `replay_snapshot.json` matches the event log.
+5. Annotate every number on the slide with its source run id.
+6. Cross-check that no secrets, credentials, or out-of-scope writes leaked.
 
-Issues found here outrank new feature work.
+Issues found during this review take priority over new features.
 
-## Integration test matrix
+### Integration test matrix
+
+Capstone systems are not validated by unit tests alone. Run four kinds of integration tests in balance.
+
+| Test type | Purpose | Pass criterion | Frequency |
+|-----------|---------|----------------|-----------|
+| Smoke | does the system come up? | `make run` once | every commit |
+| Integration | does the end-to-end happy path pass? | three repeats clean | once a day |
+| Soak | does memory / queue stay stable over time? | no OOM in 10 min / 100 calls | once before presentation |
+| Chaos | does the system recover from injected faults? | invalid task / network drop / model 500 → safe close | once before presentation |
 
 <Tabs>
   <TabItem label="Happy Path">
     ```text
     task packet -> planner -> worker -> tests pass -> judge pass -> artifact saved
     ```
-    Run at least three times.
+    Run at least three times. If even one fails, log the failure reason and fix the cause.
   </TabItem>
   <TabItem label="Failure Path">
     ```text
     invalid task -> schema validation fail -> no file write -> run.closed(failed)
     ```
-    Show that the system stops safely on bad input.
+    Demonstrate that bad input halts the system safely.
   </TabItem>
   <TabItem label="Recovery Path">
     ```text
     tests fail -> reviewer says revise -> retry once -> pass or closed(failed)
     ```
-    Show that retry budget prevents infinite loops.
+    Verify that the retry budget prevents infinite loops.
+  </TabItem>
+  <TabItem label="Chaos">
+    ```text
+    api 500 -> retry with backoff -> still 500 -> escalate to human + run.closed(failed)
+    ```
+    Inject deliberate faults to prove recovery behavior.
   </TabItem>
 </Tabs>
 
-## Performance and cost report
+### Writing the performance / cost report
 
-| Metric | Run 1 | Run 2 | Run 3 | Average |
-|--------|------:|------:|------:|--------:|
-| total latency sec | | | | |
-| prompt tokens | | | | |
-| completion tokens | | | | |
-| tool calls | | | | |
-| retry count | | | | |
-| judge score | | | | |
-| pass/fail | | | | |
+Each team includes at minimum the following table.
+
+| Indicator | Run 1 | Run 2 | Run 3 | Mean | vs baseline |
+|-----------|------:|------:|------:|-----:|------------:|
+| total latency sec | | | | | |
+| prompt tokens | | | | | |
+| completion tokens | | | | | |
+| tool calls | | | | | |
+| retry count | | | | | |
+| judge score | | | | | |
+| pass/fail | | | | | |
+
+Cost is a comparison formula, not a billed amount.
 
 ```text
 commercial_api_cost = input_tokens * input_price + output_tokens * output_price
@@ -115,11 +207,59 @@ local_gpu_cost = gpu_hour_price * elapsed_seconds / 3600
 operator_cost = human_minutes * hourly_rate / 60
 ```
 
-<Aside type="tip" title="Cost trap">
-Local models may look cheap per token, but GPU idle time, model loading, operator time, and retries can dominate end-to-end task cost.
+<Aside type="tip" title="The cost trap">
+Local models look cheap per token until you add GPU idle time, model loading, operator hours, and retry costs. Compare end-to-end task cost, not just tokens.
 </Aside>
 
-## Final report structure
+#### Statistical reliability
+
+Three to five runs is too few to claim a clean mean. Add a single line that improves reliability.
+
+| Item | Recommended notation |
+|------|---------------------|
+| Average | mean ± stdev |
+| Distribution | min / median / p95 |
+| Sample size | n=N (state explicitly if < 3) |
+| Failure rate | failures / total |
+
+### Presentation storytelling — the STAR framework
+
+A demo by itself does not let evaluators tell luck from design. STAR provides intent.
+
+| Beat | STAR meaning | Capstone application |
+|------|-------------|---------------------|
+| Situation | why this problem | user / repeated task / failure cost |
+| Task | the scope you solved | demo path · scope cut |
+| Action | how you built it | task packet · gate · replay design choices |
+| Result | quantitative evidence | success rate · cost · judge · failure cases |
+
+#### Slide structure
+
+The recommended length is 15 minutes.
+
+| Time | Section | Evidence |
+|------|---------|----------|
+| 2 min | Problem (Situation) | user / repeated task / risk boundary |
+| 3 min | Architecture (Task + Action) | agent diagram + runtime layers |
+| 5 min | Live demo (Action) | happy path + failure recovery |
+| 3 min | Results (Result) | success rate, cost, latency, judge |
+| 2 min | Reflection | failures and scope cuts, next improvements |
+
+<Aside type="tip" title="Demo preparation">
+A live demo can fail because of network, API, GPU queue, or time limits. Always keep a 90-second recording and the headline screenshots as backup.
+</Aside>
+
+### Demo stabilization techniques
+
+| Technique | Description | When to apply |
+|-----------|-------------|---------------|
+| Pre-warm | load the model and warm caches one hour before the talk | live demo |
+| Recorded fallback | a 90-second recording ready to play | as soon as the live run stalls |
+| Frozen task packet | demo task packet pinned to a git tag | right before the talk |
+| Hardcoded inputs | pre-captured external API responses used as fixtures | chaos scenarios |
+| Watchdog timer | a 90-second live demo timer auto-switches to fallback | presentation mode |
+
+### Final report structure
 
 ```markdown
 # Final Report
@@ -135,75 +275,122 @@ Local models may look cheap per token, but GPU idle time, model loading, operato
 ## 9. What We Would Do Next
 ```
 
-## Presentation structure
-
-| Time | Content | Evidence |
-|------|---------|----------|
-| 2 min | Problem | user, recurring task, risk boundary |
-| 3 min | Architecture | agent diagram + runtime layers |
-| 5 min | Live demo | happy path + failure recovery |
-| 3 min | Results | success rate, cost, latency, judge |
-| 2 min | Reflection | failures, scope cuts, next steps |
-
-## Rehearsal checklist
+### Rehearsal checklist
 
 <Steps>
-1. **Cold start rehearsal**
+1. **Cold-start rehearsal**
 
-   Start from nothing and prepare the presentation environment.
+   Start the presentation environment from scratch, with nothing pre-loaded.
 
 2. **Time-box rehearsal**
 
-   Present within 15 minutes and finish the demo by minute 12.
+   Speak under 15 minutes, ending the demo at the 12-minute mark.
 
 3. **Failure injection**
 
-   Run one deliberately bad task and confirm safe failure.
+   Deliberately submit a failing task and verify the system halts safely on stage.
 
 4. **Evidence check**
 
-   Link every metric to a run id, event log, or dashboard screenshot.
+   Confirm every number ties back to a run id, an event log entry, and a dashboard screenshot.
 
 5. **Speaker handoff**
 
-   Define transitions between speakers so the presentation can continue if one person is absent.
+   Pre-write transition lines so the talk continues even if one teammate is missing.
 </Steps>
 
-## Final deliverables
+### Final deliverables
 
-| Item | Location | Due |
-|------|----------|-----|
+| Item | Path | Due |
+|------|------|-----|
 | Source code | `capstone/teams/[team]/runtime/` | 6/16 |
 | README | `capstone/teams/[team]/README.md` | 6/16 |
-| Design document | `capstone/teams/[team]/design.md` | 6/16 |
+| Design doc | `capstone/teams/[team]/design.md` | 6/16 |
 | Final report | `capstone/teams/[team]/reports/final-report.md` | 6/16 |
-| Presentation | `capstone/teams/[team]/presentation.pdf` | 6/16 |
+| Slides | `capstone/teams/[team]/presentation.pdf` | 6/16 |
 | Demo video | `capstone/teams/[team]/demo.mp4` | 6/16 |
 | Run logs | `capstone/teams/[team]/runs/*.events.jsonl` | 6/16 |
 | Replay snapshot | `capstone/teams/[team]/reports/replay_snapshot.json` | 6/16 |
+| freeze.md | `capstone/teams/[team]/freeze.md` | 6/16 |
 
-## Evaluation rubric
+### Grading rubric
 
-| Category | Weight | Evaluation focus |
-|----------|-------:|------------------|
-| Problem and scope | 15% | real recurring task, risk boundary, scope cuts |
-| Harness design | 25% | task packet, gates, retry, replay |
-| Implementation | 25% | E2E run, tests, reliability |
-| Observability and evaluation | 20% | telemetry, judge, cost/performance evidence |
-| Presentation and reflection | 15% | clarity, failure discussion, next improvements |
+| Category | Weight | Evaluation points |
+|----------|------:|-------------------|
+| Problem framing and scope | 15% | real repeated task, risk boundary, scope cuts |
+| Harness design | 25% | task packet, gate, retry, replay |
+| Implementation completeness | 25% | E2E execution, tests, stability |
+| Observability and evaluation | 20% | telemetry, judge, cost / performance numbers |
+| Presentation and reflection | 15% | clarity, sharing failures, next improvements |
+
+## Practicum
+
+<Steps>
+1. **Author freeze.md**
+
+   Fill the five fields: demo path / recovery path / frozen features / allowed fixes / explicit cuts.
+
+2. **Run the integration matrix**
+
+   Run smoke / integration / soak / chaos at least once each, recording run ids.
+
+3. **Pass the six release gates**
+
+   Mark each of build/test, 3× E2E, replay, evaluation, security, and demo with evidence.
+
+4. **Build the performance / cost table**
+
+   Record three-to-five-run averages and distributions, plus a commercial-vs-local cost comparison.
+
+5. **STAR slides v1**
+
+   Construct the slide skeleton along Situation / Task / Action / Result.
+
+6. **Three rehearsals**
+
+   Run cold start, time-box, and failure injection back to back.
+</Steps>
 
 ## Assignment
 
 <div class="assignment-box">
 
-### Capstone: Final Presentation Materials
+### Capstone: final presentation package
 
 **Due**: 2026-06-16 23:59
 
-**Requirements**:
-1. Complete all final deliverables.
-2. Include the release gate checklist.
-3. Include metrics linked to run ids.
-4. Include a 15-minute slide deck and 90-second backup demo video.
+**Required**:
+1. Complete every item on the final-deliverables list
+2. Include the release-gate checklist
+3. Include performance / cost / quality numbers tied to run ids
+4. Include 15-minute slides and a 90-second backup demo video
+5. Attach freeze.md and the integration matrix results
 
 </div>
+
+## Key Takeaways
+
+1. **Week 15 is integration and stabilization**: demo-path reliability outranks new features.
+2. **A release gate is not a single test**: it is a policy that bundles deterministic, probabilistic, and approval gates.
+3. **freeze.md is the deciding tool**: pin what will not change so fixes and features stop blurring together.
+4. **Integration testing is a four-way matrix**: smoke / integration / soak / chaos.
+5. **Numbers connect to source run ids**: every on-slide number must trace back to a run id, an event log entry, or a dashboard.
+6. **STAR structures the talk**: Situation·Task·Action·Result reveals a demo as design, not luck.
+7. **Demos always run on two tracks**: live + 90-second recorded fallback, switched by a watchdog timer.
+
+## Further Reading
+
+**Foundational**
+- [Agent OS Runtime — Replay & Snapshots](/en/reference/agent-os-runtime/#7-layer-architecture)
+- [Capstone evaluation criteria](/en/capstone/evaluation/)
+- [Capstone submission guide](/en/capstone/submissions/)
+
+**Testing / reliability**
+- Google SRE Book — Testing for Reliability
+- Netflix Tech Blog — Chaos Engineering 101
+- Will Larson, "Test types and trade-offs"
+
+**Presentation / reporting**
+- Cole Nussbaumer Knaflic, _Storytelling with Data_
+- Amazon 6-pager / 1-pager writing guide
+- Andy Matuschak, "Evergreen notes" — reusing presentation material

@@ -18,7 +18,7 @@ difficulty: advanced
 estimated_time: "8 hours"
 ---
 
-import { Aside, Steps, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
+import { Aside, Steps, Badge, Tabs, TabItem, Card, CardGrid } from '@astrojs/starlight/components';
 
 <div class="week-meta">
   <span class="phase-tag">Phase 3</span>
@@ -28,6 +28,23 @@ import { Aside, Steps, Badge, Tabs, TabItem } from '@astrojs/starlight/component
 </div>
 
 ## Theory
+
+### Learning Objectives
+
+<CardGrid>
+  <Card title="Concepts" icon="open-book">
+    Explain the conflict-of-interest a worker faces when reviewing its own code, and define the four independence principles a QA agent must hold.
+  </Card>
+  <Card title="Design" icon="seti:config">
+    Design the feedback loop and escalation path: deterministic test → policy gate → LLM-as-Judge → human review.
+  </Card>
+  <Card title="Implementation" icon="pencil">
+    Integrate the QA agent and LLM-as-Judge in code, automating strict-JSON verdicts and retry logic.
+  </Card>
+  <Card title="Operations" icon="rocket">
+    Report judge reliability (correlation), human-override rate, and false-pass rate on a regular cadence and refresh the prompt / rubric.
+  </Card>
+</CardGrid>
 
 ### Why the QA Agent Must Be Separate
 

@@ -32,6 +32,23 @@ import { Aside, Steps, Tabs, TabItem, Badge, Card, CardGrid } from '@astrojs/sta
 
 ## 이론 (Theory)
 
+### 오늘의 학습 목표
+
+<CardGrid>
+  <Card title="개념 관점" icon="open-book">
+    전통적 SDLC와 에이전틱 SDLC의 구조적 차이를 4단계 비교표로 설명하고, 단일 에이전트가 막히는 지점을 식별한다.
+  </Card>
+  <Card title="설계 관점" icon="seti:config">
+    Lead·Planner·Worker·Reviewer·Operator 역할 분배와 핸드오프 토폴로지(linear / hub-spoke / mesh)를 비교해 우리 팀에 맞는 형태를 결정한다.
+  </Card>
+  <Card title="구현 관점" icon="pencil">
+    artifact 기반 핸드오프 계약(`spec.md`, `plan.md`, `worker_report.md`)을 작성하고 한 사이클을 실행한다.
+  </Card>
+  <Card title="운영 관점" icon="rocket">
+    multi-agent 파이프라인의 quality gate를 통합하고, "어느 역할에서 실패했는가"를 telemetry로 추적할 수 있게 만든다.
+  </Card>
+</CardGrid>
+
 ### 왜 7주차에서 멀티에이전트 SDLC인가
 
 6주차까지 우리는 **단일 에이전트**를 다뤘다 — CLAUDE.md로 행동을 규제하고(6주차), Context Rot을 방지하며(5주차), Ralph Loop로 반복 품질을 확보했다(4주차). 이제 질문은: **단일 에이전트의 한계는 어디인가?**

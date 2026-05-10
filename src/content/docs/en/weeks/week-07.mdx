@@ -32,6 +32,23 @@ import { Aside, Steps, Tabs, TabItem, Badge, Card, CardGrid } from '@astrojs/sta
 
 ## Theory
 
+### Learning Objectives
+
+<CardGrid>
+  <Card title="Concepts" icon="open-book">
+    Compare traditional and agentic SDLCs across four phases and identify exactly where a single-agent approach stalls.
+  </Card>
+  <Card title="Design" icon="seti:config">
+    Distribute Lead, Planner, Worker, Reviewer, and Operator roles, compare linear / hub-spoke / mesh topologies, and decide what fits the team.
+  </Card>
+  <Card title="Implementation" icon="pencil">
+    Author artifact-based handoff contracts (`spec.md`, `plan.md`, `worker_report.md`) and run a single end-to-end cycle.
+  </Card>
+  <Card title="Operations" icon="rocket">
+    Integrate quality gates across the multi-agent pipeline so telemetry can answer "which role failed."
+  </Card>
+</CardGrid>
+
 ### Why Multi-Agent SDLC in Week 7
 
 Through Week 6 we covered **single agents** — regulating behavior with CLAUDE.md (Week 6), preventing Context Rot (Week 5), and securing iterative quality with the Ralph Loop (Week 4). The question now is: **where does the single-agent approach hit its limits?**

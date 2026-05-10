@@ -10,16 +10,16 @@ theory_topics:
   - Team-scale agent system integration
   - Midpoint review and pivot decisions
 lab_topics:
-  - Team Ralphthon execution
-  - Live mentoring
-  - Progress report and runbook
-assignment: "Capstone: Midpoint Progress Report"
+  - Team-by-team Ralphthon execution
+  - Real-time mentoring
+  - Progress report and runbook writing
+assignment: "Capstone: midpoint progress report"
 assignment_due: "2026-06-09"
 difficulty: advanced
-estimated_time: 20 hours (team build week)
+estimated_time: 20 hours (focused team build)
 ---
 
-import { Aside, Steps, Badge } from '@astrojs/starlight/components';
+import { Aside, Steps, Badge, Card, CardGrid, Tabs, TabItem } from '@astrojs/starlight/components';
 
 <div class="week-meta">
   <span class="phase-tag">Phase 5</span>
@@ -28,61 +28,187 @@ import { Aside, Steps, Badge } from '@astrojs/starlight/components';
   <Badge text="Lecture: 2026-06-02" variant="default" />
 </div>
 
-## Execution Week
+## Theory
 
-The goal this week is a **closed-loop MVP**. One task packet enters the system, an agent acts, a gate decides, and an event log can replay the final state.
+### Learning Objectives
 
-<Aside type="tip" title="Ralphthon success rule">
-Do not build the large system first. Connect a small happy path end to end, then add failure recovery and observability.
+<CardGrid>
+  <Card title="Concepts" icon="open-book">
+    Define what a "closed-loop MVP" is and is not — a six-component checklist — and pin the minimum state your team must reach by the end of Week 14.
+  </Card>
+  <Card title="Design" icon="seti:config">
+    Specify handoff contracts among Lead / Planner / Worker / Reviewer / Operator with explicit input/output schemas, retry budgets, and escalation conditions.
+  </Card>
+  <Card title="Implementation" icon="pencil">
+    Build a runtime skeleton that runs with a single `make run` (or `make replay`) and complete the first `run.started → run.closed` cycle.
+  </Card>
+  <Card title="Operations" icon="rocket">
+    Use the five runbook patterns and the pivot decision tree to author a midpoint report with evidence-backed risks and scope cuts.
+  </Card>
+</CardGrid>
+
+---
+
+### Defining the closed-loop MVP
+
+This week's goal is not a polished product. It is a **closed-loop MVP**: one task packet goes in, the agent executes, a gate decides, and the event log enables replay.
+
+<Aside type="tip" title="The Ralphthon rule">
+Do not build the whole system at once. Connect a tiny happy path end-to-end first, then bolt on failure recovery and observability. The Ralph-loop philosophy is not "try many times" but "let the harness absorb failures."
 </Aside>
 
-## Day-by-day plan
+#### The six components of a closed-loop MVP
+
+<div class="diagram">
+  <div class="diagram__title">Closed-loop MVP — Six Components</div>
+  <div class="diagram__cols diagram__cols--3">
+    <div class="diagram__node diagram__node--blue diagram__node--full">
+      <span class="diagram__node__label">① Task packet</span>
+      <span class="diagram__node__sub">JSON Schema validated</span>
+    </div>
+    <div class="diagram__node diagram__node--cyan diagram__node--full">
+      <span class="diagram__node__label">② Worker loop</span>
+      <span class="diagram__node__sub">a single worker executes</span>
+    </div>
+    <div class="diagram__node diagram__node--orange diagram__node--full">
+      <span class="diagram__node__label">③ Tool boundary</span>
+      <span class="diagram__node__sub">allow / deny enforced</span>
+    </div>
+    <div class="diagram__node diagram__node--green diagram__node--full">
+      <span class="diagram__node__label">④ Deterministic gate</span>
+      <span class="diagram__node__sub">at least one automated test</span>
+    </div>
+    <div class="diagram__node diagram__node--purple diagram__node--full">
+      <span class="diagram__node__label">⑤ Event store</span>
+      <span class="diagram__node__sub">.events.jsonl — replayable</span>
+    </div>
+    <div class="diagram__node diagram__node--gray diagram__node--full">
+      <span class="diagram__node__label">⑥ Run report</span>
+      <span class="diagram__node__sub">success / failure run ids tracked</span>
+    </div>
+  </div>
+</div>
+
+All six must be alive simultaneously. A missing component fails the Week 14 Definition of Done.
+
+#### Common failure modes
+
+| Failure mode | Signal | Response |
+|--------------|--------|----------|
+| Open loop (gate missing) | run ends without `run.closed` | add at least one deterministic gate immediately |
+| Replay impossible | partial event log | check flush policy, force run.started/run.closed |
+| Tool boundary ignored | worker edits unscoped files | validate tool policy before invocation |
+| Demo dependency | demo only runs by hand | unify behind `make run TASK=...` |
+
+### Day-by-day plan
 
 <Steps>
 1. **Day 1: runtime skeleton**
 
-   - Finalize repository structure.
-   - Create `tasks/`, `runs/`, `artifacts/`, and `reports/`.
-   - Write task packet schema v1.
-   - Record the first `run.started` and `run.closed` events.
+   - Lock the repository layout
+   - Create `tasks/`, `runs/`, `artifacts/`, `reports/`
+   - Author task-packet schema v1
+   - Record the first `run.started` / `run.closed` events
 
 2. **Day 2: first agent loop**
 
-   - Connect one agent CLI or API client.
-   - Let a Worker complete one small task.
-   - Run deterministic gates such as tests, lint, or schema checks.
-   - Fail clearly without retry.
+   - Connect the agent CLI or API client
+   - A single worker performs one small task
+   - Run a deterministic gate (pytest/lint/schema)
+   - On failure, do not retry — fail clearly
 
 3. **Day 3: review and retry**
 
-   - Add Reviewer or LLM Judge.
-   - Split fail/revise/pass.
-   - Apply retry budget and max turns.
-   - Verify event log replay.
+   - Add a Reviewer or LLM Judge
+   - Distinguish fail / revise / pass
+   - Apply retry budget and max_turns
+   - Verify event-log replay
 
 4. **Day 4: telemetry and dashboard**
 
-   - Connect OpenTelemetry or CSV metrics.
-   - Record tokens, latency, pass rate, and judge score.
-   - Run the demo path three times.
-   - Write the failure runbook.
+   - Connect OpenTelemetry or CSV metrics
+   - Track tokens, latency, pass rate, judge score
+   - Run the demo three times in a row
+   - Write the failure runbook
 
 5. **Day 5: midpoint report**
 
-   - Write the progress report.
-   - Cut remaining scope.
-   - Fix the final demo path.
-   - List the top final-week risks.
+   - Write the midpoint report
+   - Cut remaining scope
+   - Lock the demo path
+   - List risks for the final week
 </Steps>
 
-## Minimum implementation structure
+#### Likely failure modes by day
+
+| Day | Most common failure | Preventive action |
+|-----|---------------------|-------------------|
+| Day 1 | directories created, first event missing | add a `run.started`/`run.closed` smoke test in the first commit |
+| Day 2 | infinite retry | apply max_turns 6, max_tokens 120K immediately |
+| Day 3 | broken judge JSON | structured output + fallback `verdict=revise` |
+| Day 4 | metrics exist but no dashboard | even a CSV-to-Streamlit page or static HTML works |
+| Day 5 | scope refuses to shrink | delete every "Could have" before writing the report |
+
+### Standardize handoff contracts
+
+You do not need a complex multi-agent system on day one. You do need to separate the artifacts.
+
+| Stage | Input | Output |
+|-------|-------|--------|
+| Lead | problem statement | task packet |
+| Planner | task packet | implementation plan |
+| Worker | plan + repo | patch / artifact |
+| Reviewer | patch + criteria | review verdict |
+| Gate | verdict + tests | pass / revise / fail |
+
+<Aside type="note" title="Use the Agent OS Runtime contracts">
+Lead → Planner → Worker → Reviewer can adopt the [Agent OS Contracts](/en/reference/agent-os-runtime/#contracts) `lead_directive_v1`, `plan_v1`, `worker_report_v1`, `review_result_v1` shapes as self-contained schemas.
+</Aside>
+
+#### Handoff schema example
+
+```python
+# contracts.py — pydantic-enforced step contracts
+from pydantic import BaseModel
+from typing import Literal
+
+class LeadDirectiveV1(BaseModel):
+    task_id: str
+    objective: str
+    risk_boundary: str
+    deadline: str
+
+class PlanV1(BaseModel):
+    task_id: str
+    steps: list[str]
+    files_to_modify: list[str]
+    estimated_turns: int
+
+class WorkerReportV1(BaseModel):
+    task_id: str
+    run_id: str
+    patch_path: str
+    tests_command: str
+    notes: str
+
+class ReviewResultV1(BaseModel):
+    run_id: str
+    verdict: Literal["pass", "revise", "fail"]
+    reasons: list[str]
+    judge_overall: float | None = None
+```
+
+When every step refuses to forward an artifact that fails its pydantic schema, 90%+ of typo and formatting errors disappear by midweek.
+
+### Minimum runtime layout
 
 ```text
 capstone/teams/[team]/
 ├── README.md
 ├── design.md
 ├── tasks/
-│   └── task-001.yaml
+│   ├── task-001.yaml
+│   └── task-002.yaml
 ├── runtime/
 │   ├── runner.py
 │   ├── events.py
@@ -96,7 +222,9 @@ capstone/teams/[team]/
     └── progress-week14.md
 ```
 
-Use one command path:
+#### One command, one entry point
+
+If teammates remember different commands, reproducibility breaks. Make `make run` (or `uv run`) the single entry point.
 
 ```bash
 make run TASK=tasks/task-001.yaml
@@ -105,52 +233,129 @@ make test
 make report
 ```
 
-## Agent handoff pattern
+### Runbook pattern catalog
 
-| Stage | Input | Output |
-|------|-------|--------|
-| Lead | problem statement | task packet |
-| Planner | task packet | implementation plan |
-| Worker | plan + repo | patch/artifact |
-| Reviewer | patch + criteria | review verdict |
-| Gate | verdict + tests | pass/revise/fail |
+Improvising every time something breaks repeats the same mistakes. Pre-define five standard patterns.
 
-<Aside type="note" title="Agent OS Runtime contracts">
-Use [Agent OS Contracts](/en/reference/agent-os-runtime/#contracts) as the starting point for `lead_directive_v1`, `plan_v1`, `worker_report_v1`, and `review_result_v1`.
-</Aside>
+| Pattern | Trigger | Immediate action | Follow-up |
+|---------|---------|------------------|-----------|
+| Tool boundary breach | worker edits an unscoped file | abort run, drop patch | enable strict tool policy |
+| Test thrash | the same test fails twice | stop retry, log failure_reason | split the task into smaller pieces |
+| Judge JSON corruption | invalid JSON rate > 10% | repair step + fallback verdict | turn on structured output |
+| Cost spiral | per-run token budget exceeded | force-close the run | tighten max_turns / context trim |
+| Demo flake | one of three reruns fails | shrink the live demo | keep a recorded fallback |
 
-## Runbook
+#### Per-incident runbook table
 
-| Problem | Immediate action | Long-term fix |
-|---------|------------------|---------------|
-| Agent edits out-of-scope files | stop run and discard patch | strengthen task packet scope and tool policy |
-| Tests keep failing | stop retrying and record reason | split the task smaller |
-| Judge emits invalid JSON | schema validation fail | add structured output or repair step |
-| Token cost spikes | enforce max turns/tokens | shorten prompt prefix and improve cache hits |
-| Merge conflicts | declare file ownership | use branches or worktrees |
-| Demo is unstable | prepare recording | shorten the happy path |
+| Problem | Immediate action | Long-term fix | Recurrence prevention |
+|---------|-----------------|---------------|----------------------|
+| Agent edits an unscoped file | abort the run, drop the patch | tighten task-packet scope and tool policy | path allowlist check inside the tool wrapper |
+| Tests keep failing | stop retry, record failure_reason | split the task | put smoke tests inside the task packet |
+| Judge breaks JSON | mark schema-validation failure | structured output or repair step | "JSON only" stress in the judge prompt |
+| Token cost blows up | apply max_turns / max_tokens | reorganize prompt prefix, raise cache hit | cost-dashboard alarm threshold |
+| Teammate file conflicts | declare file ownership | use worktrees or branches | record file owner in the task packet |
+| Unstable demo | prepare a recording | shorten the happy path | add a demo-regression test |
 
-## Pivot criteria
+### Pivot decision framework
 
-Cut scope if any of these are true:
+Teams hesitate to pivot because "how much should we cut?" feels vague. A decision tree fixes that.
 
-- no end-to-end happy path has passed;
-- event logs cannot reconstruct failures;
-- no deterministic, judge, or policy gate is automated;
-- model connectivity consumes most of the time;
-- team members are implementing different goals.
+<div class="diagram">
+  <div class="diagram__title">Pivot Decision Tree</div>
+  <div class="diagram__flow">
+    <div class="diagram__node diagram__node--gray diagram__node--wide">
+      <span class="diagram__node__label">Q1. Has the happy path passed end-to-end at least once?</span>
+    </div>
+    <div class="diagram__branch">
+      <div style="background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.25); color: #22C55E;">
+        <span class="diagram__branch__icon">✓ Yes</span>
+        <span class="diagram__branch__desc">→ move to reliability hardening</span>
+      </div>
+      <div style="background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); color: #EF4444;">
+        <span class="diagram__branch__icon">✗ No</span>
+        <span class="diagram__branch__desc">→ force a scope cut</span>
+      </div>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--gray diagram__node--wide">
+      <span class="diagram__node__label">Q2. Can the latest failure be reconstructed from the event log?</span>
+    </div>
+    <div class="diagram__branch">
+      <div style="background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.25); color: #22C55E;">
+        <span class="diagram__branch__icon">✓ Yes</span>
+        <span class="diagram__branch__desc">→ continue</span>
+      </div>
+      <div style="background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); color: #EF4444;">
+        <span class="diagram__branch__icon">✗ No</span>
+        <span class="diagram__branch__desc">→ harden the event store first</span>
+      </div>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--gray diagram__node--wide">
+      <span class="diagram__node__label">Q3. Is at least one automated gate working?</span>
+    </div>
+    <div class="diagram__branch">
+      <div style="background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.25); color: #22C55E;">
+        <span class="diagram__branch__icon">✓ Yes</span>
+        <span class="diagram__branch__desc">→ evaluate "Should have"</span>
+      </div>
+      <div style="background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); color: #EF4444;">
+        <span class="diagram__branch__icon">✗ No</span>
+        <span class="diagram__branch__desc">→ add a single smoke test</span>
+      </div>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--gray diagram__node--wide">
+      <span class="diagram__node__label">Q4. Is the demo path narrowed to one?</span>
+    </div>
+    <div class="diagram__branch">
+      <div style="background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.25); color: #22C55E;">
+        <span class="diagram__branch__icon">✓ Yes</span>
+        <span class="diagram__branch__desc">→ proceed to reliability / cost / report</span>
+      </div>
+      <div style="background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); color: #EF4444;">
+        <span class="diagram__branch__icon">✗ No</span>
+        <span class="diagram__branch__desc">→ collapse to one immediately</span>
+      </div>
+    </div>
+  </div>
+</div>
 
-## Mentoring check-in questions
+#### Pivot triggers (summary)
 
-1. What is the demo path?
+If any of the following holds at the midpoint, cut scope.
+
+- The happy path has not yet passed end-to-end.
+- Without the event log you cannot reconstruct the failure.
+- Not a single gate (judge, policy, test) is automated.
+- Model connectivity issues are eating the schedule.
+- Teammates are building toward different goals.
+
+### Recognize observability debt
+
+Building the demo without operational evidence collapses Week 15 integration. By Week 14, these patterns mean you are already in debt.
+
+| Debt pattern | Meaning | Pay it down by |
+|--------------|---------|----------------|
+| logs without run id | cannot identify which run produced the log | replace prints with logger calls |
+| missing event flush | events lost on crash | per-line fsync or transactional log |
+| metrics without alerts | breaches go unnoticed | add a single alert (cost or failure rate) |
+| dashboard only on one screen | team cannot see the same view | export a shareable static URL |
+| overrides only in chat | no audit | record `human.override` events |
+
+### Mentoring check-in questions
+
+In mentoring time, instead of narrating progress, be ready to answer these in one sentence.
+
+1. What is the current demo path?
 2. What is the last successful run id?
-3. What failed in the last failed run?
-4. What remaining scope can be cut?
-5. Which metric will appear in the final presentation?
+3. What is the failure reason for the last failed run?
+4. Which scope items can still be dropped?
+5. Which numbers will appear on the final-presentation slide?
 
-## Midpoint report template
+### Midpoint report template
 
-The progress report should be evidence-centered, not a long narrative.
+A progress report is evidence-driven, not narrative.
 
 ```markdown
 # Week 14 Progress Report
@@ -172,6 +377,12 @@ The progress report should be evidence-centered, not a long narrative.
 | Run id | Latency | Tokens | Gate result | Notes |
 |--------|---------|--------|-------------|-------|
 
+## Quantitative summary
+- success_rate (3 attempts): %
+- p95 latency: s
+- token cost / run: $
+- override count:
+
 ## Risks and scope cuts
 1.
 2.
@@ -180,32 +391,84 @@ The progress report should be evidence-centered, not a long narrative.
 
 ### Week 14 Definition of Done
 
-| Item | Minimum passing standard |
-|------|--------------------------|
-| Closed loop | one task packet runs end to end |
+| Item | Minimum pass |
+|------|--------------|
+| Closed loop | a single task packet executes end-to-end |
 | Event log | `run.started`, key tool events, and `run.closed` are recorded |
 | Gate | at least one deterministic gate runs automatically |
-| Replay | final status can be recomputed from the event log |
-| Report | team can explain the last successful and failed runs |
+| Replay | the event log recomputes the final status |
+| Report | the last successful run and the last failed run are explained |
+| Dashboard | at least one of success rate / cost / latency is visualized |
 
-If this is not done, Week 15 should focus on completing the loop rather than adding features.
+If you cannot pass these, Week 15 is dedicated to closing the loop, not adding features.
+
+## Practicum
+
+<Steps>
+1. **Day 1 — build the runtime skeleton**
+
+   Land directories and the first `run.started`/`run.closed` event in one sitting.
+
+2. **Day 2 — first agent loop**
+
+   With one task packet, have the worker produce a patch and pass a deterministic gate.
+
+3. **Day 3 — reviewer + judge integration**
+
+   Apply handoff contracts and separate fail / revise / pass.
+
+4. **Day 4 — telemetry + dashboard**
+
+   Expose tokens / latency / pass rate as metrics and stand up a four-panel dashboard.
+
+5. **Day 5 — submit the midpoint report**
+
+   Write an evidence-driven progress report and decide on scope cuts.
+</Steps>
 
 ## Assignment
 
 <div class="assignment-box">
 
-### Capstone: Midpoint Progress Report
+### Capstone: midpoint progress report
 
 **Due**: 2026-06-09 23:59
 
-**Path**: `capstone/teams/[team-name]/reports/progress-week14.md`
+**Submission path**: `capstone/teams/[team]/reports/progress-week14.md`
 
-**Required content**:
-1. Current demo path and last successful run id.
-2. Completed runtime layers.
-3. One `.events.jsonl` sample and replay result.
-4. Implemented deterministic, judge, and human review gates.
-5. Top three risks and scope-cut plan.
-6. Final demo script draft.
+**Required**:
+1. Current demo path and the latest successful run id
+2. Completed runtime-layer list
+3. One `.events.jsonl` example with replay output
+4. Implemented items among deterministic gate, judge gate, and human review
+5. Top three risks and the scope-cut plan
+6. Draft demo script for the final presentation
+7. Quantitative summary table (success_rate, p95 latency, token cost)
 
 </div>
+
+## Key Takeaways
+
+1. **The goal is a closed-loop MVP**: a small task goes in, passes a gate, and the event log can replay.
+2. **Six components live together**: task packet / worker loop / tool boundary / deterministic gate / event store / run report.
+3. **Handoff contracts enforced by schema**: pydantic or JSON Schema absorbs typos and formatting drift.
+4. **Carry five runbook patterns**: tool breach, test thrash, judge JSON corruption, cost spiral, demo flake.
+5. **Pivot through the decision tree**: happy path → event log → gate → demo path; any "no" forces a scope cut.
+6. **Pay observability debt now**: logs without run_id, missing flushes, and alertless metrics must be cleared in Week 14.
+7. **The midpoint report is evidence-driven**: run ids, metric tables, and three scope cuts make Week 15 integration possible.
+
+## Further Reading
+
+**Foundational**
+- [Agent OS Runtime — Contracts](/en/reference/agent-os-runtime/#contracts)
+- [Agent OS Runtime — 7-Layer Architecture](/en/reference/agent-os-runtime/#7-layer-architecture)
+- [Capstone evaluation criteria](/en/capstone/evaluation/)
+
+**Operations / SRE**
+- Google SRE Book — Incident Response
+- The Phoenix Project — runbook culture
+- Atlassian, "How to write a postmortem"
+
+**Reference cases**
+- Anthropic — Multi-agent system best practices
+- ThoughtWorks Tech Radar — Capstone-style agentic delivery

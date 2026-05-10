@@ -29,6 +29,23 @@ import { Aside, Steps, Badge, Card, CardGrid } from '@astrojs/starlight/componen
 
 ## Theory
 
+### Learning Objectives
+
+<CardGrid>
+  <Card title="Concepts" icon="open-book">
+    Define Context Rot and explain why it persists in long-context models in terms of attention dilution and instruction drift.
+  </Card>
+  <Card title="Design" icon="seti:config">
+    Compare three strategies — context window wiping, summarization, state-tracking files — and decide which combination fits a Ralph loop.
+  </Card>
+  <Card title="Implementation" icon="pencil">
+    Author `tasks.md` (or an equivalent state file) that serializes compact progress every turn in a token-efficient way.
+  </Card>
+  <Card title="Operations" icon="rocket">
+    Measure cache hit ratio, prompt tokens, and summarization cost to report the ROI of your context strategy quantitatively.
+  </Card>
+</CardGrid>
+
 ### Why Context Management is Central in Week 5
 
 In Week 4 we learned the power of the loop paradigm — calling the same model repeatedly while using deterministic validation to ensure quality. But for a loop to work, there is a **prerequisite**: **the context must be clean.**
@@ -398,7 +415,7 @@ Measure context usage directly and compare before and after compaction to experi
 
 ---
 
-## Key Summary
+## Key Takeaways
 
 1. **Context Rot is an empirical phenomenon** — Chroma study: accuracy degrades as input grows longer across all 18 models. 30%+ degradation at mid-window positions.
 2. **A 1M token window is not the solution** — a bigger window just means a larger space for Context Rot to occur in. Effective usage is 60-70%.

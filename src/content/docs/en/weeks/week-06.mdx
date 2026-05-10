@@ -29,6 +29,23 @@ import { Aside, Steps, Badge, Tabs, TabItem, Card, CardGrid } from '@astrojs/sta
 
 ## Theory
 
+### Learning Objectives
+
+<CardGrid>
+  <Card title="Concepts" icon="open-book">
+    Use the "Sign" metaphor to explain instruction tuning, and split the work between permanent context (PROMPT.md / AGENTS.md) and one-off prompts.
+  </Card>
+  <Card title="Design" icon="seti:config">
+    Design instruction layers across mission / norms / pitfalls / examples, and decide which failure pattern each layer absorbs.
+  </Card>
+  <Card title="Implementation" icon="pencil">
+    Harden the project's PROMPT.md by encoding one or two recurring mistakes as explicit anti-patterns, and automate the failure → instruction-update cycle.
+  </Card>
+  <Card title="Operations" icon="rocket">
+    Monitor instruction drift and propose a quarterly housekeeping routine that re-reviews, rewrites, and prunes instructions.
+  </Card>
+</CardGrid>
+
 ### Why Instruction Tuning is Central in Week 6
 
 In Week 5 we learned how to keep context clean — auto-compaction, fresh context, state files. But even with clean context, **if the agent keeps making the same mistakes**, it's all for nothing.
@@ -397,7 +414,7 @@ Analyze recurring errors to design deterministic constraints, then use A/B testi
 
 ---
 
-## Key Summary
+## Key Takeaways
 
 1. **Instruction tuning = installing signs + pruning**: Includes not just adding but also pruning and reprioritizing to prevent Sign Fatigue
 2. **Do not generate instruction files with LLMs**: ETH Zurich research — 3% success rate decrease, 20% cost increase. Humans must write only "information the agent cannot infer by reasoning"

@@ -29,6 +29,23 @@ import { Aside, Steps, Badge, Tabs, TabItem, Card, CardGrid } from '@astrojs/sta
 
 ## 이론 (Theory)
 
+### 오늘의 학습 목표
+
+<CardGrid>
+  <Card title="개념 관점" icon="open-book">
+    "Sign" 메타포로 instruction tuning을 설명하고, 영구 컨텍스트(PROMPT.md / AGENTS.md)와 일시적 프롬프트의 역할 분리를 정리한다.
+  </Card>
+  <Card title="설계 관점" icon="seti:config">
+    instruction layer를 mission / norms / pitfalls / examples 4구역으로 설계하고, 어떤 실패 패턴을 어떤 구역에서 흡수할지 결정한다.
+  </Card>
+  <Card title="구현 관점" icon="pencil">
+    프로젝트 PROMPT.md를 고도화해 반복 실수 1-2개를 명시적 금지 패턴으로 박제하고, 실패 → instruction 업데이트 사이클을 자동화한다.
+  </Card>
+  <Card title="운영 관점" icon="rocket">
+    instruction drift를 모니터링하고, 분기마다 instruction을 재검토 / 정리 / 삭제하는 "instruction housekeeping" 루틴을 제안한다.
+  </Card>
+</CardGrid>
+
 ### 왜 6주차에서 인스트럭션 튜닝이 중심인가
 
 5주차에서 컨텍스트를 깨끗하게 유지하는 법을 배웠다 — auto-compaction, fresh context, 상태 파일. 하지만 컨텍스트가 깨끗해도, 에이전트가 **같은 실수를 반복하면** 소용이 없다.

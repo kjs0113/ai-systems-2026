@@ -28,7 +28,28 @@ import { Aside, Steps, Badge, Card, CardGrid, Tabs, TabItem } from '@astrojs/sta
   <Badge text="강의일: 2026-06-02" variant="default" />
 </div>
 
-## Ralphthon 실행 주간
+## 이론 (Theory)
+
+### 오늘의 학습 목표
+
+<CardGrid>
+  <Card title="개념 관점" icon="open-book">
+    "closed-loop MVP"가 무엇이고 무엇이 아닌지 6개 구성요소로 설명하고, 우리 팀이 14주차 끝에 도달해야 할 최소 상태를 정의한다.
+  </Card>
+  <Card title="설계 관점" icon="seti:config">
+    Lead/Planner/Worker/Reviewer/Operator 사이의 handoff 계약을 input/output schema로 명세하고, retry budget·escalation 조건을 표로 정리한다.
+  </Card>
+  <Card title="구현 관점" icon="pencil">
+    `make run` / `make replay` 한 줄로 실행되는 runtime skeleton을 만들고 첫 `run.started → run.closed` 사이클을 끝낸다.
+  </Card>
+  <Card title="운영 관점" icon="rocket">
+    runbook 5종 패턴과 pivot 의사결정 트리를 사용해 중간 보고서에 "남은 리스크와 scope cut"을 evidence와 함께 적는다.
+  </Card>
+</CardGrid>
+
+---
+
+### Closed-loop MVP의 정의
 
 이번 주의 목표는 완성품이 아니라 **closed loop MVP**다. 한 개의 task packet이 들어가고, 에이전트가 실행되고, gate가 판단하고, event log로 replay 가능한 상태까지 가면 성공이다.
 
@@ -36,7 +57,50 @@ import { Aside, Steps, Badge, Card, CardGrid, Tabs, TabItem } from '@astrojs/sta
 큰 시스템을 한 번에 만들지 않는다. 작은 happy path를 끝까지 연결한 뒤, 실패 복구와 관측성을 붙인다. Ralph 루프 철학은 "많이 시도한다"가 아니라 "실패를 하네스가 흡수한다"에 가깝다.
 </Aside>
 
-## Day-by-day 실행 계획
+#### Closed-loop MVP의 6개 구성요소
+
+<div class="diagram">
+  <div class="diagram__title">Closed-loop MVP — Six Components</div>
+  <div class="diagram__cols diagram__cols--3">
+    <div class="diagram__node diagram__node--blue diagram__node--full">
+      <span class="diagram__node__label">① Task packet</span>
+      <span class="diagram__node__sub">JSON Schema validated</span>
+    </div>
+    <div class="diagram__node diagram__node--cyan diagram__node--full">
+      <span class="diagram__node__label">② Worker loop</span>
+      <span class="diagram__node__sub">단일 worker가 실행</span>
+    </div>
+    <div class="diagram__node diagram__node--orange diagram__node--full">
+      <span class="diagram__node__label">③ Tool boundary</span>
+      <span class="diagram__node__sub">allow / deny 적용</span>
+    </div>
+    <div class="diagram__node diagram__node--green diagram__node--full">
+      <span class="diagram__node__label">④ Deterministic gate</span>
+      <span class="diagram__node__sub">최소 1개 자동 테스트</span>
+    </div>
+    <div class="diagram__node diagram__node--purple diagram__node--full">
+      <span class="diagram__node__label">⑤ Event store</span>
+      <span class="diagram__node__sub">.events.jsonl, replay 가능</span>
+    </div>
+    <div class="diagram__node diagram__node--gray diagram__node--full">
+      <span class="diagram__node__label">⑥ Run report</span>
+      <span class="diagram__node__sub">success/failure run id 추적 가능</span>
+    </div>
+  </div>
+</div>
+
+이 6개가 동시에 살아 있어야 closed loop다. 하나라도 빠지면 14주차 Definition of Done을 통과하지 못한다.
+
+#### 흔한 실패 사례
+
+| 실패 유형 | 신호 | 대응 |
+|----------|------|------|
+| Open loop (gate 누락) | `run.closed` 없이 끝남 | gate를 deterministic 1개로라도 즉시 추가 |
+| Replay 불가 | event log가 부분만 남음 | flush 정책 점검, run.started/run.closed 강제 |
+| Tool boundary 무시 | worker가 범위 밖 파일 수정 | tool policy를 worker가 호출 전에 검증 |
+| Demo 의존성 | 손으로만 시작되는 demo | `make run TASK=...` 단일 진입점으로 통합 |
+
+### Day-by-day 실행 계획
 
 <Steps>
 1. **Day 1: runtime skeleton**
@@ -75,7 +139,68 @@ import { Aside, Steps, Badge, Card, CardGrid, Tabs, TabItem } from '@astrojs/sta
    - 최종 주차 리스크 목록 작성
 </Steps>
 
-## 최소 구현 구조
+#### 일자별 예상 실패 모드
+
+| Day | 가장 흔한 실패 | 예방 조치 |
+|-----|--------------|----------|
+| Day 1 | 디렉토리만 만들고 첫 이벤트 미기록 | `run.started`/`run.closed` 통과 테스트를 첫 commit에 포함 |
+| Day 2 | retry 무한 루프 | max_turns 6, max_tokens 120K 즉시 적용 |
+| Day 3 | judge JSON 깨짐 | structured output + fallback `verdict=revise` |
+| Day 4 | metric은 있는데 dashboard 없음 | CSV→Streamlit 또는 정적 HTML이라도 1개 |
+| Day 5 | scope 못 줄임 | "Could have" 전부 삭제 후 보고서 작성 |
+
+### Agent handoff 계약 표준화
+
+처음부터 복잡한 multi-agent를 만들 필요는 없다. 다만 산출물 계약은 분리한다.
+
+| 단계 | 입력 | 출력 |
+|------|------|------|
+| Lead | problem statement | task packet |
+| Planner | task packet | implementation plan |
+| Worker | plan + repo | patch/artifact |
+| Reviewer | patch + criteria | review verdict |
+| Gate | verdict + tests | pass/revise/fail |
+
+<Aside type="note" title="Agent OS Runtime 계약 활용">
+Lead → Planner → Worker → Reviewer 계약은 [Agent OS Contracts](/reference/agent-os-runtime/#contracts)의 `lead_directive_v1`, `plan_v1`, `worker_report_v1`, `review_result_v1` 구조를 참고해 self-contained로 작성한다.
+</Aside>
+
+#### Handoff schema 예시
+
+```python
+# contracts.py — pydantic으로 강제하는 단계별 계약
+from pydantic import BaseModel
+from typing import Literal
+
+class LeadDirectiveV1(BaseModel):
+    task_id: str
+    objective: str
+    risk_boundary: str
+    deadline: str
+
+class PlanV1(BaseModel):
+    task_id: str
+    steps: list[str]
+    files_to_modify: list[str]
+    estimated_turns: int
+
+class WorkerReportV1(BaseModel):
+    task_id: str
+    run_id: str
+    patch_path: str
+    tests_command: str
+    notes: str
+
+class ReviewResultV1(BaseModel):
+    run_id: str
+    verdict: Literal["pass", "revise", "fail"]
+    reasons: list[str]
+    judge_overall: float | None = None
+```
+
+각 단계가 pydantic schema를 통과하지 못한 산출물을 다음 단계로 넘기지 않으면, 14주차에서 90% 이상의 typo·formatting 오류가 사라진다.
+
+### 최소 구현 구조
 
 ```text
 capstone/teams/[team]/
@@ -97,7 +222,7 @@ capstone/teams/[team]/
     └── progress-week14.md
 ```
 
-### 실행 명령은 하나로 묶는다
+#### 실행 명령은 하나로 묶는다
 
 팀원이 다른 명령을 각자 기억하면 재현성이 깨진다. `make run` 또는 `uv run` 한 줄로 실행되게 만든다.
 
@@ -108,34 +233,95 @@ make test
 make report
 ```
 
-## Agent handoff 패턴
+### Runbook 패턴 카탈로그
 
-처음부터 복잡한 multi-agent를 만들 필요는 없다. 다만 산출물 계약은 분리한다.
+문제가 터질 때마다 즉흥 대응하면 매번 같은 실수를 반복한다. 5가지 표준 패턴을 미리 정해 둔다.
 
-| 단계 | 입력 | 출력 |
-|------|------|------|
-| Lead | problem statement | task packet |
-| Planner | task packet | implementation plan |
-| Worker | plan + repo | patch/artifact |
-| Reviewer | patch + criteria | review verdict |
-| Gate | verdict + tests | pass/revise/fail |
+| 패턴 | 트리거 | 즉시 조치 | 사후 작업 |
+|-----|------|----------|----------|
+| Tool boundary breach | worker가 허용 외 파일 수정 | run abort, patch 폐기 | tool policy strict 모드 적용 |
+| Test thrash | 같은 테스트가 2회 이상 실패 | retry 중단, failure reason 기록 | task를 더 작게 분할 |
+| Judge JSON corruption | invalid JSON 비율 > 10% | repair step + fallback verdict | structured output 활성화 |
+| Cost spiral | run당 token 예산 초과 | run 강제 종료 | max_turns / context trim 강화 |
+| Demo flake | 같은 task 3회 중 1회 이상 실패 | live demo 축소 | 녹화본 fallback 확보 |
 
-<Aside type="note" title="Agent OS Runtime 계약 활용">
-Lead → Planner → Worker → Reviewer 계약은 [Agent OS Contracts](/reference/agent-os-runtime/#contracts)의 `lead_directive_v1`, `plan_v1`, `worker_report_v1`, `review_result_v1` 구조를 참고해 self-contained로 작성한다.
-</Aside>
+#### 문제 상황별 runbook 표
 
-## 문제 상황별 runbook
+| 문제 | 즉시 조치 | 장기 수정 | 재발 방지 |
+|------|----------|----------|----------|
+| 에이전트가 범위 밖 파일 수정 | run 중단, patch 폐기 | task packet scope와 tool policy 강화 | tool wrapper에서 path allowlist 검증 |
+| 테스트가 계속 실패 | retry 중단, failure reason 기록 | task를 더 작게 분할 | smoke test를 task packet 안에 명시 |
+| judge가 JSON을 깨뜨림 | schema validation fail 처리 | structured output 또는 repair step 추가 | judge prompt에 "JSON only" 강조 |
+| 토큰 비용 폭증 | max_turns/max_tokens 적용 | prompt prefix 정리, cache hit 높이기 | 비용 dashboard 알람 임계값 |
+| 팀원 변경 충돌 | 파일 ownership 선언 | worktree 또는 branch 분리 | task packet에 file owner 기재 |
+| demo가 불안정 | 녹화본 준비 | happy path를 더 짧게 고정 | demo regression test 추가 |
 
-| 문제 | 즉시 조치 | 장기 수정 |
-|------|----------|----------|
-| 에이전트가 범위 밖 파일 수정 | run 중단, patch 폐기 | task packet scope와 tool policy 강화 |
-| 테스트가 계속 실패 | retry 중단, failure reason 기록 | task를 더 작게 분할 |
-| judge가 JSON을 깨뜨림 | schema validation fail 처리 | structured output 또는 repair step 추가 |
-| 토큰 비용 폭증 | max_turns/max_tokens 적용 | prompt prefix 정리, cache hit 높이기 |
-| 팀원 변경 충돌 | 파일 ownership 선언 | worktree 또는 branch 분리 |
-| demo가 불안정 | 녹화본 준비 | happy path를 더 짧게 고정 |
+### Pivot 의사결정 프레임워크
 
-## 피벗 기준
+피벗을 망설이는 가장 큰 이유는 "어디까지 줄여야 하는가"가 모호하기 때문이다. 의사결정 트리로 명확히 한다.
+
+<div class="diagram">
+  <div class="diagram__title">Pivot Decision Tree</div>
+  <div class="diagram__flow">
+    <div class="diagram__node diagram__node--gray diagram__node--wide">
+      <span class="diagram__node__label">Q1. happy path가 한 번이라도 end-to-end로 통과했는가?</span>
+    </div>
+    <div class="diagram__branch">
+      <div style="background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.25); color: #22C55E;">
+        <span class="diagram__branch__icon">✓ 예</span>
+        <span class="diagram__branch__desc">→ 신뢰도 보강 단계로</span>
+      </div>
+      <div style="background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); color: #EF4444;">
+        <span class="diagram__branch__icon">✗ 아니오</span>
+        <span class="diagram__branch__desc">→ scope cut 강제</span>
+      </div>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--gray diagram__node--wide">
+      <span class="diagram__node__label">Q2. event log에서 마지막 실패를 재구성할 수 있는가?</span>
+    </div>
+    <div class="diagram__branch">
+      <div style="background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.25); color: #22C55E;">
+        <span class="diagram__branch__icon">✓ 예</span>
+        <span class="diagram__branch__desc">→ 다음 질문으로</span>
+      </div>
+      <div style="background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); color: #EF4444;">
+        <span class="diagram__branch__icon">✗ 아니오</span>
+        <span class="diagram__branch__desc">→ event store 보강 우선</span>
+      </div>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--gray diagram__node--wide">
+      <span class="diagram__node__label">Q3. 자동화된 gate가 최소 1개 작동하는가?</span>
+    </div>
+    <div class="diagram__branch">
+      <div style="background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.25); color: #22C55E;">
+        <span class="diagram__branch__icon">✓ 예</span>
+        <span class="diagram__branch__desc">→ Should have 평가</span>
+      </div>
+      <div style="background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); color: #EF4444;">
+        <span class="diagram__branch__icon">✗ 아니오</span>
+        <span class="diagram__branch__desc">→ smoke test 1개부터 추가</span>
+      </div>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--gray diagram__node--wide">
+      <span class="diagram__node__label">Q4. demo path가 한 개로 고정되어 있는가?</span>
+    </div>
+    <div class="diagram__branch">
+      <div style="background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.25); color: #22C55E;">
+        <span class="diagram__branch__icon">✓ 예</span>
+        <span class="diagram__branch__desc">→ 신뢰도 / 비용 / 보고서로 진행</span>
+      </div>
+      <div style="background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); color: #EF4444;">
+        <span class="diagram__branch__icon">✗ 아니오</span>
+        <span class="diagram__branch__desc">→ 즉시 1개로 축소</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+#### 피벗 기준 요약
 
 중간 점검에서 다음 중 하나라도 해당하면 scope를 줄인다.
 
@@ -145,7 +331,19 @@ Lead → Planner → Worker → Reviewer 계약은 [Agent OS Contracts](/referen
 - 모델 연결 문제가 전체 시간을 잡아먹음
 - 팀원이 각자 다른 목표를 구현하고 있음
 
-## 멘토링 체크인 질문
+### 관측성 부채 인지하기
+
+운영 자료가 없는 상태로 demo를 만들면 15주차 통합에서 무너진다. 14주차에 다음 패턴이 보이면 이미 부채다.
+
+| 부채 패턴 | 의미 | 즉시 청산 방법 |
+|----------|------|--------------|
+| run id 없는 로그 | 어느 실행의 로그인지 식별 불가 | 모든 print를 logger 호출로 교체 |
+| event flush 누락 | crash 시 이벤트 손실 | 줄 단위 fsync 또는 transactional log |
+| metric은 있고 alert 없음 | 임계 초과를 모름 | 1개 alert (cost / failure rate) |
+| 사람만 보는 dashboard | 팀이 같은 화면을 보지 못함 | URL 공유 가능한 정적 export |
+| Override가 chat에만 남음 | audit 불가 | `human.override` 이벤트로 기록 |
+
+### 멘토링 체크인 질문
 
 멘토링 시간에는 진행 상황 설명보다 다음 질문에 바로 답할 수 있어야 한다.
 
@@ -155,7 +353,7 @@ Lead → Planner → Worker → Reviewer 계약은 [Agent OS Contracts](/referen
 4. 남은 scope 중 버려도 되는 것은 무엇인가?
 5. 최종 발표에서 수치로 보여줄 지표는 무엇인가?
 
-## 중간 보고서 템플릿
+### 중간 보고서 템플릿
 
 진행 보고서는 긴 서술문보다 evidence 중심으로 작성한다.
 
@@ -179,6 +377,12 @@ Lead → Planner → Worker → Reviewer 계약은 [Agent OS Contracts](/referen
 | Run id | Latency | Tokens | Gate result | Notes |
 |--------|---------|--------|-------------|-------|
 
+## Quantitative summary
+- success_rate (3 attempts): %
+- p95 latency: s
+- token cost / run: $
+- override count: 
+
 ## Risks and scope cuts
 1.
 2.
@@ -194,8 +398,33 @@ Lead → Planner → Worker → Reviewer 계약은 [Agent OS Contracts](/referen
 | Gate | 최소 1개 deterministic gate가 자동 실행됨 |
 | Replay | event log에서 final status를 재계산할 수 있음 |
 | Report | 마지막 성공 run과 마지막 실패 run을 설명할 수 있음 |
+| Dashboard | success rate / cost / latency 1개 이상 시각화 |
 
 이 기준을 통과하지 못하면 15주차에는 새 기능이 아니라 loop 완성에 집중한다.
+
+## 실습 (Practicum)
+
+<Steps>
+1. **Day 1 — runtime skeleton 빌드**
+
+   디렉토리 구조와 첫 `run.started`/`run.closed` 이벤트 기록을 한 번에 끝낸다.
+
+2. **Day 2 — first agent loop**
+
+   하나의 task packet으로 worker가 patch를 만들고 deterministic gate를 통과시킨다.
+
+3. **Day 3 — reviewer + judge 통합**
+
+   handoff contracts를 적용하고 fail/revise/pass 상태를 분리한다.
+
+4. **Day 4 — telemetry + dashboard**
+
+   token / latency / pass rate를 메트릭으로 노출하고 4-패널 dashboard를 만든다.
+
+5. **Day 5 — midpoint report 제출**
+
+   evidence 중심 progress report와 scope cut 결정을 작성한다.
+</Steps>
 
 ## 과제 (Assignment)
 
@@ -214,5 +443,32 @@ Lead → Planner → Worker → Reviewer 계약은 [Agent OS Contracts](/referen
 4. deterministic gate, judge gate, human review 중 구현된 항목
 5. 가장 큰 리스크 3개와 scope cut 계획
 6. 최종 발표 demo script 초안
+7. 정량 요약(success_rate, p95 latency, token cost) 표
 
 </div>
+
+## 핵심 정리
+
+1. **목표는 closed loop MVP**: 작은 task가 들어가서 gate를 통과하고 event log로 replay까지 돌아야 한다.
+2. **6개 구성요소를 동시에 살린다**: task packet / worker loop / tool boundary / deterministic gate / event store / run report.
+3. **Handoff 계약은 schema로 강제**: pydantic이나 JSON Schema로 단계별 산출물을 검증해 typo·formatting 오류를 흡수한다.
+4. **Runbook 5종을 미리 가진다**: tool breach, test thrash, judge JSON corruption, cost spiral, demo flake.
+5. **피벗은 결정 트리로**: happy path → event log → gate → demo path 순으로 점검하고 못 넘으면 scope cut.
+6. **관측성 부채를 즉시 청산**: run_id 없는 로그, flush 누락, alert 없는 metric은 14주차 안에 처리한다.
+7. **중간 보고서는 evidence 중심**: run id, metric 표, scope cut 3개가 있어야 15주차 통합이 가능하다.
+
+## 더 읽을거리
+
+**핵심 문서**
+- [Agent OS Runtime — Contracts](/reference/agent-os-runtime/#contracts)
+- [Agent OS Runtime — 7-Layer Architecture](/reference/agent-os-runtime/#7-layer-architecture)
+- [캡스톤 평가 기준](/capstone/evaluation/)
+
+**운영 / SRE**
+- Google SRE Book — Incident Response
+- The Phoenix Project — runbook 문화에 관한 입문
+- Atlassian, "How to write a postmortem"
+
+**참고 사례**
+- Anthropic — Multi-agent system best practices
+- ThoughtWorks Tech Radar — Capstone-style agentic delivery

@@ -29,6 +29,23 @@ import { Aside, Steps, Tabs, TabItem, Badge, Card, CardGrid } from '@astrojs/sta
 
 ## 이론 (Theory)
 
+### 오늘의 학습 목표
+
+<CardGrid>
+  <Card title="개념 관점" icon="open-book">
+    플래너 에이전트가 9-phase SDLC의 병목인 이유를 설명하고, Worker만으로는 흡수하지 못하는 설계 결정 종류를 분류한다.
+  </Card>
+  <Card title="설계 관점" icon="seti:config">
+    `spec.md` 스키마(목표·범위·제약·acceptance·escalation)를 직접 설계하고 검증 게이트를 정의한다.
+  </Card>
+  <Card title="구현 관점" icon="pencil">
+    codebase analysis 단계와 spec generation 단계를 분리한 플래너를 코드로 구현하고, spec validation을 자동화한다.
+  </Card>
+  <Card title="운영 관점" icon="rocket">
+    spec drift(요구사항 변경 vs 구현 불일치)를 감지하고 수정 흐름을 운영하는 체크리스트를 운영한다.
+  </Card>
+</CardGrid>
+
 ---
 
 ### 왜 플래너 에이전트가 파이프라인의 병목인가

@@ -7,13 +7,13 @@ phase_title: Open-Source Models & MLOps
 date: "2026-05-05"
 theory_topics:
   - 2026 open-weight coding LLM landscape
-  - Choosing between APIs, cloud agents, and local models
-  - OpenAI-compatible serving with vLLM and SGLang
+  - Selection criteria for commercial APIs, cloud agents, and local models
+  - vLLM/SGLang OpenAI-compatible inference servers
 lab_topics:
-  - Deploy an open-weight model with vLLM
+  - Deploy open-weight models with vLLM
   - Connect AI coding CLIs to local models
-  - Benchmark inference performance and cost
-assignment: "Lab 10: vLLM Deployment"
+  - Inference server performance / cost benchmarking
+assignment: "Lab 10: vLLM deployment practicum"
 assignment_due: "2026-05-12"
 difficulty: advanced
 estimated_time: 8 hours
@@ -30,87 +30,248 @@ import { Aside, Steps, Badge, Card, CardGrid, Tabs, TabItem } from '@astrojs/sta
 
 ## Theory
 
-### The 2026 Open-Weight Coding Model Landscape
-
-The important change is no longer that open models are "usable." The change is that open-weight models can now compete inside real agent harnesses, where tool calling, long context, serving compatibility, license, and operating cost matter as much as raw coding benchmarks.
-
-<Aside type="note" title="Open source vs. open weights">
-Most current models do not publish the full training stack. They publish weights and usage terms. This course uses "open-weight models" when that is the accurate term.
-</Aside>
-
-#### Current model comparison
-
-| Model | Release type | Parameters | Context | Strength | Operational note |
-|------|--------------|-----------|---------|----------|------------------|
-| **Qwen3-Coder-Next** | Apache 2.0 | 80B MoE, 3B active | 256K | agentic coding, tool calling, local development | newer, smaller, faster coding-agent candidate than 480B-A35B |
-| **DeepSeek-V4-Pro / Flash** | model-card public | Pro 1.6T/49B active; Flash 284B/13B active | 1M | long-context reasoning, coding, agentic tasks | Pro targets quality; Flash targets efficiency and throughput |
-| **GLM-5.1** | MIT | 754B model-card size | agentic long-context work | agentic engineering, coding, terminal tasks | current GLM comparison baseline; vLLM/SGLang supported |
-| **MiniMax-M2.7** | model-card public | 229B | long agent workflows | software engineering, search, office work, agentic teams | newer MiniMax agentic candidate than M2.5 |
-| **DeepSeek-Coder-V2-Lite** | DeepSeek | 16B/236B family | 128K | single-GPU lab model | useful for teaching; not the frontier comparison point |
-
-#### How to read a model card
-
-For this course, read operational constraints before benchmark tables.
-
-| Step | Question | Reject signal |
-|------|----------|---------------|
-| License | Can we use it for class, research, or a PoC? | unclear redistribution or service terms |
-| Serving support | Does it officially support vLLM, SGLang, or Transformers? | only community patches exist |
-| Tool format | How are tool calls, JSON, and reasoning outputs represented? | every model needs an ad hoc parser |
-| Context policy | Is the usable context smaller than the advertised maximum? | no realistic GPU plan for long context |
-| Failure behavior | Are OOM, invalid JSON, refusals, and timeouts distinguishable? | failures cannot drive retry decisions |
-
-"Current" in this table means current for the lecture date. The capstone decision must still come from reproduced runs using the same task packets and harness.
-
-#### Qwen3-Coder
-
-Qwen3-Coder-Next is an 80B total / 3B active MoE model with 256K context and explicit agentic coding/tool-use positioning. The operational point is not just coding quality. It is a practical candidate for local or institutional agentic coding harnesses because it combines long repository context, tool-use behavior, and vLLM/SGLang deployment support.
-
-#### DeepSeek-V4
-
-DeepSeek-V4-Pro and DeepSeek-V4-Flash are the current DeepSeek V4 comparison points in this course. Pro is the quality and long-context reasoning candidate; Flash is the efficiency and throughput candidate.
-
-| Family | Use in this course |
-|--------|--------------------|
-| DeepSeek-Coder-V2-Lite | teaching model that can run on smaller lab servers |
-| DeepSeek-V4-Pro | current DeepSeek frontier comparison baseline |
-| DeepSeek-V4-Flash | cost and throughput comparison baseline |
-| earlier DeepSeek models | long-context baseline and historical comparison |
-
-#### GLM-5.1 and MiniMax-M2.7
-
-GLM-5.1 is the current GLM comparison point for agentic engineering, coding, and tool workflows. MiniMax-M2.7 is the current MiniMax candidate for long-horizon agentic workflows across coding, search, and office-like tasks. Treat their model-card benchmark numbers as vendor claims until the same tasks are reproduced inside our harness.
-
-<Aside type="caution" title="How to read benchmarks">
-SWE-bench, Terminal-Bench, and BrowseComp scores depend heavily on scaffold, prompt, tool policy, and retry budget. Use public scores to choose candidates, not to declare a winner before lab reproduction.
-</Aside>
-
-### Model choice is harness choice
-
-The deployment decision has three realistic options.
+### Learning Objectives
 
 <CardGrid>
-  <Card title="Commercial API" icon="external">
-    Use Claude, GPT, or Gemini APIs directly. Quality and convenience are high, while data boundaries, cost forecasting, and rate limits need management.
+  <Card title="Concepts" icon="open-book">
+    Distinguish open-weight from open-source, and place the major 2026 coding LLM families (Qwen3-Coder, DeepSeek-V4, GLM-5.1, MiniMax-M2.7, DeepSeek-Coder-V2-Lite) on the landscape.
   </Card>
-  <Card title="Cloud Agent" icon="rocket">
-    Use Codex Web/App, Claude Code on the Web, or GitHub Agent HQ. Strong for asynchronous coding, review, and GitHub workflows.
+  <Card title="Design" icon="seti:config">
+    Compare commercial API, cloud agent, and local inference along data-boundary, cost, and operational-complexity axes, and map the choices into a decision tree.
   </Card>
-  <Card title="Local Serving" icon="laptop">
-    Serve an OpenAI-compatible endpoint with vLLM or SGLang. Data control and predictable GPU cost improve, but operational complexity increases.
+  <Card title="Implementation" icon="pencil">
+    Bring up an OpenAI-compatible server with `vllm serve` on single GPU, multi-GPU, and MIG configurations, and unify alias / tool parser / token accounting through a model adapter.
+  </Card>
+  <Card title="Operations" icon="rocket">
+    Run identical tasks on a commercial model and a local model under the same harness, and quantitatively compare throughput, latency, failure rate, and projected cost.
   </Card>
 </CardGrid>
 
-| Criterion | Commercial API | Cloud agent | Local serving |
-|-----------|----------------|-------------|---------------|
-| Startup speed | Very fast | Fast | Slow |
-| Data control | Low-medium | Medium | High |
-| Long-term cost | Usage-based | Seat/usage-based | GPU fixed cost |
-| Latest model access | Fast | Fast | After weight release |
-| Ops complexity | Low | Medium | High |
-| Course value | API design | Workflow design | MLOps and infra |
+---
 
-### Agentic Coding Tool Ecosystem
+### 2026 open-weight coding LLM landscape
+
+The defining shift of 2026 is not "open-source models are usable" but **open-weight models compete with commercial models inside real agent harnesses**. Coding performance is no longer the only axis: tool calling, long context, inference-server compatibility, license, and operating cost are now compared together.
+
+<Aside type="note" title="Open-source vs open-weight">
+Most current "open" releases are not open-source in the full sense — training code and data are typically not public, only the weights and inference rights. This course uses **open-weight model** as the default term for accuracy.
+</Aside>
+
+#### Family tree
+
+<div class="diagram">
+  <div class="diagram__title">Open-weight Coding LLM 2026</div>
+  <div class="diagram__flow">
+    <div class="diagram__node diagram__node--blue diagram__node--wide">
+      <span class="diagram__node__label">Open-weight Coding LLM (2026)</span>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__cols diagram__cols--4">
+      <div class="diagram__node diagram__node--cyan diagram__node--full">
+        <span class="diagram__node__label">Qwen</span>
+        <span class="diagram__node__sub">Qwen3-Coder-Next 80B MoE · 3B active · 256K</span>
+        <span class="diagram__node__detail">Qwen3-Coder-30B-A3B</span>
+      </div>
+      <div class="diagram__node diagram__node--purple diagram__node--full">
+        <span class="diagram__node__label">DeepSeek</span>
+        <span class="diagram__node__sub">V4-Pro 1.6T MoE · 1M ctx</span>
+        <span class="diagram__node__detail">V4-Flash 284B MoE · Coder-V2-Lite 16B</span>
+      </div>
+      <div class="diagram__node diagram__node--orange diagram__node--full">
+        <span class="diagram__node__label">GLM</span>
+        <span class="diagram__node__sub">GLM-5.1</span>
+        <span class="diagram__node__detail">agentic engineering</span>
+      </div>
+      <div class="diagram__node diagram__node--green diagram__node--full">
+        <span class="diagram__node__label">MiniMax</span>
+        <span class="diagram__node__sub">MiniMax-M2.7</span>
+        <span class="diagram__node__detail">agent + office</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+#### Major models compared (2026-05)
+
+| Model | Release form | Parameters | Context | Strengths | Operational notes |
+|------|--------------|------------|---------|-----------|------------------|
+| **Qwen3-Coder-Next** | Apache 2.0 | 80B MoE, 3B active | 256K | agentic coding, tool calling, local development | Smaller, faster successor to the 480B-A35B generation |
+| **DeepSeek-V4-Pro / Flash** | Public model card | 1.6T / 284B MoE | 1M | long-context reasoning, coding, agentic tasks | Pro for quality, Flash for efficiency. More current than V3.2 |
+| **GLM-5.1** | Public weights | latest GLM card | long-context agent work | agentic engineering, coding, tool use | Current GLM-family baseline |
+| **MiniMax-M2.7** | Public model card | 230B-class MoE | long agentic workflow | coding, search, office work, long-horizon agents | More current MiniMax agentic candidate than M2.5 |
+| **DeepSeek-Coder-V2-Lite** | DeepSeek | 16B / 236B family | 128K | single-GPU labs, code edit/completion | Suitable for teaching labs, not a frontier benchmark |
+
+#### Reading model cards in order
+
+Read operational constraints before benchmark tables. Evaluate candidates in this order.
+
+| Step | Question | Disqualifier |
+|------|----------|--------------|
+| License | Can it be used in class, research, and commercial PoCs? | Redistribution / service terms unclear |
+| Serving support | Is vLLM, SGLang, or Transformers officially supported? | Only community patches, no official examples |
+| Tool format | How are tool calls, JSON mode, and reasoning outputs represented? | Parser must be patched ad hoc each time |
+| Context policy | Do max context and recommended context differ? | "1M context" claim without GPU budget |
+| Failure behavior | How do OOM, invalid JSON, refusal, and timeout surface? | Failures unstructured, retry policy hard to design |
+
+The "current" entries in the table are candidates as of the lecture date. The capstone selection criterion is not the model name but **the reproducible result of running the same task packet with the same harness**.
+
+#### Qwen3-Coder
+
+Qwen3-Coder-Next is an 80B-total / 3B-active MoE model with 256K context, foregrounding agentic coding and tool calling. It is a smaller and faster coding-agent candidate than its larger predecessors and serves as our Qwen-family baseline.
+
+Operationally, Qwen3-Coder is meaningful not because it "writes good code" but because long repository context, function-calling format, and vLLM/SGLang deployment support combine to make it a viable candidate for **building agentic coding harnesses on local or institutional servers**.
+
+#### DeepSeek-V4
+
+DeepSeek-V4-Pro and DeepSeek-V4-Flash are confirmed as the most current V4-family cards. With 1.6T/284B MoE and 1M context, V4-Pro targets quality and long-context reasoning; V4-Flash targets efficiency and throughput.
+
+| Family member | Course usage |
+|---------------|--------------|
+| DeepSeek-Coder-V2-Lite | Easy-to-run educational model |
+| DeepSeek-V4-Pro | DeepSeek frontier benchmark |
+| DeepSeek-V4-Flash | Cost / throughput baseline |
+| Earlier DeepSeek generations | Long-context regression baseline |
+
+#### GLM-5.1
+
+GLM-5.1 is the current public GLM family and the first model to check when comparing agentic engineering and coding workflows. The lesson is constant: switching `model=` is not enough — **the harness must understand each model's tool/reasoning parser and serving options**.
+
+#### MiniMax-M2.7
+
+MiniMax-M2.7 is MiniMax's current agentic-workflow candidate, emphasizing search, office work, and long-horizon agentic tasks alongside coding. Vendor benchmarks are vendor claims; the course treats them as candidate signals only. The Week 10 lab compares them on the same task, harness, budget, and rubric.
+
+<Aside type="caution" title="Reading benchmark numbers">
+SWE-bench, Terminal-Bench, and BrowseComp scores depend heavily on harness, prompt, tool policy, and retry budget. Use model tables to choose what to test, but rely on lab-reproduced results for the final selection.
+</Aside>
+
+### Choosing a model is choosing a harness
+
+Adopting open-weight models is not just about saving on API spend. There are three real options.
+
+<CardGrid>
+  <Card title="Commercial API" icon="external">
+    Use Claude, GPT, or Gemini APIs directly. High quality and easy to operate, but data boundary, cost predictability, and rate limits must be managed.
+  </Card>
+  <Card title="Cloud Agents" icon="rocket">
+    Use Codex Web/App, Claude Code on the Web, or GitHub Agent HQ — remote sandbox plus GitHub integration. Strong for asynchronous work and review flow.
+  </Card>
+  <Card title="Local Inference" icon="laptop">
+    Serve OpenAI-compatible APIs through vLLM/SGLang. Strong on data boundaries and predictable GPU cost; operational complexity is higher.
+  </Card>
+</CardGrid>
+
+#### Decision matrix
+
+| Criterion | Commercial API | Cloud Agent | Local Inference |
+|-----------|---------------|-------------|----------------|
+| Time-to-start | very fast | fast | slow |
+| Data control | low–medium | medium | high |
+| Long-term cost | usage-driven | seat / usage | GPU fixed cost |
+| Access to latest models | fast | fast | after model release |
+| Operational difficulty | low | medium | high |
+| Educational value | API design | workflow design | MLOps / infra understanding |
+
+#### Model-selection decision tree
+
+<div class="diagram">
+  <div class="diagram__title">Model Selection Decision Tree</div>
+  <div class="diagram__flow">
+    <div class="diagram__node diagram__node--gray diagram__node--wide">
+      <span class="diagram__node__label">Q1. Can data leave our boundary?</span>
+    </div>
+    <div class="diagram__branch">
+      <div style="background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.25); color: #22C55E;">
+        <span class="diagram__branch__icon">✓ Yes</span>
+      </div>
+      <div style="background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); color: #EF4444;">
+        <span class="diagram__branch__icon">✗ No</span>
+        <span class="diagram__branch__desc">→ Local inference vLLM/SGLang</span>
+      </div>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--gray diagram__node--wide">
+      <span class="diagram__node__label">Q2. Need a frontier model?</span>
+    </div>
+    <div class="diagram__branch">
+      <div style="background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.25); color: #22C55E;">
+        <span class="diagram__branch__icon">✓ Yes</span>
+      </div>
+      <div style="background: rgba(249,115,22,0.07); border: 1px solid rgba(249,115,22,0.25); color: #F97316;">
+        <span class="diagram__branch__icon">✗ No</span>
+        <span class="diagram__branch__desc">→ Commercial API + cache + budget gate</span>
+      </div>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--gray diagram__node--wide">
+      <span class="diagram__node__label">Q3. Interactive IDE or async PR?</span>
+    </div>
+    <div class="diagram__branch">
+      <div style="background: rgba(37,99,235,0.10); border: 1px solid rgba(37,99,235,0.30); color: #3B82F6;">
+        <span class="diagram__branch__icon">Interactive</span>
+        <span class="diagram__branch__desc">Commercial API + Claude Code / Codex CLI</span>
+      </div>
+      <div style="background: rgba(124,58,237,0.08); border: 1px solid rgba(124,58,237,0.25); color: #7C3AED;">
+        <span class="diagram__branch__icon">Async PR</span>
+        <span class="diagram__branch__desc">Cloud agent — GitHub Agent HQ</span>
+      </div>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--gray diagram__node--wide">
+      <span class="diagram__node__label">Q4. (Local path) Is one model enough?</span>
+    </div>
+    <div class="diagram__branch">
+      <div style="background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.25); color: #22C55E;">
+        <span class="diagram__branch__icon">✓ Yes</span>
+        <span class="diagram__branch__desc">Single model + admission control</span>
+      </div>
+      <div style="background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); color: #EF4444;">
+        <span class="diagram__branch__icon">✗ No</span>
+        <span class="diagram__branch__desc">Routing gateway</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+The tree is not gospel — it is the **starting point for a written decision**. Capture the branch and a one-to-two-sentence rationale in the capstone ADR.
+
+### vLLM / SGLang / TGI compared
+
+Operating an open-weight model needs an inference server. The course uses vLLM by default, but you should be able to compare candidates.
+
+| Criterion | vLLM | SGLang | TGI (Hugging Face) |
+|----------|------|--------|--------------------|
+| OpenAI-compatible API | yes | yes | yes |
+| Continuous batching | ✓ | ✓ | ✓ |
+| Prefix caching | automatic | RadixAttention | partial |
+| Speculative decoding | ✓ | ✓ | some models |
+| Disaggregated prefill | ✓ | experimental | × |
+| Tool / structured output | ✓ (auto-tool, guided JSON) | ✓ (constrained decoding) | ✓ |
+| Operational complexity | mid | mid–high | low |
+| Community | very active | growing fast | stable |
+| Recommended use | default labs / capstone | RadixAttention study | quick PoC |
+
+### Cost worksheet
+
+To compare commercial APIs and local inference on the same axis, account for both token price and GPU amortization.
+
+| Item | Formula |
+|------|---------|
+| Per-call commercial cost | `(prompt_tokens × in_price) + (completion_tokens × out_price)` |
+| GPU hourly cost | `rental rate or (purchase / depreciation hours) + power` |
+| Per-call local cost | `GPU hourly cost × (run_latency_s / 3600) / concurrent calls` |
+| Break-even calls | `GPU hourly cost / average per-call API cost` |
+
+```text
+Example
+  - Commercial model: $3/M in, $15/M out → ~$0.012 per call (3K in, 600 out)
+  - DGX H100 ~ $4.5/hr (assumed student rate), 4 concurrent calls
+  - Local cost ≈ 4.5 / 4 / (3600/12) ≈ $0.0038
+  - Break-even: above ~375 calls per hour, local wins
+```
+
+This table goes straight into the capstone slide titled "why we chose local."
+
+### Agentic coding tool ecosystem
 
 <div class="diagram">
   <div class="diagram__title">AGENTIC CODING TOOL ECOSYSTEM (2026)</div>
@@ -122,7 +283,7 @@ The deployment decision has three realistic options.
           <li>Claude Code: subagents, hooks, skills, MCP</li>
           <li>Codex CLI/App/Web: sandbox, AGENTS.md, MCP, subagents</li>
           <li>Gemini CLI: 1M context, Google Search grounding, MCP</li>
-          <li>GitHub Agent HQ: Claude/Codex inside GitHub workflows</li>
+          <li>GitHub Agent HQ: choose Claude or Codex inside GitHub</li>
         </ul>
       </div>
     </div>
@@ -144,7 +305,7 @@ The deployment decision has three realistic options.
         <ul>
           <li>vLLM / SGLang: OpenAI-compatible serving</li>
           <li>LiteLLM / gateway: routing, budget, policy</li>
-          <li>OpenTelemetry: traces, metrics, logs</li>
+          <li>OpenTelemetry: trace, metrics, logs</li>
           <li>Agent OS Runtime: event store, contracts, replay</li>
         </ul>
       </div>
@@ -152,11 +313,11 @@ The deployment decision has three realistic options.
   </div>
 </div>
 
-> For CLI comparison, see [AI Coding Tool Selection](/en/reference/tool-selection).
+> See the [AI coding tool selection guide](/en/reference/tool-selection) for terminal-based AI CLIs.
 
-### Why OpenAI-compatible APIs matter
+### Why OpenAI-compatible APIs become the standard interface
 
-vLLM and SGLang usually expose OpenAI-compatible chat endpoints. That lets the harness swap model providers without rewriting the agent runtime.
+vLLM and SGLang both expose OpenAI-compatible `/v1/chat/completions` (or Responses-style) clients. Using this interface decouples the harness from any single model provider.
 
 ```python
 from openai import OpenAI
@@ -176,46 +337,84 @@ response = client.chat.completions.create(
 )
 ```
 
+The point is the abstraction stack.
+
 | Layer | Responsibility |
-|------|----------------|
-| Agent CLI | File edits, commands, approvals, workflow |
-| Gateway | Model routing, budget, rate limits, audit |
-| Serving | Batching, KV cache, speculative decoding, GPU scheduling |
-| Model | Token generation, tool-call JSON, reasoning output |
+|-------|---------------|
+| Agent CLI | file I/O, command execution, user approval, workflow |
+| Gateway | model routing, budget, rate limits, audit |
+| Serving | batching, KV cache, speculative decoding, GPU scheduling |
+| Model | token generation, tool-call JSON, reasoning output |
 
 #### Model adapter checklist
 
-OpenAI compatibility is the common starting point, not the whole abstraction. A useful model adapter must absorb:
+OpenAI compatibility is the starting line. To swap models in production, the adapter must absorb the following.
 
-| Item | Implementation rule |
-|------|---------------------|
-| Model alias | stable names such as `local-coder`, `qwen3-coder`, and `glm-5.1` |
-| Message template | system/developer/user/tool messages aligned with each model's chat template |
-| Tool parser | function-call JSON, XML-like blocks, and plain-text plans parsed per model |
-| Retry policy | timeout, invalid JSON, context overflow, and refusal recorded separately |
-| Token accounting | prompt, completion, and cache tokens linked to run id |
-| Evaluation hook | same task packet can run against commercial and local models |
+| Item | Implementation criterion |
+|------|------------------------|
+| Model alias | Use stable course-level names like `local-coder`, `qwen3-coder`, `glm-5.1` |
+| Message template | system/developer/user/tool messages must not collide with the model's chat template |
+| Tool parser | Per-model parsing for tool-call JSON, XML-like blocks, and plain-text plans |
+| Retry policy | Distinguish timeout, invalid JSON, context overflow, and refusal as separate failure reasons |
+| Token accounting | Connect prompt/completion/cache tokens with run_id |
+| Evaluation hook | Same task packet must be runnable across commercial and local models |
 
-Without this checklist, "model swapping" is a comment in the code rather than an operational property.
+Without this checklist, "model interchangeable" is a code comment, not an operational property.
+
+```python
+# adapter.py — a thin layer that unifies alias, tool parsing, and token accounting
+from dataclasses import dataclass
+from typing import Callable, Any
+
+@dataclass
+class ModelSpec:
+    alias: str
+    backend_url: str
+    backend_model: str
+    tool_parser: Callable[[str], list[dict]]
+    chat_template: str | None = None
+
+REGISTRY: dict[str, ModelSpec] = {}
+
+def register(spec: ModelSpec) -> None:
+    REGISTRY[spec.alias] = spec
+
+def call(alias: str, messages: list[dict], **kw) -> dict:
+    spec = REGISTRY[alias]
+    from openai import OpenAI
+    client = OpenAI(base_url=spec.backend_url, api_key="local")
+    resp = client.chat.completions.create(
+        model=spec.backend_model, messages=messages, **kw
+    )
+    text = resp.choices[0].message.content
+    tools = spec.tool_parser(text)
+    return {
+        "alias": alias,
+        "text": text,
+        "tools": tools,
+        "usage": resp.usage.model_dump(),
+    }
+```
 
 ## Practicum
 
-### Deploy an open-weight model with vLLM
+### Deploy open-weight models with vLLM
 
 <Steps>
-1. **Check the environment**
+1. **Verify the environment**
 
    ```bash
    nvidia-smi
+   python --version
    uv venv .venv
    source .venv/bin/activate
    uv pip install vllm openai
    ```
 
-2. **Choose a lab model**
+2. **Pick a lab model**
 
    <Tabs>
-     <TabItem label="Teaching default">
+     <TabItem label="Educational default">
        ```bash
        vllm serve deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct \
          --served-model-name local-coder \
@@ -241,9 +440,22 @@ Without this checklist, "model swapping" is a comment in the code rather than an
          --port 8000
        ```
      </TabItem>
+     <TabItem label="DGX MIG multi-model">
+       ```bash
+       # GPU 0 slice a: educational model
+       CUDA_VISIBLE_DEVICES=MIG-0/0 vllm serve \
+         deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct \
+         --served-model-name local-coder --port 8001 &
+
+       # GPU 0 slice b: evaluation model
+       CUDA_VISIBLE_DEVICES=MIG-0/1 vllm serve \
+         Qwen/Qwen3-Coder-Next \
+         --served-model-name qwen3-coder --port 8002 &
+       ```
+     </TabItem>
    </Tabs>
 
-3. **Test the OpenAI-compatible endpoint**
+3. **Test the OpenAI-compatible API**
 
    ```bash
    curl http://localhost:8000/v1/chat/completions \
@@ -257,9 +469,17 @@ Without this checklist, "model swapping" is a comment in the code rather than an
      }'
    ```
 
-4. **Compare identical tasks**
+4. **Run the same five tasks on two models**
 
-   Run the same five tasks against one commercial model and one local model: bug fix, refactor, test generation, docs update, and CLI feature.
+   Each team runs five identical tasks against one commercial API and one local model.
+
+   | Task | Evaluation criterion |
+   |------|---------------------|
+   | Bug fix | Tests pass |
+   | Refactoring | Behavior preserved + readability |
+   | Test generation | Coverage and edge cases |
+   | Documentation update | Faithful to the change |
+   | Add a CLI feature | Requirements met + UX |
 
 5. **Measure cost and throughput**
 
@@ -271,31 +491,60 @@ Without this checklist, "model swapping" is a comment in the code rather than an
      --num-prompts 100 \
      --request-rate 4
    ```
+
+6. **Register a model adapter**
+
+   Use the `adapter.py` pattern to register two or three aliases (e.g., local-coder, qwen3-coder, gpt-baseline) and run the same task packet by changing only the alias.
 </Steps>
+
+<Aside type="tip" title="What matters in the lab">
+Knowing many model names is less important than producing **a reproducible decision rationale in your own environment**: same task, same harness, same evaluation criteria.
+</Aside>
 
 ## Assignment
 
 <div class="assignment-box">
 
-### Lab 10: vLLM Deployment
+### Lab 10: vLLM deployment practicum
 
 **Due**: 2026-05-12 23:59
 
 **Requirements**:
-1. vLLM server log from DGX or a local GPU.
-2. At least three OpenAI-compatible API calls.
-3. Same-task comparison between one commercial model and one open-weight model.
-4. Throughput, latency, failure rate, and cost estimate.
-5. Final recommendation: which model should be used for which task, and why.
+1. Logs of a vLLM server running on DGX or local GPU
+2. Three or more OpenAI-compatible API call results
+3. Five identical tasks compared between one commercial model and one open-weight model
+4. Tables for throughput (tokens/sec), latency, failure rate, and cost estimate
+5. Final selection: which model for which task, with rationale
+6. Model adapter code (`adapter.py`) with at least two registered aliases
 
 </div>
 
-## Current References
+## Key Takeaways
 
+1. **Open-weight ≠ open-source**: only weights are public; training data and code may not be. Read the license first.
+2. **Choosing a model is choosing a harness**: the same model performs differently across harnesses. Hold the task packet and rubric constant for fair comparison.
+3. **Three options coexist**: commercial API, cloud agent, and local inference each fit different work types.
+4. **vLLM, SGLang, and TGI are complementary**: vLLM as default, SGLang for RadixAttention study, TGI for fast PoC.
+5. **Cost lives at the break-even line**: do not look at token price alone — fold in GPU-hour cost and concurrency.
+6. **The model adapter is operational equity**: aliases, tool parsers, token accounting, and retry policies decide whether "swap models" is real.
+7. **Reproducible rationale, not model names**: the capstone decision document is built from your lab evidence, not vendor benchmarks.
+
+## Further Reading
+
+**Model cards**
 - [Qwen3-Coder-Next](https://huggingface.co/Qwen/Qwen3-Coder-Next)
 - [DeepSeek-V4-Pro](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro)
 - [DeepSeek-V4-Flash](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash)
 - [GLM-5.1](https://huggingface.co/zai-org/GLM-5.1)
 - [MiniMax-M2.7](https://huggingface.co/MiniMaxAI/MiniMax-M2.7)
-- [Codex MCP documentation](https://developers.openai.com/codex/mcp)
+
+**Serving infrastructure**
 - [vLLM OpenAI-compatible server](https://docs.vllm.ai/en/latest/serving/openai_compatible_server/)
+- [SGLang RadixAttention](https://docs.sglang.ai/)
+- [Hugging Face TGI](https://huggingface.co/docs/text-generation-inference/index)
+- [LiteLLM gateway](https://docs.litellm.ai/)
+
+**Agent tools**
+- [Codex MCP documentation](https://developers.openai.com/codex/mcp)
+- [AI coding tool selection guide](/en/reference/tool-selection)
+- [Agent OS Runtime](/en/reference/agent-os-runtime/)

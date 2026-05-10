@@ -28,13 +28,46 @@ import { Aside, Steps, Badge, Card, CardGrid, Tabs, TabItem } from '@astrojs/sta
   <Badge text="강의일: 2026-05-26" variant="default" />
 </div>
 
-## Ralphthon이란?
+## 이론 (Theory)
+
+### 오늘의 학습 목표
+
+<CardGrid>
+  <Card title="개념 관점" icon="open-book">
+    Ralphthon이 해커톤과 다른 이유를 closed-loop 시스템 관점에서 설명하고, 좋은 캡스톤 주제의 5가지 조건을 자기 팀의 후보에 적용한다.
+  </Card>
+  <Card title="설계 관점" icon="seti:config">
+    Agent OS Runtime 7-layer를 캡스톤 아키텍처에 매핑하고, task packet 스키마·gate 정책·escalation 경로를 1차 설계한다.
+  </Card>
+  <Card title="구현 관점" icon="pencil">
+    Lead/Planner/Worker/Reviewer/Operator 역할로 코드 책임을 분배하고, ADR 3개와 risk register 5개 항목을 작성한다.
+  </Card>
+  <Card title="운영 관점" icon="rocket">
+    14-16주차 구현·통합·발표 일정을 역산해 demo path와 scope cut(Won't have)을 명시적으로 결정한다.
+  </Card>
+</CardGrid>
+
+---
+
+### Ralphthon이란?
 
 **Ralphthon**은 Ralph 루프 방법론을 기반으로 실제 소프트웨어 문제를 해결하는 팀 캡스톤이다. 일반 해커톤과 다른 점은 결과물이 "앱 하나"가 아니라 **반복 실행 가능한 에이전트 시스템**이라는 점이다.
 
 <Aside type="note" title="캡스톤의 목표">
 최종 평가는 "AI가 코드를 많이 썼는가"가 아니다. 목표는 사람이 요구사항과 경계를 정의하고, 에이전트가 반복 실행하며, 하네스가 품질과 안전을 강제하는 시스템을 만드는 것이다.
 </Aside>
+
+#### 해커톤 vs Ralphthon 구조 비교
+
+| 축 | 일반 해커톤 | Ralphthon |
+|----|------------|-----------|
+| 산출물 | 데모 앱 1개 | 반복 실행 가능한 에이전트 시스템 |
+| 성공 기준 | 데모가 작동함 | 같은 task packet을 3회 실행해 일관 결과 |
+| AI 사용 | 자유 (코드 보조) | task packet → 하네스 → gate를 통과 |
+| 평가 자료 | 데모 영상 | event log, replay snapshot, gate 결과 |
+| 팀 구성 | 자유 | Lead/Planner/Worker/Reviewer/Operator |
+| 실패 처리 | 즉흥 대응 | runbook + retry budget + escalation |
+| 사후 운영 | 보통 종료 | replay와 ADR로 재현 가능 |
 
 ### 좋은 주제의 조건
 
@@ -46,7 +79,7 @@ import { Aside, Steps, Badge, Card, CardGrid, Tabs, TabItem } from '@astrojs/sta
 | 실패 복구 가능 | 잘못된 출력이 나와도 rollback/retry 가능하다 | DB를 바로 수정 |
 | 팀 역할 분리 | planner/worker/reviewer/operator가 나뉜다 | 한 사람이 모든 것 수행 |
 
-## Agent OS Runtime으로 보는 캡스톤 구조
+### Agent OS Runtime으로 보는 캡스톤 구조
 
 13주차 설계 문서는 다음 7개 계층 중 최소 5개를 명시해야 한다.
 
@@ -62,22 +95,99 @@ import { Aside, Steps, Badge, Card, CardGrid, Tabs, TabItem } from '@astrojs/sta
 
 > 자세한 계층 설명은 [Agent OS 7-Layer Architecture](/reference/agent-os-runtime/#7-layer-architecture)를 참고한다.
 
+#### 7-layer 매핑 시각화
+
+<div class="diagram">
+  <div class="diagram__title">Agent OS Runtime — 7 Layers in the Capstone</div>
+  <div class="diagram__stack">
+    <div class="diagram__node diagram__node--blue">
+      <span class="diagram__node__label">L7 Artifact</span>
+      <span class="diagram__node__sub">patch / PR · report · dashboard · final demo</span>
+    </div>
+    <div class="diagram__node diagram__node--cyan">
+      <span class="diagram__node__label">L6 Orchestration</span>
+      <span class="diagram__node__sub">handoff · retry · escalation</span>
+    </div>
+    <div class="diagram__node diagram__node--green">
+      <span class="diagram__node__label">L5 Policy Gate</span>
+      <span class="diagram__node__sub">tests · judge · approval</span>
+    </div>
+    <div class="diagram__node diagram__node--orange">
+      <span class="diagram__node__label">L4 Event Store</span>
+      <span class="diagram__node__sub">.events.jsonl · replay snapshot</span>
+    </div>
+    <div class="diagram__node diagram__node--purple">
+      <span class="diagram__node__label">L3 Agent Roles</span>
+      <span class="diagram__node__sub">Lead · Planner · Worker · Reviewer · Operator</span>
+    </div>
+    <div class="diagram__node diagram__node--red">
+      <span class="diagram__node__label">L2 Skill / Instruction</span>
+      <span class="diagram__node__sub">role prompt · rubric</span>
+    </div>
+    <div class="diagram__node diagram__node--gray">
+      <span class="diagram__node__label">L1 Tool Boundary</span>
+      <span class="diagram__node__sub">allowed tools · denied tools</span>
+    </div>
+  </div>
+</div>
+
+각 계층은 산출물을 가진다. 13주차에 모든 계층을 만들 필요는 없지만, 어느 계층이 14주차에 채워질지 책임자를 명시한다.
+
 ### 권장 팀 역할
 
 <CardGrid>
-  <Card title="Lead / Architect" icon="group">
+  <Card title="Lead / Architect" icon="star">
     문제 정의, 범위 관리, 최종 설계 책임. scope creep을 막고 acceptance criteria를 고정한다.
   </Card>
   <Card title="Harness Engineer" icon="seti:config">
     task packet, event store, policy gate, retry/rollback 로직을 구현한다.
   </Card>
-  <Card title="Agent Engineer" icon="seti:code">
+  <Card title="Agent Engineer" icon="pencil">
     role prompt, tool policy, model routing, CLI 연동을 구현한다.
   </Card>
-  <Card title="QA / Operator" icon="seti:check">
+  <Card title="QA / Operator" icon="approve-check-circle">
     테스트, judge rubric, telemetry dashboard, 발표 데모 안정성을 책임진다.
   </Card>
 </CardGrid>
+
+#### 팀 협업 토폴로지
+
+<div class="diagram">
+  <div class="diagram__title">Capstone Team Topology</div>
+  <div class="diagram__flow">
+    <div class="diagram__node diagram__node--blue diagram__node--full">
+      <span class="diagram__node__label">Lead / Architect</span>
+      <span class="diagram__node__sub">directive 발행 · scope 관리</span>
+    </div>
+    <div class="diagram__arrow">▼ directive</div>
+    <div class="diagram__node diagram__node--cyan diagram__node--full">
+      <span class="diagram__node__label">Planner Agent</span>
+      <span class="diagram__node__sub">spec / plan 생성</span>
+    </div>
+    <div class="diagram__arrow">▼ plan</div>
+    <div class="diagram__node diagram__node--purple diagram__node--full">
+      <span class="diagram__node__label">Worker Agent</span>
+      <span class="diagram__node__sub">patch / artifact 생성</span>
+    </div>
+    <div class="diagram__arrow">▼ patch</div>
+    <div class="diagram__node diagram__node--orange diagram__node--full">
+      <span class="diagram__node__label">Reviewer Agent</span>
+      <span class="diagram__node__sub">review verdict</span>
+    </div>
+    <div class="diagram__arrow">▼ verdict</div>
+    <div class="diagram__node diagram__node--green diagram__node--full">
+      <span class="diagram__node__label">Operator / QA</span>
+      <span class="diagram__node__sub">gate 통합 · dashboard · 발표 안정성</span>
+    </div>
+    <div class="diagram__arrow">▲ gate result → Lead 회귀</div>
+    <div class="diagram__node diagram__node--gray diagram__node--full">
+      <span class="diagram__node__label">Event Store</span>
+      <span class="diagram__node__sub">tool events · review events · metrics 모두 수렴 → replay snapshot</span>
+    </div>
+  </div>
+</div>
+
+이 토폴로지는 Lead가 모든 결정을 하지 않는다는 점이 핵심이다. Operator는 metrics와 dashboard로 실시간 신호를 본다.
 
 ### 추천 프로젝트 아이디어
 
@@ -130,6 +240,66 @@ escalation:
     - "Secret or credential is required"
 ```
 
+#### Task packet 평가표 — good / borderline / anti-pattern
+
+| 항목 | Good | Borderline | Anti-pattern |
+|------|------|-----------|-------------|
+| Objective | 동사+측정 가능한 결과 | 모호한 동사 | "더 좋게 만들어 줘" |
+| Scope | 파일/디렉토리 명시 | "관련 코드" | 전체 repo |
+| Allowed tools | read/edit/run_tests 한정 | 광범위 | "any" |
+| Acceptance | pass/fail 가능 3-5개 | 1개만 | 없음 |
+| Budget | turns·tokens 명시 | 한쪽만 | 무제한 |
+| Escalation | 조건 + 담당자 | 조건만 | 없음 |
+
+#### Task packet JSON Schema (요약)
+
+```json
+{
+  "type": "object",
+  "required": ["task_id", "objective", "scope", "acceptance", "budget"],
+  "properties": {
+    "task_id": {"type": "string", "pattern": "^[a-z0-9-]{4,}$"},
+    "objective": {"type": "string", "minLength": 10},
+    "scope": {
+      "type": "object",
+      "properties": {
+        "files": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "allowed_tools": {"type": "array", "items": {"type": "string"}},
+    "acceptance": {
+      "type": "array", "minItems": 1, "items": {"type": "string"}
+    },
+    "budget": {
+      "type": "object",
+      "required": ["max_turns", "max_tokens"],
+      "properties": {
+        "max_turns": {"type": "integer", "maximum": 15},
+        "max_tokens": {"type": "integer"}
+      }
+    },
+    "escalation": {"type": "object"}
+  }
+}
+```
+
+캡스톤 시작 시점에 schema validator를 한 줄 코드로 통과시키지 못하는 task는 받지 않는다는 약속이 큰 효과를 낸다.
+
+### 리스크 평가 프레임워크
+
+리스크는 추상적으로 적지 말고 STRIDE 응용 표로 정리한다.
+
+| 위협 카테고리 | 캡스톤 적용 | 예시 |
+|--------------|-----------|------|
+| Spoofing | 모델 식별 | 다른 모델이 같은 alias로 응답 |
+| Tampering | task/artifact 변조 | event log 후처리 누락으로 결과 위조 가능 |
+| Repudiation | 책임 회피 | override가 익명으로 일어남 |
+| Information disclosure | 민감 데이터 유출 | 코드/시크릿이 외부 API로 전송 |
+| Denial of service | 자원 고갈 | 무한 retry, queue overflow |
+| Elevation of privilege | 권한 초과 | 허용 범위 밖 파일 수정 |
+
+각 항목은 "현재 계획에서 어떻게 차단하는가"를 한 줄씩 적는다. 차단이 없다면 14주차에 만들어야 할 항목이다.
+
 ### Architecture Decision Record
 
 각 팀은 중요한 결정을 ADR로 남긴다. 최소 3개가 필요하다.
@@ -147,6 +317,16 @@ Expose local models through vLLM's OpenAI-compatible API and route calls through
 - Good: model provider can be swapped without changing agent code.
 - Bad: model-specific tool-call parsers still require configuration.
 ```
+
+#### 좋은 ADR vs 나쁜 ADR
+
+| 측면 | 좋은 ADR | 나쁜 ADR |
+|------|---------|---------|
+| Context | "왜 지금" 1-2문장 | 전사적 비전 |
+| Decision | 한 문장 + 대안 거절 사유 | "Use X" |
+| Consequences | Good/Bad 양면 | Good만 |
+| Owner | 책임자 1명 | 익명 |
+| Date | 결정일 | 비어 있음 |
 
 ### 설계 문서 구조
 
@@ -167,17 +347,39 @@ Expose local models through vLLM's OpenAI-compatible API and route calls through
     ```
   </TabItem>
   <TabItem label="다이어그램 예시">
-    ```mermaid
-    flowchart LR
-      Lead --> Planner
-      Planner --> Worker
-      Worker --> Reviewer
-      Reviewer --> Gate{Tests + Judge}
-      Gate -->|pass| Artifact
-      Gate -->|fail| Planner
-      Worker --> Events[(events.jsonl)]
-      Gate --> Events
-    ```
+    <div class="diagram">
+      <div class="diagram__title">Capstone Agent Flow</div>
+      <div class="diagram__flow">
+        <div class="diagram__chain">
+          <div class="diagram__node diagram__node--blue"><span class="diagram__node__label">Lead</span></div>
+          <div class="diagram__arrow">→</div>
+          <div class="diagram__node diagram__node--cyan"><span class="diagram__node__label">Planner</span></div>
+          <div class="diagram__arrow">→</div>
+          <div class="diagram__node diagram__node--purple"><span class="diagram__node__label">Worker</span></div>
+          <div class="diagram__arrow">→</div>
+          <div class="diagram__node diagram__node--orange"><span class="diagram__node__label">Reviewer</span></div>
+        </div>
+        <div class="diagram__arrow">▼</div>
+        <div class="diagram__node diagram__node--gray diagram__node--wide">
+          <span class="diagram__node__label">Gate — Tests + Judge</span>
+        </div>
+        <div class="diagram__branch">
+          <div style="background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.25); color: #22C55E;">
+            <span class="diagram__branch__icon">pass</span>
+            <span class="diagram__branch__desc">→ Artifact</span>
+          </div>
+          <div style="background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); color: #EF4444;">
+            <span class="diagram__branch__icon">fail</span>
+            <span class="diagram__branch__desc">→ Planner 회귀</span>
+          </div>
+        </div>
+        <div class="diagram__arrow">▼ 모든 단계 → events.jsonl</div>
+        <div class="diagram__node diagram__node--gray diagram__node--full">
+          <span class="diagram__node__label">events.jsonl</span>
+          <span class="diagram__node__sub">replay snapshot 생성 가능</span>
+        </div>
+      </div>
+    </div>
   </TabItem>
 </Tabs>
 
@@ -218,7 +420,15 @@ Expose local models through vLLM's OpenAI-compatible API and route calls through
 
    각 계층에 어떤 파일, 스크립트, 로그, 정책이 들어갈지 정한다.
 
-5. **demo path 고정**
+5. **task packet schema 작성**
+
+   JSON Schema 1개와 good/borderline/anti-pattern 예시 3개를 첨부한다.
+
+6. **ADR 3개 작성**
+
+   모델 선택, 하네스 라이브러리, 평가 방식에 대해 각각 한 장씩 작성한다.
+
+7. **demo path 고정**
 
    최종 발표에서 보여줄 happy path 1개와 failure recovery path 1개를 정한다.
 </Steps>
@@ -237,8 +447,39 @@ Expose local models through vLLM's OpenAI-compatible API and route calls through
 1. 문제 정의 및 사용자/위험 경계
 2. agent architecture diagram
 3. Agent OS Runtime 7계층 중 최소 5계층 매핑
-4. task packet schema와 예시 3개
+4. task packet schema와 예시 3개 (good/borderline/anti-pattern)
 5. deterministic gate + LLM Judge + human review 기준
-6. 14-16주차 구현 계획과 demo script 초안
+6. Risk register 5개 항목 (trigger/owner/response)
+7. ADR 3개 이상
+8. 14-16주차 구현 계획과 demo script 초안
 
 </div>
+
+## 핵심 정리
+
+1. **Ralphthon은 "앱 만들기"가 아니다**: closed-loop 시스템을 설계·운영·증명하는 자리다.
+2. **좋은 주제 5조건**: 반복 가능 / 검증 가능 / 경계 명확 / 실패 복구 가능 / 팀 역할 분리.
+3. **7-layer를 모두 만들 필요는 없다**: 13주차에는 최소 5개 계층을 명시하고, 나머지 계층의 책임자만 지정한다.
+4. **Won't have가 진짜 계획**: 무엇을 안 만들지 적지 못하면 그 계획은 희망목록이다.
+5. **Task packet은 schema로 강제**: 자연어 지시 대신 JSON Schema validator를 통과한 packet만 worker에 전달한다.
+6. **ADR은 결정의 흔적**: 무엇을 골랐는가가 아니라 무엇을 거절했는가가 중요하다.
+7. **Risk register는 14주차의 입구**: 각 리스크는 trigger·owner·response 3종 세트로 정의되어야 다음 주에 추적된다.
+
+## 더 읽을거리
+
+**핵심 문서**
+- [Agent OS Runtime — 7-Layer Architecture](/reference/agent-os-runtime/#7-layer-architecture)
+- [Agent OS Contracts](/reference/agent-os-runtime/#contracts)
+- [The Agent OS Runtime — capstone reference](/reference/agent-os-runtime/)
+
+**ADR / 설계 문화**
+- Michael Nygard, "Documenting Architecture Decisions" (원문 ADR 패턴)
+- ThoughtWorks Tech Radar — ADR 항목
+
+**평가/리스크**
+- STRIDE threat modeling 입문
+- Google SRE Workbook — Risk Analysis
+
+**예시 캡스톤 자료**
+- [Capstone overview](/capstone/)
+- [Capstone evaluation criteria](/capstone/evaluation/)

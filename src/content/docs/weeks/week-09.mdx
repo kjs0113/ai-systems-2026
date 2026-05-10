@@ -18,7 +18,7 @@ difficulty: 고급
 estimated_time: 8시간
 ---
 
-import { Aside, Steps, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
+import { Aside, Steps, Badge, Tabs, TabItem, Card, CardGrid } from '@astrojs/starlight/components';
 
 <div class="week-meta">
   <span class="phase-tag">Phase 3</span>
@@ -28,6 +28,23 @@ import { Aside, Steps, Badge, Tabs, TabItem } from '@astrojs/starlight/component
 </div>
 
 ## 이론 (Theory)
+
+### 오늘의 학습 목표
+
+<CardGrid>
+  <Card title="개념 관점" icon="open-book">
+    Worker가 자기 코드를 검증할 때 발생하는 conflict-of-interest를 설명하고, QA 에이전트가 가져야 할 독립성 4원칙을 정의한다.
+  </Card>
+  <Card title="설계 관점" icon="seti:config">
+    deterministic test → policy gate → LLM-as-Judge → human review로 이어지는 feedback loop와 escalation 경로를 설계한다.
+  </Card>
+  <Card title="구현 관점" icon="pencil">
+    QA 에이전트와 LLM-as-Judge를 코드로 통합해 strict JSON verdict와 retry 로직을 자동화한다.
+  </Card>
+  <Card title="운영 관점" icon="rocket">
+    judge 신뢰도(상관관계)·human override 빈도·false-pass 비율을 정기적으로 보고하고 prompt/rubric을 갱신한다.
+  </Card>
+</CardGrid>
 
 ### 왜 QA 에이전트가 별도여야 하는가
 

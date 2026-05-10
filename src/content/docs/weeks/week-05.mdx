@@ -29,6 +29,23 @@ import { Aside, Steps, Badge, Card, CardGrid } from '@astrojs/starlight/componen
 
 ## 이론 (Theory)
 
+### 오늘의 학습 목표
+
+<CardGrid>
+  <Card title="개념 관점" icon="open-book">
+    Context Rot 현상을 정의하고 long-context 모델에서도 발생하는 이유를 attention dilution / instruction drift 관점에서 설명한다.
+  </Card>
+  <Card title="설계 관점" icon="seti:config">
+    Context window wiping, summarization, state-tracking 파일 3가지 전략을 비교하고 Ralph 루프에 어떤 조합을 적용할지 결정한다.
+  </Card>
+  <Card title="구현 관점" icon="pencil">
+    `tasks.md` 또는 동등한 상태 파일을 작성해 매 turn마다 압축된 진행 상태를 토큰 효율적으로 직렬화한다.
+  </Card>
+  <Card title="운영 관점" icon="rocket">
+    cache hit ratio · prompt token · summarization 비용을 측정해 컨텍스트 전략의 ROI를 정량적으로 보고한다.
+  </Card>
+</CardGrid>
+
 ### 왜 5주차에서 컨텍스트 관리가 중심인가
 
 4주차에서 루프 패러다임의 위력을 배웠다 — 같은 모델을 반복 호출하되, 결정론적 검증으로 품질을 확보한다. 하지만 루프가 작동하려면 **전제 조건**이 있다: **컨텍스트가 깨끗해야 한다.**
