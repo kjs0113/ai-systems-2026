@@ -1,13 +1,13 @@
 ---
 title: Agent OS Runtime
-description: Single-page MCP-first, provider-agnostic, event-sourced agent runtime reference
+description: Single-page reference for the MCP-first, provider-agnostic, event-sourced agent runtime (+ L8 workflow plane)
 ---
 
 Agent OS Runtime treats agents as **verifiable runtime systems**, not just prompt-driven programs. This is a self-contained course unit. Students should be able to understand the architecture, contracts, implementation shape, and checklist without reading an external repository or separate subpages.
 
 Core sentence:
 
-> MCP-first, provider-agnostic, Plan-Work-Review, event-sourced, Markdown-SSOT, hook-gated, schema-versioned.
+> MCP-first, provider-agnostic, Plan-Work-Review, event-sourced, Markdown-SSOT, hook-gated, schema-versioned — and a workflow plane on top.
 
 ## Why It Exists
 
@@ -19,6 +19,7 @@ Core sentence:
 | Long runs are hard to reconstruct | Use append-only event logs and replay |
 | Operational policy is mixed into code | Externalize allow, deny, transform decisions through hooks |
 | Prompts, skills, and role descriptions drift from code | Keep Markdown as source of truth |
+| Multi-phase workflow policy is scattered across code | Separate cycle / phase / policy / persona / artifact as a workflow-plane SSOT (L8) |
 
 ## Five Invariants
 
@@ -68,7 +69,7 @@ session.close ok
 
 ## 7-Layer Architecture
 
-The goal is not simply to "make the model work." The goal is to place nondeterministic model calls inside a deterministic, observable, replayable system.
+The goal is not simply to "make the model work." The goal is to place nondeterministic model calls inside a deterministic, observable, replayable system. L1–L7 is the core runtime that executes a single request safely; the optional [L8 Workflow Plane](#workflow-plane-l8) sits on top to sequence multi-phase cycles (a 7+1 structure).
 
 | Layer | Name | Responsibility |
 |---|---|---|
@@ -79,10 +80,13 @@ The goal is not simply to "make the model work." The goal is to place nondetermi
 | L5 | Markdown-SSOT Skill Runtime | Discover skills, match triggers, and scope allowed tools |
 | L6 | Hook-intercepted Lifecycle | Externalize security, redaction, rate limiting, and loop stop policy |
 | L7 | Schema-versioned IPC Registry | Validate every boundary payload with versioned JSON Schema |
+| L8 | Workflow Orchestration | Sequence the cycle / phase / policy / persona / artifact axes as Markdown SSOT |
 
 ```text
 L6 Hook Lifecycle
-  intercepts
+  intercepts everything below
+L8 Workflow Orchestration
+  sequences cycles, phases, personas, policies
 L5 Markdown Skill Runtime
   selects skill and scopes tools
 L3 Plan-Work-Review Agent Loop
@@ -97,7 +101,7 @@ L7 Schema-versioned IPC Registry
   validates every boundary payload
 ```
 
-L4 and L7 cut across every layer. A state change without an event, or a boundary payload without schema validation, is treated as an out-of-runtime side effect.
+L4 and L7 cut across every layer. A state change without an event, or a boundary payload without schema validation, is treated as an out-of-runtime side effect. L6 intercepts every layer above it, and L8 is a workflow plane layered on top of L1–L7 — it inherits the same five invariants (I-1 through I-5) and decides, not "what should one prompt do?", but "which phases run in which order until which verdict?"
 
 ### L1 MCP-first Tool Protocol
 
@@ -274,6 +278,81 @@ Validate before provider requests, after provider responses, after role output p
 
 `v1` is frozen. Breaking changes require a new schema such as `plan_v2.json`.
 
+## Workflow Plane (L8)
+
+L1–L7 are the core primitives that execute a single agent request deterministically. They do not, however, answer "what cycle do we start with today, and when does it end?" **L8 Workflow Orchestration** uses a single L3 Plan-Work-Review pass as a building block and defines the following five axes as Markdown + JSON Schema SSOT.
+
+| Axis | Unit of definition | Location | Schema |
+|---|---|---|---|
+| **Cycle** | A user-intent bundle — phases, entry/exit/abort conditions, loop bounds | `workflows/cycles/` | `cycle_v1` |
+| **Phase** | A step inside a cycle — `advance_signal`, `halt_signal`, personas invoked | `workflows/phases/` | `phase_v1` |
+| **Policy** | A gating rule (allow / deny / advisory, default deny) | `workflows/policies/` | `policy_v1` |
+| **Persona** | A domain specialist layered on the L3 six roles (reviewer / researcher / document-reviewer) | `workflows/personas/` | `skill_frontmatter_v1`-compatible |
+| **Artifact** | A deliverable template — naming rule, frontmatter | `workflows/artifacts/` | per-template schema |
+
+L8 calls L3; it never references L1 or L2 directly (L3 does). L8 inherits the same five invariants (I-1 through I-5), so workflow definitions must also be deterministic, auditable, and provider-agnostic.
+
+### Execution Flow
+
+```text
+USER REQUEST
+  -> resolve cycle_id (from a skill or a lead_directive)
+  -> WorkflowStart hook (allow / deny / transform)
+  -> phase[0] = entry_phase
+  -> loop:
+       evaluate advance_signal / halt_signal
+       if halt: WorkflowComplete (verdict=abort)
+       fan-out personas in phase.agents_invoked
+       fan-in findings -> aggregate
+       evaluate policies in order
+       PhaseAdvance hook (allow / deny / transform)
+       phase = next phase
+       if cycle.exit_conditions.done: WorkflowComplete (verdict=done)
+       if cycle.loop_bounds breached: WorkflowComplete (verdict=halted)
+```
+
+Each phase may internally invoke a single L3 cycle. With one persona that becomes plain L3; with several personas it follows the fan-out → fan-in pattern.
+
+### The Five Policy Kinds
+
+| Kind | Decision unit |
+|---|---|
+| `confidence-gating` | Split actionable vs suppressed findings by confidence × severity |
+| `severity-routing` | Route severity × autofix_class into apply / gated / manual / advisory |
+| `role-permissions` | Restrict sub-persona dispatch and the paths a persona may write |
+| `mode-dispatch` | Vary UX and deliverables by interactive / autofix / report-only / headless mode |
+| `loop-halt` | Stop a bounded loop on max_generations, oscillation, or grade regression |
+
+Each rule is a `when` → `then` → `reason` triple. If nothing matches, the `default` (allow / deny / advisory) applies; if `default` is omitted, deny is the default-of-default (**fail-closed**). When reviewers disagree on the same fingerprint, the conservative choice wins (`safe_auto < gated_auto < manual < advisory`, `allow < deny`).
+
+### Hooks & Audit Events
+
+| Hook | When |
+|---|---|
+| `WorkflowStart` | Just before a cycle begins — allow / deny / transform |
+| `PhaseAdvance` | Just before a phase transition — allow / deny / transform |
+| `WorkflowComplete` | Just after a verdict is decided — observe / record |
+
+The audit events L8 emits:
+
+```text
+workflow.started        cycle_id, session_id
+workflow.phase_advanced cycle_id, from_phase, to_phase
+workflow.policy_gated   policy_id, decision, reason
+workflow.completed      cycle_id, verdict
+workflow.aborted        cycle_id, reason
+```
+
+LLM calls produced by persona fan-out are still recorded by L2 as `llm.request` / `llm.response`; L8 only adds workflow context on top.
+
+### L8 Design Invariants
+
+- **Zero code lines to add a cycle**: adding `workflows/cycles/<id>.md` alone must be enough. If Python/Go/TS code must change, the design is broken.
+- **Unknown IDs fail closed**: unknown cycle/phase/policy/persona IDs are denied by the `WorkflowRegistry`. Allow-list registration only.
+- **Personas live in their own Markdown**: never inline a persona inside a cycle. Split into `personas/<role>/<id>.md` and reference by ID.
+- **Signals are deterministic expressions**: never delegate `advance_signal` to free-form natural-language evaluation. Use evaluable expressions like `review_aggregate.p0_unresolved == 0`.
+- **Artifact naming lives in the template**: do not describe naming as informal prose. Encode the pattern in the frontmatter of `artifacts/<id>-template.md`.
+
 ## Contracts
 
 Contracts are execution requirements, not documentation decoration.
@@ -415,6 +494,21 @@ Contracts are execution requirements, not documentation decoration.
   }
 }
 ```
+
+#### L8 workflow schemas
+
+L8-aware implementations register the following additional schemas. We keep only the identifiers in this page; the JSON definitions live in the upstream [`agent-os-runtime/schemas/`](https://github.com/entelecheia/agent-os-runtime/tree/main/schemas).
+
+| Schema id | Role |
+|---|---|
+| `cycle_v1` | cycle frontmatter — phases, entry_phase, exit_conditions, policies |
+| `phase_v1` | phase frontmatter — advance_signal, halt_signal, agents_invoked, artifacts |
+| `policy_v1` | policy frontmatter — kind, default, rules (`when` / `then` / `reason`) |
+| `finding_v1` | persona review finding — severity, autofix_class, confidence, fingerprint |
+| `review_aggregate_v1` | fan-in result — coverage, p0_unresolved, top findings |
+| `brainstorm_v1` / `plan_v1` (reused) / `solution_v1` / `learning_v1` / `pulse_report_v1` | per-cycle artifact deliverables |
+
+The `autofix_class` enum on `finding_v1` (`safe_auto`, `gated_auto`, `manual`, `advisory`) is the input that drives the severity-routing policy.
 
 #### `skill_frontmatter_v1` and `write_claim_v1`
 
@@ -799,6 +893,9 @@ def handle_user_request(runtime, prompt: str):
 | skill discovery | YAML frontmatter validation | shared fixture read | shared fixture read |
 | protected write | hash check + conflict | hash check + conflict | hash check + conflict |
 | tests | end-to-end checklist | `go test ./...` | Node test runner |
+| L8 workflow plane | `workflows/` SSOT loader (PR 5) | core-only (optional) | core-only (optional) |
+
+L1–L7 is the core compliance surface; L8 is an optional plane. L8-capable implementations must read the `workflows/` directory (`cycles/`, `phases/`, `policies/`, `personas/`, `artifacts/`) as SSOT and add new cycles with zero code changes — that is the design invariant.
 
 ### Protected Write
 
@@ -837,7 +934,7 @@ def protected_write(path: Path, new_text: str, expected_hash: str, who: str, why
 
 Use this checklist for Lab 07 multi-agent pipelines, Lab 11 telemetry, and the Ralphthon capstone.
 
-### Minimal Implementation Checklist
+### Core (L1–L7) Implementation Checklist
 
 - [ ] `Event` type and append-only `.events.jsonl` event store
 - [ ] `replay()` recalculates snapshots from the event log
@@ -853,6 +950,18 @@ Use this checklist for Lab 07 multi-agent pipelines, Lab 11 telemetry, and the R
 - [ ] role output schema validation
 - [ ] protected write conflict detection
 - [ ] schema violations fail closed rather than silently passing
+
+### L8 Workflow-Plane Checklist (optional)
+
+A runtime that also claims L8 support must, on top of the core checklist:
+
+- [ ] a `WorkflowRegistry` that loads cycle / phase / policy / persona / artifact Markdown SSOT fail-closed
+- [ ] `cycle_v1`, `phase_v1`, `policy_v1` schemas plus per-cycle artifact schemas
+- [ ] `workflow.started`, `workflow.phase_advanced`, `workflow.policy_gated`, `workflow.completed`, `workflow.aborted` events
+- [ ] `WorkflowStart`, `PhaseAdvance`, `WorkflowComplete` hook integration
+- [ ] replay snapshot reconstruction for current cycle, current phase, verdict, and visited phases
+- [ ] new cycles/phases/policies/personas can be added by writing Markdown alone (zero code lines)
+- [ ] unknown cycle/phase/policy/persona IDs deny fail-closed
 
 ### Audit Completeness
 
@@ -870,6 +979,16 @@ tool.result
 worker.report
 skill.complete
 session.close
+```
+
+Sessions that run through the L8 plane add the following on top:
+
+```text
+workflow.started
+workflow.phase_advanced   (one per phase transition)
+workflow.policy_gated     (one per policy decision)
+workflow.completed        (verdict=done|halted)
+workflow.aborted          (verdict=abort)
 ```
 
 Audit failure if any of these are missing:
@@ -905,6 +1024,11 @@ Audit failure if any of these are missing:
 | skill registered in code | operational knowledge is locked in deploy artifact | Markdown discovery |
 | hook directly mutates runtime state | mixes policy and state transition | return decision + append event |
 | breaking schema v1 | old session replay breaks | add v2 schema |
+| inlining a persona inside a cycle | breaks audit, coverage, and role-permissions | split into `personas/<role>/<id>.md`; cycle references the ID |
+| natural-language `advance_signal` | signal is nondeterministic, replay/regression impossible | deterministic expression like `review_aggregate.p0_unresolved == 0` |
+| hard-coding policy inside Python | new policies are locked to a deploy cycle | register in `workflows/policies/` and reference by ID |
+| new cycle requires Python edits | the workflow plane collapses back into the code plane | add Markdown to `workflows/cycles/` only |
+| skipping L4 audit for a workflow transition | invariant violation — replay/audit broken | append a `workflow.*` event for every phase/policy transition |
 
 ### Lab Rubric
 
@@ -941,6 +1065,7 @@ The README must include execution commands, mock-provider test instructions, at 
 | Week 04 | Ralph Loop becomes operational when Stop hooks and event logs are added |
 | Week 05 | Context reset is safe only with Markdown state and event replay |
 | Week 06 | CLAUDE.md/PROMPT.md generalizes into a Markdown-SSOT skill runtime |
-| Week 07 | Multi-agent SDLC maps to a Plan-Work-Review state machine |
-| Week 12 | Telemetry includes both OpenTelemetry spans and replayable event logs |
-| Capstone | Team runtime checklist can become the rubric |
+| Week 07 | The gated multi-agent SDLC pipeline generalizes as one instance of an L8 cycle/phase definition |
+| Week 09 | The three-way parallel reviewer plus severity PASS/FAIL is an informal implementation of L8's **persona fan-out + severity-routing** policy |
+| Week 12 | Telemetry includes OpenTelemetry spans and replayable event logs — `workflow.*` events join the audit surface when L8 is used |
+| Week 13–14 | Team runtime checklist can become the rubric. Teams that run multi-phase cycles may additionally submit L8 cycle/phase/policy Markdown SSOT |

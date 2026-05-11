@@ -93,7 +93,7 @@ import { Aside, Steps, Badge, Card, CardGrid, Tabs, TabItem } from '@astrojs/sta
 | L6 Orchestration | handoff 순서, retry, escalation |
 | L7 Artifact | PR, report, dashboard, demo, final presentation |
 
-> 자세한 계층 설명은 [Agent OS 7-Layer Architecture](/reference/agent-os-runtime/#7-layer-architecture)를 참고한다.
+> 자세한 계층 설명은 [Agent OS 7+1-Layer Architecture (L1–L7 core + L8 workflow plane)](/reference/agent-os-runtime/#7-layer-architecture)를 참고한다. 다중 phase 사이클(예: brainstorm → fix → ship)을 설계하려는 팀은 [L8 Workflow Plane](/reference/agent-os-runtime/#workflow-plane-l8)의 5축 모델(cycle / phase / policy / persona / artifact)을 함께 본다. 다만 L8 사용은 **선택**이며, L1–L7 코어만으로도 캡스톤 평가 기준은 충족된다 — L8은 사이클 시퀀싱·정책·페르소나를 markdown SSOT로 정리하고 싶은 팀을 위한 옵션이다.
 
 #### 7-layer 매핑 시각화
 

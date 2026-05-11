@@ -285,6 +285,10 @@ What does the diagram above look like when implemented as a **real production sy
 
 The `/proceed` pipeline of sdlc-toolkit implements a 9-stage gated execution.
 
+<Aside type="note" title="Preview: L8 Workflow Plane">
+In Agent OS Runtime's [L8 Workflow Plane](/en/reference/agent-os-runtime/#workflow-plane-l8) vocabulary, this 9-stage gated pipeline is one instance of a "ship-cycle" — each stage is a **phase**, each `/validate` gate is a **policy** (`severity-routing` + `loop-halt`), the coder/reviewer/QA roles are **personas**, and `spec.md` / TASK files are **artifacts**. The "3 retries then human escalation" rule is an instance of the `loop-halt` policy. Once you know the L8 vocabulary, you can design other pipelines for the capstone — brainstorm-cycle, fix-cycle, ralph-cycle — inside the same frame.
+</Aside>
+
 <Tabs>
   <TabItem label="Phase Map">
     | Phase | Name | Agent | Gate |

@@ -285,6 +285,10 @@ SWE-Bench Pro에서도 같은 패턴이 나타난다 — 동일한 모델(Claude
 
 sdlc-toolkit의 `/proceed` 파이프라인이 9단계 게이트드 실행을 구현한다.
 
+<Aside type="note" title="L8 Workflow Plane 미리보기">
+이 9단계 게이트드 파이프라인은 Agent OS Runtime의 [L8 Workflow Plane](/reference/agent-os-runtime/#workflow-plane-l8) 어휘로 보면 "ship-cycle" 한 사례다 — 각 단계가 **phase**, `/validate` 게이트가 **policy**(`severity-routing` + `loop-halt`), 코더/리뷰어/QA가 **persona**, `spec.md`·TASK 파일이 **artifact**다. 3회 재시도 후 인간 에스컬레이션은 `loop-halt` 정책의 인스턴스. L8 어휘를 알면 캡스톤에서 brainstorm-cycle, fix-cycle, ralph-cycle 같은 다른 파이프라인을 같은 frame으로 설계할 수 있다.
+</Aside>
+
 <Tabs>
   <TabItem label="Phase Map">
     | Phase | 이름 | 에이전트 | 게이트 |
