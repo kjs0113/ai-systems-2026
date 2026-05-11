@@ -481,19 +481,47 @@ This is the end-to-end chain running from Week 8 (PlannerAgent) → Coder → We
 
 **Artifact Chain**
 
-```
-requirement.md          ← Planner input
-    ↓
-architecture.md         ← Planner output (Week 8)
-    ↓
-TASK-001.md, TASK-002.md ← Coder assignments based on task_queue.json
-    ↓
-PR (code + tests)       ← Coder output
-    ↓
-review-results.json     ← QA output (Week 9)
-    ↓
-LESSON-001.md           ← Record of learned failure patterns
-```
+<div class="artifact-chain diagram">
+  <div class="diagram__title">ARTIFACT CHAIN</div>
+  <div class="artifact-chain__layout">
+    <div class="artifact-chain__flow">
+      <div class="artifact-chain__item artifact-chain__item--blue">
+        <span class="artifact-chain__meta">Planner input</span>
+        <code>requirement.md</code>
+      </div>
+      <div class="artifact-chain__arrow" aria-hidden="true">↓</div>
+      <div class="artifact-chain__item artifact-chain__item--purple">
+        <span class="artifact-chain__meta">Planner output · Week 8</span>
+        <code>architecture.md</code>
+      </div>
+      <div class="artifact-chain__arrow" aria-hidden="true">↓</div>
+      <div class="artifact-chain__item artifact-chain__item--cyan">
+        <span class="artifact-chain__meta">Coder assignment from task_queue.json</span>
+        <code>TASK-001.md · TASK-002.md</code>
+      </div>
+      <div class="artifact-chain__arrow" aria-hidden="true">↓</div>
+      <div class="artifact-chain__item artifact-chain__item--orange">
+        <span class="artifact-chain__meta">Coder output</span>
+        <code>PR (code + tests)</code>
+      </div>
+      <div class="artifact-chain__arrow" aria-hidden="true">↓</div>
+      <div class="artifact-chain__item artifact-chain__item--green">
+        <span class="artifact-chain__meta">QA output · Week 9</span>
+        <code>review-results.json</code>
+      </div>
+      <div class="artifact-chain__arrow" aria-hidden="true">↓</div>
+      <div class="artifact-chain__item artifact-chain__item--gray">
+        <span class="artifact-chain__meta">Record of learned failure patterns</span>
+        <code>LESSON-001.md</code>
+      </div>
+    </div>
+    <div class="artifact-chain__state">
+      <span class="artifact-chain__state-label">Central State Store</span>
+      <code>pipeline-state.json</code>
+      <p>Records each artifact's creation time, responsible agent, and current Phase so the pipeline can restart from the interruption point.</p>
+    </div>
+  </div>
+</div>
 
 `pipeline-state.json` records when each artifact was generated, the responsible agent, and the current Phase. Even if the pipeline is interrupted, you can identify how far it progressed and restart from that point.
 
