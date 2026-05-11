@@ -37,7 +37,7 @@ import { Aside, Steps, Badge, Card, CardGrid, Tabs, TabItem } from '@astrojs/sta
     Ralphthon이 해커톤과 다른 이유를 closed-loop 시스템 관점에서 설명하고, 좋은 캡스톤 주제의 5가지 조건을 자기 팀의 후보에 적용한다.
   </Card>
   <Card title="설계 관점" icon="seti:config">
-    Agent OS Runtime 7-layer를 캡스톤 아키텍처에 매핑하고, task packet 스키마·gate 정책·escalation 경로를 1차 설계한다.
+    Agent OS Runtime L1–L7 core를 캡스톤 아키텍처에 매핑하고, 필요하면 L8 workflow plane으로 cycle·phase·policy를 추가 설계한다.
   </Card>
   <Card title="구현 관점" icon="pencil">
     Lead/Planner/Worker/Reviewer/Operator 역할로 코드 책임을 분배하고, ADR 3개와 risk register 5개 항목을 작성한다.
@@ -81,57 +81,62 @@ import { Aside, Steps, Badge, Card, CardGrid, Tabs, TabItem } from '@astrojs/sta
 
 ### Agent OS Runtime으로 보는 캡스톤 구조
 
-13주차 설계 문서는 다음 7개 계층 중 최소 5개를 명시해야 한다.
+13주차 설계 문서는 다음 L1–L7 core 중 최소 5개를 명시해야 한다. L8 workflow plane은 다중 phase 사이클을 명시적으로 설계하려는 팀만 추가한다.
 
 | 계층 | 캡스톤에서 정의할 것 |
 |------|--------------------|
-| L1 Tool Boundary | 어떤 도구를 허용/금지할 것인가 |
-| L2 Skill/Instruction | 역할별 instruction, rubric, prompt |
-| L3 Agent Role | Lead, Planner, Worker, Reviewer, Operator |
+| L1 MCP Tool Protocol | 허용/금지 도구, tool input/output schema, tool event |
+| L2 Provider Completion | model profile, cost/latency 예산, fallback 규칙 |
+| L3 Plan-Work-Review Collaboration | Lead, Planner, Worker, Reviewer 상태 전이 |
 | L4 Event Store | `.events.jsonl`, replay snapshot |
-| L5 Policy Gate | tests, lint, approval, budget, secret scan |
-| L6 Orchestration | handoff 순서, retry, escalation |
-| L7 Artifact | PR, report, dashboard, demo, final presentation |
+| L5 Markdown-SSOT Skill Runtime | 역할별 instruction, rubric, allowed tool scope |
+| L6 Hook Lifecycle | approval, secret scan, loop stop, escalation hook |
+| L7 Schema IPC Registry | task packet, worker report, review verdict, run report schema |
+| Optional L8 Workflow Plane | cycle / phase / policy / persona / artifact Markdown SSOT |
 
 > 자세한 계층 설명은 [Agent OS 7+1-Layer Architecture (L1–L7 core + L8 workflow plane)](/reference/agent-os-runtime/#7-layer-architecture)를 참고한다. 다중 phase 사이클(예: brainstorm → fix → ship)을 설계하려는 팀은 [L8 Workflow Plane](/reference/agent-os-runtime/#workflow-plane-l8)의 5축 모델(cycle / phase / policy / persona / artifact)을 함께 본다. 다만 L8 사용은 **선택**이며, L1–L7 코어만으로도 캡스톤 평가 기준은 충족된다 — L8은 사이클 시퀀싱·정책·페르소나를 markdown SSOT로 정리하고 싶은 팀을 위한 옵션이다.
 
-#### 7-layer 매핑 시각화
+#### Core + L8 매핑 시각화
 
 <div class="diagram">
-  <div class="diagram__title">Agent OS Runtime — 7 Layers in the Capstone</div>
+  <div class="diagram__title">Agent OS Runtime — L1-L7 Core + Optional L8</div>
   <div class="diagram__stack">
     <div class="diagram__node diagram__node--blue">
-      <span class="diagram__node__label">L7 Artifact</span>
-      <span class="diagram__node__sub">patch / PR · report · dashboard · final demo</span>
+      <span class="diagram__node__label">Optional L8 Workflow Plane</span>
+      <span class="diagram__node__sub">cycle · phase · policy · persona · artifact</span>
     </div>
     <div class="diagram__node diagram__node--cyan">
-      <span class="diagram__node__label">L6 Orchestration</span>
-      <span class="diagram__node__sub">handoff · retry · escalation</span>
+      <span class="diagram__node__label">L7 Schema IPC</span>
+      <span class="diagram__node__sub">task packet · report · verdict schemas</span>
     </div>
     <div class="diagram__node diagram__node--green">
-      <span class="diagram__node__label">L5 Policy Gate</span>
-      <span class="diagram__node__sub">tests · judge · approval</span>
+      <span class="diagram__node__label">L6 Hook Lifecycle</span>
+      <span class="diagram__node__sub">approval · secret scan · loop stop</span>
     </div>
     <div class="diagram__node diagram__node--orange">
+      <span class="diagram__node__label">L5 Skill Runtime</span>
+      <span class="diagram__node__sub">Markdown instruction · allowed tools</span>
+    </div>
+    <div class="diagram__node diagram__node--purple">
       <span class="diagram__node__label">L4 Event Store</span>
       <span class="diagram__node__sub">.events.jsonl · replay snapshot</span>
     </div>
-    <div class="diagram__node diagram__node--purple">
-      <span class="diagram__node__label">L3 Agent Roles</span>
-      <span class="diagram__node__sub">Lead · Planner · Worker · Reviewer · Operator</span>
-    </div>
     <div class="diagram__node diagram__node--red">
-      <span class="diagram__node__label">L2 Skill / Instruction</span>
-      <span class="diagram__node__sub">role prompt · rubric</span>
+      <span class="diagram__node__label">L3 Collaboration</span>
+      <span class="diagram__node__sub">Lead · Planner · Worker · Reviewer</span>
     </div>
     <div class="diagram__node diagram__node--gray">
-      <span class="diagram__node__label">L1 Tool Boundary</span>
-      <span class="diagram__node__sub">allowed tools · denied tools</span>
+      <span class="diagram__node__label">L2 Provider Completion</span>
+      <span class="diagram__node__sub">model profile · fallback · budget</span>
+    </div>
+    <div class="diagram__node diagram__node--gray">
+      <span class="diagram__node__label">L1 MCP Tool Protocol</span>
+      <span class="diagram__node__sub">allowed tools · input/output schema</span>
     </div>
   </div>
 </div>
 
-각 계층은 산출물을 가진다. 13주차에 모든 계층을 만들 필요는 없지만, 어느 계층이 14주차에 채워질지 책임자를 명시한다.
+각 core 계층은 산출물을 가진다. 13주차에 L1–L7을 모두 만들 필요는 없지만, 최소 5개 계층은 구체적으로 정의하고 나머지 계층은 14주차 책임자를 명시한다. L8을 선택한 팀은 cycle/phase/policy Markdown과 `workflow.*` event 증거까지 별도 산출물로 둔다.
 
 ### 권장 팀 역할
 
@@ -459,7 +464,7 @@ Expose local models through vLLM's OpenAI-compatible API and route calls through
 
 1. **Ralphthon은 "앱 만들기"가 아니다**: closed-loop 시스템을 설계·운영·증명하는 자리다.
 2. **좋은 주제 5조건**: 반복 가능 / 검증 가능 / 경계 명확 / 실패 복구 가능 / 팀 역할 분리.
-3. **7-layer를 모두 만들 필요는 없다**: 13주차에는 최소 5개 계층을 명시하고, 나머지 계층의 책임자만 지정한다.
+3. **L1–L7 core를 모두 만들 필요는 없다**: 13주차에는 최소 5개 core 계층을 명시하고, 나머지는 책임자를 지정한다. L8은 선택 확장이다.
 4. **Won't have가 진짜 계획**: 무엇을 안 만들지 적지 못하면 그 계획은 희망목록이다.
 5. **Task packet은 schema로 강제**: 자연어 지시 대신 JSON Schema validator를 통과한 packet만 worker에 전달한다.
 6. **ADR은 결정의 흔적**: 무엇을 골랐는가가 아니라 무엇을 거절했는가가 중요하다.
@@ -468,7 +473,7 @@ Expose local models through vLLM's OpenAI-compatible API and route calls through
 ## 더 읽을거리
 
 **핵심 문서**
-- [Agent OS Runtime — 7-Layer Architecture](/reference/agent-os-runtime/#7-layer-architecture)
+- [Agent OS Runtime — core architecture + L8 workflow plane](/reference/agent-os-runtime/#7-layer-architecture)
 - [Agent OS Contracts](/reference/agent-os-runtime/#contracts)
 - [The Agent OS Runtime — capstone reference](/reference/agent-os-runtime/)
 

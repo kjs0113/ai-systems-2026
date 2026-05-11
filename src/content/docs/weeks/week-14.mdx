@@ -162,7 +162,9 @@ import { Aside, Steps, Badge, Card, CardGrid, Tabs, TabItem } from '@astrojs/sta
 | Gate | verdict + tests | pass/revise/fail |
 
 <Aside type="note" title="Agent OS Runtime 계약 활용">
-Lead → Planner → Worker → Reviewer 계약은 [Agent OS Contracts](/reference/agent-os-runtime/#contracts)의 `lead_directive_v1`, `plan_v1`, `worker_report_v1`, `review_result_v1` 구조를 참고해 self-contained로 작성한다. 다중 phase 사이클(brainstorm → fix → ship 등)을 직접 굴리는 팀은 추가로 [L8 Workflow Plane](/reference/agent-os-runtime/#workflow-plane-l8)의 `cycle_v1`/`phase_v1`/`policy_v1` markdown SSOT를 함께 제출할 수 있다 — 옵션이며 평가 가산.
+Lead → Planner → Worker → Reviewer 계약은 [Agent OS Contracts](/reference/agent-os-runtime/#contracts)의 `lead_directive_v1`, `plan_v1`, `worker_report_v1`, `review_result_v1` 구조를 참고해 self-contained로 작성한다.
+
+L8은 선택 확장이다. 다중 phase 사이클(brainstorm → fix → ship 등)을 직접 굴리는 팀만 추가로 `workflows/cycles/`, `workflows/phases/`, `workflows/policies/` Markdown SSOT와 `workflow.started` / `workflow.phase_advanced` / `workflow.policy_gated` event 증거를 제출한다.
 </Aside>
 
 #### Handoff schema 예시
@@ -461,7 +463,7 @@ make report
 
 **핵심 문서**
 - [Agent OS Runtime — Contracts](/reference/agent-os-runtime/#contracts)
-- [Agent OS Runtime — 7-Layer Architecture](/reference/agent-os-runtime/#7-layer-architecture)
+- [Agent OS Runtime — core architecture + L8 workflow plane](/reference/agent-os-runtime/#7-layer-architecture)
 - [캡스톤 평가 기준](/capstone/evaluation/)
 
 **운영 / SRE**

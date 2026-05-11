@@ -62,7 +62,7 @@ In a human-on-the-loop system, the human does not approve every tool call. The s
 | Evaluation | Is the result usable? | tests, lint, LLM-as-Judge, human review |
 
 <Aside type="note" title="Span vs. event log">
-OpenTelemetry spans answer "what is slow right now." Agent OS Runtime `.events.jsonl` answers "what exactly happened in this run." Week 12 uses both: OTel for live monitoring, and an [append-only event store](/en/reference/agent-os-runtime/#7-layer-architecture) for audit and replay.
+OpenTelemetry spans answer "what is slow right now." Agent OS Runtime `.events.jsonl` answers "what exactly happened in this run." Week 12 uses both: OTel for live monitoring, and an [append-only event store](/en/reference/agent-os-runtime/#7-layer-architecture) for audit and replay. Teams using the L8 workflow plane also prove `workflow.started`, `workflow.phase_advanced`, and `workflow.policy_gated` events plus replay of the current cycle, phase, and verdict.
 </Aside>
 
 #### Telemetry flow at a glance
@@ -543,7 +543,7 @@ These four panels form the minimum skeleton of the "numbers slide" you will use 
 
 **Foundational**
 - [OpenTelemetry Specification](https://opentelemetry.io/docs/specs/otel/)
-- [Agent OS Runtime — 7-Layer Architecture](/en/reference/agent-os-runtime/#7-layer-architecture)
+- [Agent OS Runtime — core architecture + L8 workflow plane](/en/reference/agent-os-runtime/#7-layer-architecture)
 - [OpenAI Evals best practices](https://platform.openai.com/docs/guides/evals)
 
 **Tools**

@@ -148,7 +148,7 @@ class QAAgent:
 7주차에서 설계한 3-parallel reviewer 패턴을 실제로 구현한다. 정확성(Correctness), 품질(Quality), 아키텍처(Architecture) 세 관점이 동시에 검토되고, 심각도 기반 PASS/FAIL 게이트가 최종 판단을 내린다.
 
 <Aside type="tip" title="L8 매핑 — 이 구현이 무엇의 인스턴스인가">
-이 코드는 사실상 Agent OS Runtime [L8 Workflow Plane](/reference/agent-os-runtime/#workflow-plane-l8)의 두 개념을 비공식으로 구현한 것이다 — 정확성/품질/아키텍처 리뷰어를 동시에 호출하고 결과를 합치는 부분은 **persona fan-out / fan-in**, 심각도(Critical/Major/Minor) × 점수 기준으로 PASS/FAIL을 결정하는 게이트는 **severity-routing + confidence-gating** 정책이다. L8 SSOT(`workflows/personas/`, `workflows/policies/`)로 옮기면 코드 0줄로 새 리뷰어 차원을 추가하거나 심각도 기준을 조정할 수 있고, 결정마다 `workflow.policy_gated` event가 자동으로 audit log에 남는다.
+이 코드는 사실상 Agent OS Runtime [L8 Workflow Plane](/reference/agent-os-runtime/#workflow-plane-l8)의 두 개념을 비공식으로 구현한 것이다 — 정확성/품질/아키텍처 리뷰어를 동시에 호출하고 결과를 합치는 부분은 **persona fan-out / fan-in**, 심각도 × 점수 기준으로 PASS/FAIL을 결정하는 게이트는 **severity-routing + confidence-gating** 정책이다. 이 실습의 `critical/major/minor/info`는 L8 `finding_v1`의 `P0/P1/P2/P3`로 매핑할 수 있다. L8 SSOT(`workflows/personas/`, `workflows/policies/`)로 옮기면 코드 0줄로 새 리뷰어 차원을 추가하거나 심각도 기준을 조정할 수 있고, 결정마다 `workflow.policy_gated` event가 audit log에 남는다.
 </Aside>
 
 ```python

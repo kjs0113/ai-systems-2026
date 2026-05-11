@@ -67,6 +67,8 @@ skill.complete greet ok
 session.close ok
 ```
 
+Requests that use the L8 workflow plane wrap the single-request flow above in a cycle. In addition to the core events, the runtime records `workflow.started`, `workflow.phase_advanced`, `workflow.policy_gated`, and `workflow.completed` or `workflow.aborted`; replay snapshots must restore the current cycle, phase, and verdict. An implementation without L8 is still a complete L1–L7 core runtime for this course.
+
 ## 7-Layer Architecture
 
 The goal is not simply to "make the model work." The goal is to place nondeterministic model calls inside a deterministic, observable, replayable system. L1–L7 is the core runtime that executes a single request safely; the optional [L8 Workflow Plane](#workflow-plane-l8) sits on top to sequence multi-phase cycles (a 7+1 structure).
@@ -497,18 +499,18 @@ Contracts are execution requirements, not documentation decoration.
 
 #### L8 workflow schemas
 
-L8-aware implementations register the following additional schemas. We keep only the identifiers in this page; the JSON definitions live in the upstream [`agent-os-runtime/schemas/`](https://github.com/entelecheia/agent-os-runtime/tree/main/schemas).
+L8-aware implementations register the following additional schemas. The table below is the minimum contract students need: `workflows/` Markdown frontmatter and emitted artifact JSON must satisfy these shapes.
 
-| Schema id | Role |
-|---|---|
-| `cycle_v1` | cycle frontmatter — phases, entry_phase, exit_conditions, policies |
-| `phase_v1` | phase frontmatter — advance_signal, halt_signal, agents_invoked, artifacts |
-| `policy_v1` | policy frontmatter — kind, default, rules (`when` / `then` / `reason`) |
-| `finding_v1` | persona review finding — severity, autofix_class, confidence, fingerprint |
-| `review_aggregate_v1` | fan-in result — coverage, p0_unresolved, top findings |
-| `brainstorm_v1` / `plan_v1` (reused) / `solution_v1` / `learning_v1` / `pulse_report_v1` | per-cycle artifact deliverables |
+| Schema id | Required / core fields | Role |
+|---|---|---|
+| `cycle_v1` | `id`, `phases`, `entry_phase`, `schema_version`; optional `exit_conditions`, `loop_bounds`, `policies` | Bundles user intent into a phase sequence and exit conditions |
+| `phase_v1` | `id`, `advance_signal`, `schema_version`; optional `halt_signal`, `agents_invoked`, `input_schema`, `output_schema`, `policies` | A deterministic step inside a cycle |
+| `policy_v1` | `id`, `kind`, `rules`, `schema_version`; optional `default` | Decides allow, deny, or advisory through `when` / `then` / `reason` rules |
+| `finding_v1` | `id`, `reviewer`, `severity`, `autofix_class`, `confidence`, `title`, `schema_version` | One persona review finding |
+| `review_aggregate_v1` | `findings`, `suppressed`, `pre_existing`, `verdict`, `schema_version`; optional `coverage`, `p0_unresolved` | Fan-in result and gate input |
+| `brainstorm_v1` / `plan_v1` (reused) / `solution_v1` / `learning_v1` / `pulse_report_v1` | per-schema required fields | per-cycle artifact deliverables |
 
-The `autofix_class` enum on `finding_v1` (`safe_auto`, `gated_auto`, `manual`, `advisory`) is the input that drives the severity-routing policy.
+`finding_v1.severity` is `P0`-`P3`, `confidence` is `0/25/50/75/100`, and `autofix_class` is one of `safe_auto`, `gated_auto`, `manual`, `advisory`. The `critical/major/minor/info` severities used in the course labs can map to `P0/P1/P2/P3`.
 
 #### `skill_frontmatter_v1` and `write_claim_v1`
 
@@ -893,7 +895,7 @@ def handle_user_request(runtime, prompt: str):
 | skill discovery | YAML frontmatter validation | shared fixture read | shared fixture read |
 | protected write | hash check + conflict | hash check + conflict | hash check + conflict |
 | tests | end-to-end checklist | `go test ./...` | Node test runner |
-| L8 workflow plane | `workflows/` SSOT loader (PR 5) | core-only (optional) | core-only (optional) |
+| L8 workflow plane | `workflows/` SSOT loader | core-only (optional) | core-only (optional) |
 
 L1–L7 is the core compliance surface; L8 is an optional plane. L8-capable implementations must read the `workflows/` directory (`cycles/`, `phases/`, `policies/`, `personas/`, `artifacts/`) as SSOT and add new cycles with zero code changes — that is the design invariant.
 

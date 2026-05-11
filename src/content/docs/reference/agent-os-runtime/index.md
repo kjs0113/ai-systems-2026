@@ -69,6 +69,8 @@ skill.complete greet ok
 session.close ok
 ```
 
+L8 workflow plane을 쓰는 요청은 위 단일 request 흐름을 cycle로 감싼다. 이때 core event에 더해 `workflow.started`, `workflow.phase_advanced`, `workflow.policy_gated`, `workflow.completed` 또는 `workflow.aborted`가 남고, replay snapshot은 현재 cycle, phase, verdict까지 복원해야 한다. L8을 쓰지 않는 구현은 여전히 L1–L7 core runtime으로 완전한 평가 대상이다.
+
 ## 7-Layer Architecture
 
 Agent OS Runtime의 목적은 "모델에게 일을 시킨다"가 아니라 **비결정적 모델 호출을 결정론적으로 관측, 검증, 재실행 가능한 시스템에 넣는 것**이다. L1–L7은 한 번의 request를 안전하게 실행하는 core runtime이고, 그 위에 다중 phase 사이클을 시퀀싱하는 [L8 Workflow Plane](#workflow-plane-l8)이 옵션 plane으로 얹힌다(7+1 구조).
@@ -516,18 +518,18 @@ Agent OS Runtime에서 계약은 문서 장식이 아니라 실행 조건이다.
 
 #### L8 workflow schemas
 
-L8 workflow plane을 사용하는 구현은 추가로 다음 schema를 등록한다. 본 페이지에는 식별자만 정리하고, JSON 정의는 업스트림 [`agent-os-runtime/schemas/`](https://github.com/entelecheia/agent-os-runtime/tree/main/schemas)를 SSOT로 한다.
+L8 workflow plane을 사용하는 구현은 추가로 다음 schema를 등록한다. 아래 표는 학생 구현에 필요한 최소 계약이며, 실제 파일은 `workflows/` Markdown frontmatter와 산출물 JSON이 이 구조를 만족해야 한다.
 
-| Schema id | 역할 |
-|---|---|
-| `cycle_v1` | cycle frontmatter — phases, entry_phase, exit_conditions, policies |
-| `phase_v1` | phase frontmatter — advance_signal, halt_signal, agents_invoked, artifacts |
-| `policy_v1` | policy frontmatter — kind, default, rules (`when` / `then` / `reason`) |
-| `finding_v1` | persona review finding — severity, autofix_class, confidence, fingerprint |
-| `review_aggregate_v1` | fan-in 결과 — coverage, p0_unresolved, top findings |
-| `brainstorm_v1` / `plan_v1` (재사용) / `solution_v1` / `learning_v1` / `pulse_report_v1` | cycle별 artifact 산출물 |
+| Schema id | 필수/핵심 필드 | 역할 |
+|---|---|---|
+| `cycle_v1` | `id`, `phases`, `entry_phase`, `schema_version`; 선택 `exit_conditions`, `loop_bounds`, `policies` | 사용자 의도를 phase sequence와 종료 조건으로 묶음 |
+| `phase_v1` | `id`, `advance_signal`, `schema_version`; 선택 `halt_signal`, `agents_invoked`, `input_schema`, `output_schema`, `policies` | cycle 내부의 결정론적 단계 |
+| `policy_v1` | `id`, `kind`, `rules`, `schema_version`; 선택 `default` | `when` / `then` / `reason` 규칙으로 allow, deny, advisory 결정 |
+| `finding_v1` | `id`, `reviewer`, `severity`, `autofix_class`, `confidence`, `title`, `schema_version` | persona review 결과 단위 |
+| `review_aggregate_v1` | `findings`, `suppressed`, `pre_existing`, `verdict`, `schema_version`; 선택 `coverage`, `p0_unresolved` | fan-in 결과와 gate 입력 |
+| `brainstorm_v1` / `plan_v1` (재사용) / `solution_v1` / `learning_v1` / `pulse_report_v1` | 산출물별 필수 필드는 각 schema가 정의 | cycle별 artifact 산출물 |
 
-`finding_v1`의 `autofix_class` enum은 severity-routing 정책의 입력이다 (`safe_auto`, `gated_auto`, `manual`, `advisory`).
+`finding_v1.severity`는 `P0`–`P3`, `confidence`는 `0/25/50/75/100`, `autofix_class`는 `safe_auto`, `gated_auto`, `manual`, `advisory` 중 하나다. 수업 실습에서 쓰는 `critical/major/minor/info`는 각각 `P0/P1/P2/P3`로 매핑해도 된다.
 
 #### `skill_frontmatter_v1` and `write_claim_v1`
 
@@ -912,7 +914,7 @@ def handle_user_request(runtime, prompt: str):
 | skill discovery | YAML frontmatter validation | shared fixture read | shared fixture read |
 | protected write | hash check + conflict | hash check + conflict | hash check + conflict |
 | tests | end-to-end checklist | `go test ./...` | Node test runner |
-| L8 workflow plane | `workflows/` SSOT loader (PR 5) | core-only (선택) | core-only (선택) |
+| L8 workflow plane | `workflows/` SSOT loader | core-only (선택) | core-only (선택) |
 
 L1–L7은 core compliance, L8은 옵셔널 plane이다. L8을 지원하는 구현은 `workflows/` 디렉토리(`cycles/` `phases/` `policies/` `personas/` `artifacts/`) SSOT만 읽으면 동작해야 하며, 새 cycle 추가에 코드 0줄이 design invariant다.
 

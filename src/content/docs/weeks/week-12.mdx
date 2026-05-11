@@ -62,7 +62,7 @@ Human-on-the-Loop 시스템에서 인간 감독자는 모든 tool call을 실시
 | Evaluation | 결과가 쓸 만한가? | tests, lint, LLM-as-Judge, human review |
 
 <Aside type="note" title="Span과 Event Log의 차이">
-OpenTelemetry span은 "지금 무엇이 느린가"를 보여주고, Agent OS Runtime의 `.events.jsonl`은 "그 세션에서 실제로 무엇이 일어났는가"를 재구성한다. Week 12의 관측성은 두 축을 함께 다룬다: live monitoring은 OTel, audit/replay는 [append-only event store](/reference/agent-os-runtime/#7-layer-architecture)가 담당한다.
+OpenTelemetry span은 "지금 무엇이 느린가"를 보여주고, Agent OS Runtime의 `.events.jsonl`은 "그 세션에서 실제로 무엇이 일어났는가"를 재구성한다. Week 12의 관측성은 두 축을 함께 다룬다: live monitoring은 OTel, audit/replay는 [append-only event store](/reference/agent-os-runtime/#7-layer-architecture)가 담당한다. L8 workflow plane을 쓰는 팀은 `workflow.started`, `workflow.phase_advanced`, `workflow.policy_gated` event와 current cycle/phase/verdict replay까지 함께 증명한다.
 </Aside>
 
 #### 텔레메트리 흐름 한눈에 보기
@@ -558,7 +558,7 @@ LIMIT 5;
 
 **핵심 문서**
 - [OpenTelemetry Specification](https://opentelemetry.io/docs/specs/otel/)
-- [Agent OS Runtime — 7-Layer Architecture](/reference/agent-os-runtime/#7-layer-architecture)
+- [Agent OS Runtime — core architecture + L8 workflow plane](/reference/agent-os-runtime/#7-layer-architecture)
 - [OpenAI Evals best practices](https://platform.openai.com/docs/guides/evals)
 
 **도구**

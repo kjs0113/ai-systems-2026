@@ -162,7 +162,9 @@ You do not need a complex multi-agent system on day one. You do need to separate
 | Gate | verdict + tests | pass / revise / fail |
 
 <Aside type="note" title="Use the Agent OS Runtime contracts">
-Lead → Planner → Worker → Reviewer can adopt the [Agent OS Contracts](/en/reference/agent-os-runtime/#contracts) `lead_directive_v1`, `plan_v1`, `worker_report_v1`, `review_result_v1` shapes as self-contained schemas. Teams that run multi-phase cycles (brainstorm → fix → ship etc.) may additionally submit [L8 Workflow Plane](/en/reference/agent-os-runtime/#workflow-plane-l8) `cycle_v1` / `phase_v1` / `policy_v1` Markdown SSOT — optional, with rubric credit.
+Lead → Planner → Worker → Reviewer can adopt the [Agent OS Contracts](/en/reference/agent-os-runtime/#contracts) `lead_directive_v1`, `plan_v1`, `worker_report_v1`, `review_result_v1` shapes as self-contained schemas.
+
+L8 is optional. Only teams that run a multi-phase cycle (brainstorm → fix → ship, etc.) should additionally submit `workflows/cycles/`, `workflows/phases/`, and `workflows/policies/` Markdown SSOT plus evidence for `workflow.started`, `workflow.phase_advanced`, and `workflow.policy_gated` events.
 </Aside>
 
 #### Handoff schema example
@@ -461,7 +463,7 @@ If you cannot pass these, Week 15 is dedicated to closing the loop, not adding f
 
 **Foundational**
 - [Agent OS Runtime — Contracts](/en/reference/agent-os-runtime/#contracts)
-- [Agent OS Runtime — 7-Layer Architecture](/en/reference/agent-os-runtime/#7-layer-architecture)
+- [Agent OS Runtime — core architecture + L8 workflow plane](/en/reference/agent-os-runtime/#7-layer-architecture)
 - [Capstone evaluation criteria](/en/capstone/evaluation/)
 
 **Operations / SRE**

@@ -795,7 +795,7 @@ Claude Desktop이나 Claude Code에서 MCP 서버를 연결하는 설정:
 ```
 
 <Aside type="note" title="Agent OS Runtime 관점">
-이번 주의 MCP는 "도구를 붙이는 방법"이 아니라 **capability boundary**로 이해해야 한다. Agent OS Runtime에서는 모든 tool call이 `allowed-tools` scope, input/output schema, `PreToolUse`/`PostToolUse` hook, `tool.invoke`/`tool.result` event를 통과한다. 이 기준은 이후 [Agent OS 7-Layer Architecture](/reference/agent-os-runtime/#7-layer-architecture)의 L1에서 다시 사용한다.
+이번 주의 MCP는 "도구를 붙이는 방법"이 아니라 **capability boundary**로 이해해야 한다. Agent OS Runtime에서는 모든 tool call이 `allowed-tools` scope, input/output schema, `PreToolUse`/`PostToolUse` hook, `tool.invoke`/`tool.result` event를 통과한다. 이 기준은 이후 [Agent OS Runtime core architecture](/reference/agent-os-runtime/#7-layer-architecture)의 L1에서 다시 사용한다.
 </Aside>
 
 ---

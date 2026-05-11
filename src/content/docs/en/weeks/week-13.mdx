@@ -37,7 +37,7 @@ import { Aside, Steps, Badge, Card, CardGrid, Tabs, TabItem } from '@astrojs/sta
     Explain why a Ralphthon is unlike a hackathon (closed-loop system framing) and apply the five conditions of a good capstone topic to your team's candidate ideas.
   </Card>
   <Card title="Design" icon="seti:config">
-    Map the Agent OS Runtime 7-layer architecture onto your capstone, and produce a first-cut task packet schema, gate policy, and escalation path.
+    Map the Agent OS Runtime L1-L7 core onto your capstone, and add L8 workflow-plane cycle / phase / policy definitions only if your team needs multi-phase orchestration.
   </Card>
   <Card title="Implementation" icon="pencil">
     Distribute responsibilities across Lead / Planner / Worker / Reviewer / Operator, and write three ADRs and five risk-register items.
@@ -81,57 +81,62 @@ The final grade is not "did the AI write a lot of code." The goal is a system in
 
 ### Capstone through the Agent OS Runtime lens
 
-The Week 13 design document must specify at least five of the seven layers below.
+The Week 13 design document must specify at least five of the L1-L7 core layers below. Add the L8 workflow plane only if your team is explicitly designing a multi-phase cycle.
 
 | Layer | What to define for the capstone |
 |-------|------------------------------|
-| L1 Tool Boundary | which tools are allowed / denied |
-| L2 Skill / Instruction | role prompts, rubrics, prompts |
-| L3 Agent Role | Lead, Planner, Worker, Reviewer, Operator |
+| L1 MCP Tool Protocol | allowed / denied tools, tool input/output schemas, tool events |
+| L2 Provider Completion | model profiles, cost/latency budgets, fallback rules |
+| L3 Plan-Work-Review Collaboration | Lead, Planner, Worker, Reviewer state transitions |
 | L4 Event Store | `.events.jsonl`, replay snapshot |
-| L5 Policy Gate | tests, lint, approval, budget, secret scan |
-| L6 Orchestration | handoff order, retry, escalation |
-| L7 Artifact | PR, report, dashboard, demo, final presentation |
+| L5 Markdown-SSOT Skill Runtime | role instructions, rubrics, allowed tool scope |
+| L6 Hook Lifecycle | approvals, secret scans, loop stops, escalation hooks |
+| L7 Schema IPC Registry | task packet, worker report, review verdict, run report schemas |
+| Optional L8 Workflow Plane | cycle / phase / policy / persona / artifact Markdown SSOT |
 
 > See [Agent OS 7+1-Layer Architecture (L1–L7 core + L8 workflow plane)](/en/reference/agent-os-runtime/#7-layer-architecture) for layer-by-layer detail. Teams that want to design multi-phase cycles (e.g. brainstorm → fix → ship) should also consult the [L8 Workflow Plane](/en/reference/agent-os-runtime/#workflow-plane-l8) five-axis model (cycle / phase / policy / persona / artifact). L8 is **optional** — the capstone rubric is fully satisfied by the L1–L7 core alone; L8 is for teams that want to lift cycle sequencing, policies, and personas into Markdown SSOT.
 
-#### 7-layer mapping
+#### Core + L8 mapping
 
 <div class="diagram">
-  <div class="diagram__title">Agent OS Runtime — 7 Layers in the Capstone</div>
+  <div class="diagram__title">Agent OS Runtime — L1-L7 Core + Optional L8</div>
   <div class="diagram__stack">
     <div class="diagram__node diagram__node--blue">
-      <span class="diagram__node__label">L7 Artifact</span>
-      <span class="diagram__node__sub">patch / PR · report · dashboard · final demo</span>
+      <span class="diagram__node__label">Optional L8 Workflow Plane</span>
+      <span class="diagram__node__sub">cycle · phase · policy · persona · artifact</span>
     </div>
     <div class="diagram__node diagram__node--cyan">
-      <span class="diagram__node__label">L6 Orchestration</span>
-      <span class="diagram__node__sub">handoff · retry · escalation</span>
+      <span class="diagram__node__label">L7 Schema IPC</span>
+      <span class="diagram__node__sub">task packet · report · verdict schemas</span>
     </div>
     <div class="diagram__node diagram__node--green">
-      <span class="diagram__node__label">L5 Policy Gate</span>
-      <span class="diagram__node__sub">tests · judge · approval</span>
+      <span class="diagram__node__label">L6 Hook Lifecycle</span>
+      <span class="diagram__node__sub">approval · secret scan · loop stop</span>
     </div>
     <div class="diagram__node diagram__node--orange">
+      <span class="diagram__node__label">L5 Skill Runtime</span>
+      <span class="diagram__node__sub">Markdown instruction · allowed tools</span>
+    </div>
+    <div class="diagram__node diagram__node--purple">
       <span class="diagram__node__label">L4 Event Store</span>
       <span class="diagram__node__sub">.events.jsonl · replay snapshot</span>
     </div>
-    <div class="diagram__node diagram__node--purple">
-      <span class="diagram__node__label">L3 Agent Roles</span>
-      <span class="diagram__node__sub">Lead · Planner · Worker · Reviewer · Operator</span>
-    </div>
     <div class="diagram__node diagram__node--red">
-      <span class="diagram__node__label">L2 Skill / Instruction</span>
-      <span class="diagram__node__sub">role prompt · rubric</span>
+      <span class="diagram__node__label">L3 Collaboration</span>
+      <span class="diagram__node__sub">Lead · Planner · Worker · Reviewer</span>
     </div>
     <div class="diagram__node diagram__node--gray">
-      <span class="diagram__node__label">L1 Tool Boundary</span>
-      <span class="diagram__node__sub">allowed tools · denied tools</span>
+      <span class="diagram__node__label">L2 Provider Completion</span>
+      <span class="diagram__node__sub">model profile · fallback · budget</span>
+    </div>
+    <div class="diagram__node diagram__node--gray">
+      <span class="diagram__node__label">L1 MCP Tool Protocol</span>
+      <span class="diagram__node__sub">allowed tools · input/output schema</span>
     </div>
   </div>
 </div>
 
-Every layer carries an artifact. You do not have to build all of them in Week 13, but every layer must have an owner who will fill it in by Week 14.
+Every core layer carries an artifact. You do not have to build all of L1-L7 in Week 13, but at least five core layers must be concrete and the rest must have Week 14 owners. Teams that choose L8 also keep cycle/phase/policy Markdown and `workflow.*` event evidence as separate deliverables.
 
 ### Recommended team roles
 
@@ -459,7 +464,7 @@ This table feeds directly into the Week 14 midpoint report and the Week 15 relea
 
 1. **A Ralphthon is not "build an app"**: it is designing, operating, and proving a closed-loop system.
 2. **Five conditions of a good topic**: repeatable / verifiable / bounded / recoverable / role-separable.
-3. **You do not have to build all seven layers**: declare at least five in Week 13 and assign owners for the rest.
+3. **You do not have to build all L1-L7 core layers**: declare at least five core layers in Week 13 and assign owners for the rest. L8 is optional.
 4. **"Won't have" is the real plan**: a plan without scope cuts is a wish list.
 5. **Force the task packet through schema**: only packets that pass the JSON Schema validator are accepted by workers.
 6. **An ADR is a record of decisions**: what you rejected matters more than what you chose.
@@ -468,7 +473,7 @@ This table feeds directly into the Week 14 midpoint report and the Week 15 relea
 ## Further Reading
 
 **Foundational**
-- [Agent OS Runtime — 7-Layer Architecture](/en/reference/agent-os-runtime/#7-layer-architecture)
+- [Agent OS Runtime — core architecture + L8 workflow plane](/en/reference/agent-os-runtime/#7-layer-architecture)
 - [Agent OS Contracts](/en/reference/agent-os-runtime/#contracts)
 - [Agent OS Runtime — capstone reference](/en/reference/agent-os-runtime/)
 

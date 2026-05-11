@@ -31,4 +31,4 @@ This section collects tools, papers, terminology, and infrastructure guides rela
 - [GitHub: halla-ai/ai-systems-2026](https://github.com/halla-ai/ai-systems-2026)
 
 ### Internal Course Material
-- [Agent OS Runtime](/en/reference/agent-os-runtime) — single combined unit covering 7-Layer Architecture, Contracts, Implementation Guide, and Runtime Checklist
+- [Agent OS Runtime](/en/reference/agent-os-runtime) — single combined unit covering L1-L7 core architecture, optional L8 workflow plane, contracts, implementation guide, and runtime checklist

@@ -31,4 +31,4 @@ description: AI 시스템 2026 강의 참고자료 모음
 - [GitHub: halla-ai/ai-systems-2026](https://github.com/halla-ai/ai-systems-2026)
 
 ### 내부 교재
-- [Agent OS Runtime](/reference/agent-os-runtime) — 7-Layer Architecture, Contracts, Implementation Guide, Runtime Checklist를 하나로 합친 단일 교재
+- [Agent OS Runtime](/reference/agent-os-runtime) — L1–L7 core architecture, optional L8 workflow plane, contracts, implementation guide, runtime checklist를 하나로 합친 단일 교재
