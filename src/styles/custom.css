@@ -1275,9 +1275,10 @@ body {
 }
 .sdlc-panel__feedback code {
   font-family: var(--sl-font-mono); color: #a78bfa; font-size: 0.8rem;
+  display: inline-flex; flex: 0 0 auto; white-space: nowrap;
 }
 :root[data-theme='light'] .sdlc-panel__feedback code { color: #6d28d9; }
-.sdlc-panel__feedback span { font-size: 0.75rem; }
+.sdlc-panel__feedback span { font-size: 0.75rem; min-width: 0; }
 
 /* ─── Bottom: Command cards ───────────────────────────────────────────── */
 .sdlc-commands {
