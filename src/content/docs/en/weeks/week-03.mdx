@@ -371,7 +371,7 @@ The functionality an MCP server can expose is classified into three primitives:
 | **Prompts** | User selects | Reusable prompt templates. User must explicitly select to activate | "MIG Status Analysis", "Security Review Checklist" |
 
 <Aside type="danger" title="Tool Descriptions Are Untrusted">
-The latest MCP spec (2025-11-25) states explicitly: **tool descriptions from untrusted servers must also be treated as untrusted**. Tool descriptions themselves can contain embedded prompt injections. This is the core attack vector of the McpInject attack covered in the "Security and Governance" section below.
+The MCP specification (2025-11-25) states explicitly: **tool descriptions from untrusted servers must also be treated as untrusted**. Tool descriptions themselves can contain embedded prompt injections. This is the core attack vector of the McpInject attack covered in the "Security and Governance" section below.
 </Aside>
 
 #### Client Features — The Reverse Hook

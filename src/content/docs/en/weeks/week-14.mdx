@@ -254,7 +254,7 @@ Improvising every time something breaks repeats the same mistakes. Pre-define fi
 | Agent edits an unscoped file | abort the run, drop the patch | tighten task-packet scope and tool policy | path allowlist check inside the tool wrapper |
 | Tests keep failing | stop retry, record failure_reason | split the task | put smoke tests inside the task packet |
 | Judge breaks JSON | mark schema-validation failure | structured output or repair step | "JSON only" stress in the judge prompt |
-| Token cost blows up | apply max_turns / max_tokens | reorganize prompt prefix, raise cache hit | cost-dashboard alarm threshold |
+| Token cost overruns budget | apply max_turns / max_tokens | reorganize prompt prefix, raise cache hit | cost-dashboard alarm threshold |
 | Teammate file conflicts | declare file ownership | use worktrees or branches | record file owner in the task packet |
 | Unstable demo | prepare a recording | shorten the happy path | add a demo-regression test |
 

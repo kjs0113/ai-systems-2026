@@ -166,7 +166,7 @@ South Korea's **AI Framework Act** (effective January 2026) is more innovation-f
 
 Let's look at the need for governance not through abstract principles, but through data.
 
-**METR Study (July 2025, arXiv 2507.09089)**: A randomized controlled experiment with 16 skilled developers completing 246 real-world tasks. The results were surprising.
+**METR Study (July 2025, arXiv 2507.09089)**: A randomized controlled experiment with 16 skilled developers completing 246 real-world tasks. The results show that AI tool impact needs careful interpretation.
 
 - Using AI tools made task completion **19% slower** (while participants perceived themselves as 20% faster)
 - A **39 percentage point gap** existed between developers' self-assessments and actual performance
@@ -255,7 +255,7 @@ The required skills are also shifting:
 
 Geoffrey Huntley's core insight: **"Build a stronger harness, not a stronger model."**
 
-The Ralph Loop prototype is surprisingly simple:
+The Ralph Loop prototype is simple:
 
 ```bash
 while :; do cat PROMPT.md | <ai-coding-cli>; done
@@ -286,7 +286,7 @@ In Phase 1 we build the safety systems first, then in Phase 2 we add the engine.
 
 #### What We Build in This Course
 
-After 15 weeks, you will have fully implemented the following system:
+After 15 weeks, you will have implemented and validated the following system:
 
 <div class="diagram">
   <div class="diagram__title">AGENTIC SDLC PIPELINE</div>
@@ -498,11 +498,11 @@ If the connection is refused, first check that Cloudflare WARP is in **Connected
 ## Key Takeaways
 
 1. **AI system ≠ AI model**: The model is the engine, the system is the automobile. Tool use, memory, planning, execution environment, safety guardrails, and observability make up the system.
-2. **SWE-bench 5% → 79%**: Agent capability has grown explosively in three years. The problem is not capability — it's control.
+2. **SWE-bench 5% → 79%**: Agent capability has improved substantially in three years. The core problem is control, not capability alone.
 3. **HITL → HOTL → HIC**: From manual transmission to self-driving. The human role shifts from "approving every step" to "setting strategy."
 4. **19% slower**: AI tools speed up individual tasks, but review costs (Babysitting Tax) cancel out the gains. The harness resolves this bottleneck.
 5. **Harness engineering**: A stronger harness, not a stronger model. Backpressure and garbage collection make non-deterministic AI deterministic.
-6. **The 15-week arc**: Governance → Infrastructure → Loops → Multi-agent → MLOps → Ralphthon. This course builds a complete agentic SDLC pipeline.
+6. **The 15-week arc**: Governance → Infrastructure → Loops → Multi-agent → MLOps → Ralphthon. This course builds an agentic SDLC pipeline step by step.
 
 ## Further Reading
 

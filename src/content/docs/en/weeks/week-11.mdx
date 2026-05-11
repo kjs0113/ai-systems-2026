@@ -158,7 +158,7 @@ PagedAttention is the foundation. The 2026 operations question is not "do we use
 | Ralph loop with the same PROMPT.md | long (3-8K) | small turn diff | 70-95% | very large |
 | Multi-tenant chatbot with shared system prompt | medium (500-2K) | per-user message | 30-60% | moderate |
 | RAG with new chunks each time | tiny | most of the prompt | 0-15% | almost none |
-| Repeated analysis on the same codebase | very long (10K+) | only the diff | 80-99% | dominant |
+| Repeated analysis on the same codebase | very long (10K+) | only the diff | 80-99% | very large |
 
 <Aside type="tip" title="Ralph loop and prefix caching">
 A Ralph loop reuses PROMPT.md, project instructions, and tool schemas every turn. The longer this static prefix, the more value automatic prefix caching delivers. Conversely, rebuilding prompts from scratch every turn drives the cache hit rate to zero.

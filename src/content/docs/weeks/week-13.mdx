@@ -401,10 +401,10 @@ Expose local models through vLLM's OpenAI-compatible API and route calls through
 | 모델 출력이 JSON schema를 반복 위반 | invalid JSON rate > 20% | Agent Engineer | structured output 또는 repair step 추가 |
 | 테스트가 없어서 품질 평가 불가 | deterministic gate가 비어 있음 | QA / Operator | 최소 smoke test와 fixture 작성 |
 | scope creep | 14주차까지 happy path 미통과 | Lead | Could have 항목 전부 제거 |
-| 비용 폭증 | run당 token budget 초과 | Harness Engineer | max_turns, context trim, cache prefix 적용 |
+| 비용 초과 | run당 token budget 초과 | Harness Engineer | max_turns, context trim, cache prefix 적용 |
 | 데모 불안정 | 같은 task 3회 중 1회 이상 실패 | QA / Operator | live demo 축소, 녹화본 준비 |
 
-이 표는 14주차 중간 보고서와 15주차 release gate의 입력으로 그대로 이어진다.
+이 표는 14주차 중간 보고서와 15주차 release gate의 입력으로 사용된다.
 
 ## 실습 (Practicum)
 

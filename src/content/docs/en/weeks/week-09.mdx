@@ -50,7 +50,7 @@ import { Aside, Steps, Badge, Tabs, TabItem, Card, CardGrid } from '@astrojs/sta
 
 Do you remember **Phase 5: Verify** from the multi-agent SDLC pipeline designed in Week 7? The core design principle at the time was "the verification agent must be independent of the generation agent." This principle is grounded not in intuition but in empirical data.
 
-According to agent system scaling research from DeepMind and MIT, **when a verification agent shares context with a generation agent, it inherits the same biases**. If the coder wrote code under a certain assumption, a QA agent with the same context will take that assumption for granted and skip verification. This is the "I thought so too" bias.
+According to agent system scaling research from DeepMind and MIT, **when a verification agent shares context with a generation agent, it inherits the same biases**. If the coder wrote code under a certain assumption, a QA agent with the same context may treat that assumption as given and skip verification. Shared context weakens verification independence.
 
 PwC's 2025 AI Agent Report offers more specific numbers. In a single-agent structure (coder only), accuracy was around 10%, but **adding an independent judge agent raised it to 70%** — a 7x improvement. QA agent independence is not optional; it is a prerequisite for system reliability.
 
@@ -578,7 +578,7 @@ Connect the PlannerAgent implemented in Week 8 with this week's QAAgent to compl
 **Submission deadline**: 2026-05-05 23:59
 
 **Requirements**:
-1. Complete `QAAgent` implementation
+1. Working `QAAgent` implementation
 2. Automated code review feature (using Claude API)
 3. Feedback loop implementation (QA failure → Coder re-run)
 4. Video or log demonstrating the full Planner → Coder → QA 3-stage pipeline end-to-end

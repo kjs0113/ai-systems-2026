@@ -401,10 +401,10 @@ Risks belong in a structured register: trigger, owner, response.
 | Model output repeatedly violates JSON schema | invalid JSON rate > 20% | Agent Engineer | structured output or repair step |
 | No tests, so quality cannot be evaluated | deterministic gate is empty | QA / Operator | minimum smoke test + fixture |
 | Scope creep | happy path not passing by end of Week 14 | Lead | drop all "Could have" items |
-| Cost blowup | run-level token budget exceeded | Harness Engineer | apply max_turns, context trim, cache prefix |
+| Cost overrun | run-level token budget exceeded | Harness Engineer | apply max_turns, context trim, cache prefix |
 | Unstable demo | one of three repeated runs fails | QA / Operator | shrink live demo, prepare a recording |
 
-This table feeds directly into the Week 14 midpoint report and the Week 15 release gate.
+This table is used as input for the Week 14 midpoint report and the Week 15 release gate.
 
 ## Practicum
 

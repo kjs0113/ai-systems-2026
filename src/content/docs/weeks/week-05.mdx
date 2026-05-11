@@ -88,7 +88,7 @@ import { Aside, Steps, Badge, Card, CardGrid } from '@astrojs/starlight/componen
 
 #### 실증 데이터: Chroma의 Context Rot 연구
 
-"컨텍스트가 길어지면 나빠진다"는 직관적이지만, **얼마나** 나빠지는지는 Chroma의 2026년 실증 연구가 처음으로 정량화했다. 18개 frontier 모델(Claude, GPT, Gemini, Llama 등)을 대상으로 테스트한 결과:
+"컨텍스트가 길어지면 나빠진다"는 직관적이지만, **얼마나** 나빠지는지는 Chroma의 2026년 실증 연구가 대표적으로 정량화했다. 18개 frontier 모델(Claude, GPT, Gemini, Llama 등)을 대상으로 테스트한 결과:
 
 | 발견 | 수치 |
 |------|------|
@@ -419,7 +419,7 @@ users[3]{id,name,email}:
 1. **Context Rot은 실증적 현상이다** — Chroma 연구: 18개 모델 모두에서 입력이 길어질수록 정확도 하락. 중간 위치에서 30%+ 저하.
 2. **1M 토큰 창이 해결책이 아니다** — 큰 창 = Context Rot이 발생할 공간이 더 넓어질 뿐. 실효 사용량은 60-70%.
 3. **Compaction은 토큰 기반** — 모델 최대의 ~75% 도달 시 자동 트리거. 최근 4개 메시지 보존, 나머지 요약.
-4. **Ralph의 fresh context가 루프 간 최선** — 루프 내부에서는 compaction, 루프 사이에서는 완전 초기화 + 상태 파일 전달.
+4. **Ralph의 fresh context가 루프 간 기본 전략** — 루프 내부에서는 compaction, 루프 사이에서는 완전 초기화 + 상태 파일 전달.
 5. **토큰 40-70%가 낭비** — 모델 라우팅(Haiku 60-70%), prompt caching(read 0.1x), CLAUDE.md 200줄 이하로 절감.
 6. **Initializer 패턴** — JSON feature list + claude-progress.txt + init.sh 2-phase 구조로 상태를 결정론적으로 관리.
 

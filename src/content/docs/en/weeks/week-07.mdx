@@ -441,7 +441,7 @@ Add Markdown files to the `.claude/agents/` directory to define specialized agen
   </TabItem>
 </Tabs>
 
-This is the role assignment design above — Coder Agent, QA Agent — implemented declaratively in **a single .md file**. The same principle of MCP-governed tool access applies via the `tools` field. The 11 skills of sdlc-toolkit (`/spec`, `/architect`, `/validate`, `/review`, etc.) are production examples that leverage exactly this Skills system.
+This is the role assignment design above — Coder Agent, QA Agent — implemented declaratively in **a single .md file**. The same principle of MCP-governed tool access applies via the `tools` field. The 11 skills of sdlc-toolkit (`/spec`, `/architect`, `/validate`, `/review`, etc.) are production examples that use this Skills system.
 
 #### `/simplify` — Built-in QA Agent
 
@@ -665,10 +665,10 @@ Multi-agent systems have unique failure modes absent in single-agent setups:
 | **Hallucination propagation** | One agent's hallucination becomes the next agent's ground truth | Independent validation gate at each phase |
 | **Infinite refinement loop** | QA→Coder→QA cycles without convergence | Retry cap (3×) + human escalation |
 | **State desynchronization** | File conflicts between parallel agents | Git worktree isolation — each agent has an independent workspace |
-| **Cost explosion** | Uncontrolled agent spawning | Concurrency cap (5 agents) + model tier routing (exploration: haiku, implementation: sonnet, review: opus) |
+| **Cost escalation** | Uncontrolled agent spawning | Concurrency cap (5 agents) + model tier routing (exploration: haiku, implementation: sonnet, review: opus) |
 
 <Aside type="caution" title="The Most Dangerous Failure Mode">
-**Hallucination propagation** is the hardest to detect. If the Planner specifies a non-existent API in the spec, the Architect accepts it as fact and decomposes tasks accordingly, and the Coder writes code that calls that API. **Every agent performed correctly within its own stage**, yet the output is completely wrong. This is the fundamental reason why **independent validation gates at each phase are necessary**.
+**Hallucination propagation** is the hardest to detect. If the Planner specifies a non-existent API in the spec, the Architect accepts it as fact and decomposes tasks accordingly, and the Coder writes code that calls that API. **Each agent operated correctly within its own stage**, yet the final output is wrong. This is the fundamental reason why **independent validation gates at each phase are necessary**.
 </Aside>
 
 ---

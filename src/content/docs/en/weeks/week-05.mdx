@@ -88,7 +88,7 @@ Context Rot is the phenomenon where an agent's context window becomes increasing
 
 #### Empirical Data: Chroma's Context Rot Research
 
-"Longer context gets worse" is intuitive, but **how much** worse was first quantified by Chroma's 2026 empirical study. Testing 18 frontier models (Claude, GPT, Gemini, Llama, and others):
+"Longer context gets worse" is intuitive, but Chroma's 2026 empirical study provides a representative quantitative measurement of **how much** worse it gets. Testing 18 frontier models (Claude, GPT, Gemini, Llama, and others):
 
 | Finding | Data |
 |---------|------|
@@ -420,7 +420,7 @@ Measure context usage directly and compare before and after compaction to experi
 1. **Context Rot is an empirical phenomenon** — Chroma study: accuracy degrades as input grows longer across all 18 models. 30%+ degradation at mid-window positions.
 2. **A 1M token window is not the solution** — a bigger window just means a larger space for Context Rot to occur in. Effective usage is 60-70%.
 3. **Compaction is token-based** — auto-triggered at ~75% of model maximum. Preserves the last 4 messages, summarizes the rest.
-4. **Ralph's fresh context is best between loops** — use compaction inside a loop, full reset + state file handoff between loops.
+4. **Ralph's fresh context is the default between loops** — use compaction inside a loop, full reset + state file handoff between loops.
 5. **40-70% of tokens are wasted** — cut costs with model routing (Haiku 60-70%), prompt caching (read at 0.1x), and keeping CLAUDE.md under 200 lines.
 6. **Initializer pattern** — manage state deterministically with a 2-phase structure: JSON feature list + claude-progress.txt + init.sh.
 
