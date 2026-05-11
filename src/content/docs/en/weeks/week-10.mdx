@@ -1,6 +1,6 @@
 ---
 title: "Week 10: Open-Weight Coding LLMs and Local Deployment"
-description: Beyond commercial APIs — current open-weight coding models, AI coding CLIs, and vLLM-based local inference operations
+description: Beyond commercial APIs — open-weight model candidates, AI coding CLIs, and vLLM-based local inference operations
 week: 10
 phase: 4
 phase_title: Open-Source Models & MLOps
@@ -51,10 +51,10 @@ import { Aside, Steps, Badge, Card, CardGrid, Tabs, TabItem } from '@astrojs/sta
 
 ### 2026 open-weight coding LLM landscape
 
-The defining shift of 2026 is not "open-source models are usable" but **open-weight models compete with commercial models inside real agent harnesses**. Coding performance is no longer the only axis: tool calling, long context, inference-server compatibility, license, and operating cost are now compared together.
+The defining shift of 2026 is that open-weight models have become candidates that can be compared with commercial models inside real agent harnesses. Coding performance is no longer the only axis: tool calling, long context, inference-server compatibility, license, and operating cost are now compared together.
 
 <Aside type="note" title="Open-source vs open-weight">
-Most current "open" releases are not open-source in the full sense — training code and data are typically not public, only the weights and inference rights. This course uses **open-weight model** as the default term for accuracy.
+Many "open" releases are not open-source in the full sense — training code and data are typically not public, only the weights and inference rights. This course uses **open-weight model** as the default term for accuracy.
 </Aside>
 
 #### Family tree
@@ -95,11 +95,11 @@ Most current "open" releases are not open-source in the full sense — training 
 
 | Model | Release form | Parameters | Context | Strengths | Operational notes |
 |------|--------------|------------|---------|-----------|------------------|
-| **Qwen3-Coder-Next** | Apache 2.0 | 80B MoE, 3B active | 256K | agentic coding, tool calling, local development | Smaller, faster successor to the 480B-A35B generation |
-| **DeepSeek-V4-Pro / Flash** | Public model card | 1.6T / 284B MoE | 1M | long-context reasoning, coding, agentic tasks | Pro for quality, Flash for efficiency. More current than V3.2 |
-| **GLM-5.1** | Public weights | latest GLM card | long-context agent work | agentic engineering, coding, tool use | Current GLM-family baseline |
-| **MiniMax-M2.7** | Public model card | 230B-class MoE | long agentic workflow | coding, search, office work, long-horizon agents | More current MiniMax agentic candidate than M2.5 |
-| **DeepSeek-Coder-V2-Lite** | DeepSeek | 16B / 236B family | 128K | single-GPU labs, code edit/completion | Suitable for teaching labs, not a frontier benchmark |
+| **Qwen3-Coder-Next** | Apache 2.0 | 80B MoE, 3B active | 256K | agentic coding, tool calling, local development | More lightweight coding-agent candidate than the larger previous generation |
+| **DeepSeek-V4-Pro / Flash** | Public model card | 1.6T / 284B MoE | 1M | long-context reasoning, coding, agentic tasks | Pro for quality, Flash for efficiency |
+| **GLM-5.1** | Public weights | public GLM family | long-context agent work | agentic engineering, coding, tool use | GLM-family comparison baseline |
+| **MiniMax-M2.7** | Public model card | 230B-class MoE | long agentic workflow | coding, search, office work, long-horizon agents | MiniMax-family agentic candidate |
+| **DeepSeek-Coder-V2-Lite** | DeepSeek | 16B / 236B family | 128K | single-GPU labs, code edit/completion | Suitable for teaching labs, but not for a high-performance baseline |
 
 #### Reading model cards in order
 
@@ -113,32 +113,32 @@ Read operational constraints before benchmark tables. Evaluate candidates in thi
 | Context policy | Do max context and recommended context differ? | "1M context" claim without GPU budget |
 | Failure behavior | How do OOM, invalid JSON, refusal, and timeout surface? | Failures unstructured, retry policy hard to design |
 
-The "current" entries in the table are candidates as of the lecture date. The capstone selection criterion is not the model name but **the reproducible result of running the same task packet with the same harness**.
+The entries in the table are candidates as of the lecture date. The capstone selection criterion is not the model name but **the reproducible result of running the same task packet with the same harness**.
 
 #### Qwen3-Coder
 
 Qwen3-Coder-Next is an 80B-total / 3B-active MoE model with 256K context, foregrounding agentic coding and tool calling. It is a smaller and faster coding-agent candidate than its larger predecessors and serves as our Qwen-family baseline.
 
-Operationally, Qwen3-Coder is meaningful not because it "writes good code" but because long repository context, function-calling format, and vLLM/SGLang deployment support combine to make it a viable candidate for **building agentic coding harnesses on local or institutional servers**.
+Operationally, Qwen3-Coder is meaningful beyond raw coding performance because long repository context, function-calling format, and vLLM/SGLang deployment support combine to make it a viable candidate for **building agentic coding harnesses on local or institutional servers**.
 
 #### DeepSeek-V4
 
-DeepSeek-V4-Pro and DeepSeek-V4-Flash are confirmed as the most current V4-family cards. With 1.6T/284B MoE and 1M context, V4-Pro targets quality and long-context reasoning; V4-Flash targets efficiency and throughput.
+DeepSeek-V4-Pro and DeepSeek-V4-Flash are comparison candidates from the DeepSeek V4-family model cards. With 1.6T/284B MoE and 1M context, V4-Pro targets quality and long-context reasoning; V4-Flash targets efficiency and throughput.
 
 | Family member | Course usage |
 |---------------|--------------|
 | DeepSeek-Coder-V2-Lite | Easy-to-run educational model |
-| DeepSeek-V4-Pro | DeepSeek frontier benchmark |
+| DeepSeek-V4-Pro | DeepSeek high-capability comparison baseline |
 | DeepSeek-V4-Flash | Cost / throughput baseline |
 | Earlier DeepSeek generations | Long-context regression baseline |
 
 #### GLM-5.1
 
-GLM-5.1 is the current public GLM family and the first model to check when comparing agentic engineering and coding workflows. The lesson is constant: switching `model=` is not enough — **the harness must understand each model's tool/reasoning parser and serving options**.
+GLM-5.1 is a public GLM-family candidate for comparing agentic engineering and coding workflows. The lesson is constant: changing the `model=` value is not sufficient — **the harness must understand each model's tool/reasoning parser and serving options**.
 
 #### MiniMax-M2.7
 
-MiniMax-M2.7 is MiniMax's current agentic-workflow candidate, emphasizing search, office work, and long-horizon agentic tasks alongside coding. Vendor benchmarks are vendor claims; the course treats them as candidate signals only. The Week 10 lab compares them on the same task, harness, budget, and rubric.
+MiniMax-M2.7 is a MiniMax-family agentic-workflow candidate, emphasizing search, office work, and long-horizon agentic tasks alongside coding. Provider benchmark numbers are treated as candidate signals, not as final rankings. The Week 10 lab compares them on the same task, harness, budget, and rubric.
 
 <Aside type="caution" title="Reading benchmark numbers">
 SWE-bench, Terminal-Bench, and BrowseComp scores depend heavily on harness, prompt, tool policy, and retry budget. Use model tables to choose what to test, but rely on lab-reproduced results for the final selection.
@@ -146,7 +146,7 @@ SWE-bench, Terminal-Bench, and BrowseComp scores depend heavily on harness, prom
 
 ### Choosing a model is choosing a harness
 
-Adopting open-weight models is not just about saving on API spend. There are three real options.
+Adopting open-weight models is not limited to API cost reduction. There are three real options.
 
 <CardGrid>
   <Card title="Commercial API" icon="external">
@@ -167,7 +167,7 @@ Adopting open-weight models is not just about saving on API spend. There are thr
 | Time-to-start | very fast | fast | slow |
 | Data control | low–medium | medium | high |
 | Long-term cost | usage-driven | seat / usage | GPU fixed cost |
-| Access to latest models | fast | fast | after model release |
+| Access to newly released models | fast | fast | after model release |
 | Operational difficulty | low | medium | high |
 | Educational value | API design | workflow design | MLOps / infra understanding |
 
@@ -190,7 +190,7 @@ Adopting open-weight models is not just about saving on API spend. There are thr
     </div>
     <div class="diagram__arrow">▼</div>
     <div class="diagram__node diagram__node--gray diagram__node--wide">
-      <span class="diagram__node__label">Q2. Need a frontier model?</span>
+      <span class="diagram__node__label">Q2. Need top-tier model quality?</span>
     </div>
     <div class="diagram__branch">
       <div style="background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.25); color: #22C55E;">
@@ -263,13 +263,13 @@ To compare commercial APIs and local inference on the same axis, account for bot
 
 ```text
 Example
-  - Commercial model: $3/M in, $15/M out → ~$0.012 per call (3K in, 600 out)
-  - DGX H100 ~ $4.5/hr (assumed student rate), 4 concurrent calls
+  - Commercial API example: $3/M in, $15/M out → ~$0.012 per call (3K in, 600 out)
+  - DGX H100 ~ $4.5/hr (instructional-rate assumption), 4 concurrent calls
   - Local cost ≈ 4.5 / 4 / (3600/12) ≈ $0.0038
   - Break-even: above ~375 calls per hour, local wins
 ```
 
-This table goes straight into the capstone slide titled "why we chose local."
+This table can be used in the capstone slide titled "why we chose local."
 
 ### Agentic coding tool ecosystem
 
@@ -359,7 +359,7 @@ OpenAI compatibility is the starting line. To swap models in production, the ada
 | Token accounting | Connect prompt/completion/cache tokens with run_id |
 | Evaluation hook | Same task packet must be runnable across commercial and local models |
 
-Without this checklist, "model interchangeable" is a code comment, not an operational property.
+Without this checklist, "model interchangeable" is an unimplemented claim, not an operational property.
 
 ```python
 # adapter.py — a thin layer that unifies alias, tool parsing, and token accounting
@@ -498,7 +498,7 @@ def call(alias: str, messages: list[dict], **kw) -> dict:
 </Steps>
 
 <Aside type="tip" title="What matters in the lab">
-Knowing many model names is less important than producing **a reproducible decision rationale in your own environment**: same task, same harness, same evaluation criteria.
+Listing model names is less important than producing **a reproducible decision rationale in your own environment**: same task, same harness, same evaluation criteria.
 </Aside>
 
 ## Assignment
@@ -526,7 +526,7 @@ Knowing many model names is less important than producing **a reproducible decis
 3. **Three options coexist**: commercial API, cloud agent, and local inference each fit different work types.
 4. **vLLM, SGLang, and TGI are complementary**: vLLM as default, SGLang for RadixAttention study, TGI for fast PoC.
 5. **Cost lives at the break-even line**: do not look at token price alone — fold in GPU-hour cost and concurrency.
-6. **The model adapter is operational equity**: aliases, tool parsers, token accounting, and retry policies decide whether "swap models" is real.
+6. **The model adapter is an operational asset**: aliases, tool parsers, token accounting, and retry policies decide whether "swap models" is real.
 7. **Reproducible rationale, not model names**: the capstone decision document is built from your lab evidence, not vendor benchmarks.
 
 ## Further Reading
