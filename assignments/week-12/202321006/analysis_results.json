@@ -1,0 +1,71 @@
+{
+  "stats": {
+    "spearman_rho": 1.0,
+    "spearman_p": 0.0,
+    "pearson_r": 0.9962,
+    "pearson_p": 0.0,
+    "n": 10
+  },
+  "details": [
+    {
+      "sample": "Perfect Add",
+      "human": 9.5,
+      "judge": 10.0,
+      "verdict": "pass"
+    },
+    {
+      "sample": "Messy Parser",
+      "human": 4.0,
+      "judge": 4.9,
+      "verdict": "revise"
+    },
+    {
+      "sample": "Broken Logic",
+      "human": 2.0,
+      "judge": 2.2,
+      "verdict": "fail"
+    },
+    {
+      "sample": "Solid Auth",
+      "human": 8.5,
+      "judge": 9.3,
+      "verdict": "pass"
+    },
+    {
+      "sample": "Over-engineered",
+      "human": 5.5,
+      "judge": 6.6,
+      "verdict": "revise"
+    },
+    {
+      "sample": "Vulnerable SQL",
+      "human": 2.5,
+      "judge": 3.3,
+      "verdict": "revise"
+    },
+    {
+      "sample": "Clean API",
+      "human": 9.0,
+      "judge": 9.9,
+      "verdict": "pass"
+    },
+    {
+      "sample": "No Error Handling",
+      "human": 4.5,
+      "judge": 5.5,
+      "verdict": "revise"
+    },
+    {
+      "sample": "Great Coverage",
+      "human": 8.0,
+      "judge": 8.8,
+      "verdict": "pass"
+    },
+    {
+      "sample": "Spaghetti Code",
+      "human": 3.0,
+      "judge": 3.8,
+      "verdict": "revise"
+    }
+  ]
+}

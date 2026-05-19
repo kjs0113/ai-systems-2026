@@ -1,0 +1,322 @@
+{
+  "run-1779161340981": {
+    "tools": [
+      {
+        "type": "tool.result",
+        "ts": "2026-05-19T03:29:01.081751Z",
+        "run_id": "run-1779161340981",
+        "tool": "run_tests",
+        "status": "ok"
+      }
+    ],
+    "tests": [
+      {
+        "type": "test.result",
+        "ts": "2026-05-19T03:29:01.081771Z",
+        "run_id": "run-1779161340981",
+        "command": "pytest",
+        "passed": true
+      }
+    ],
+    "judge": {
+      "type": "judge.result",
+      "ts": "2026-05-19T03:29:01.081845Z",
+      "run_id": "run-1779161340981",
+      "overall": 10.0,
+      "verdict": "pass"
+    },
+    "status": "closed",
+    "cost": 0,
+    "task_id": "S01",
+    "model": "sonnet-4.6",
+    "final_status": "success"
+  },
+  "run-1779161341081": {
+    "tools": [
+      {
+        "type": "tool.result",
+        "ts": "2026-05-19T03:29:01.182392Z",
+        "run_id": "run-1779161341081",
+        "tool": "run_tests",
+        "status": "ok"
+      }
+    ],
+    "tests": [
+      {
+        "type": "test.result",
+        "ts": "2026-05-19T03:29:01.182412Z",
+        "run_id": "run-1779161341081",
+        "command": "pytest",
+        "passed": true
+      }
+    ],
+    "judge": {
+      "type": "judge.result",
+      "ts": "2026-05-19T03:29:01.182489Z",
+      "run_id": "run-1779161341081",
+      "overall": 4.9,
+      "verdict": "revise"
+    },
+    "status": "closed",
+    "cost": 0,
+    "task_id": "S02",
+    "model": "sonnet-4.6",
+    "final_status": "success"
+  },
+  "run-1779161341182": {
+    "tools": [
+      {
+        "type": "tool.result",
+        "ts": "2026-05-19T03:29:01.283071Z",
+        "run_id": "run-1779161341182",
+        "tool": "run_tests",
+        "status": "error"
+      }
+    ],
+    "tests": [
+      {
+        "type": "test.result",
+        "ts": "2026-05-19T03:29:01.283091Z",
+        "run_id": "run-1779161341182",
+        "command": "pytest",
+        "passed": false
+      }
+    ],
+    "judge": {
+      "type": "judge.result",
+      "ts": "2026-05-19T03:29:01.283169Z",
+      "run_id": "run-1779161341182",
+      "overall": 2.2,
+      "verdict": "revise"
+    },
+    "status": "closed",
+    "cost": 0,
+    "task_id": "S03",
+    "model": "sonnet-4.6",
+    "final_status": "failed"
+  },
+  "run-1779161341283": {
+    "tools": [
+      {
+        "type": "tool.result",
+        "ts": "2026-05-19T03:29:01.383690Z",
+        "run_id": "run-1779161341283",
+        "tool": "run_tests",
+        "status": "ok"
+      }
+    ],
+    "tests": [
+      {
+        "type": "test.result",
+        "ts": "2026-05-19T03:29:01.383710Z",
+        "run_id": "run-1779161341283",
+        "command": "pytest",
+        "passed": true
+      }
+    ],
+    "judge": {
+      "type": "judge.result",
+      "ts": "2026-05-19T03:29:01.383781Z",
+      "run_id": "run-1779161341283",
+      "overall": 9.3,
+      "verdict": "pass"
+    },
+    "status": "closed",
+    "cost": 0,
+    "task_id": "S04",
+    "model": "sonnet-4.6",
+    "final_status": "success"
+  },
+  "run-1779161341383": {
+    "tools": [
+      {
+        "type": "tool.result",
+        "ts": "2026-05-19T03:29:01.484345Z",
+        "run_id": "run-1779161341383",
+        "tool": "run_tests",
+        "status": "ok"
+      }
+    ],
+    "tests": [
+      {
+        "type": "test.result",
+        "ts": "2026-05-19T03:29:01.484364Z",
+        "run_id": "run-1779161341383",
+        "command": "pytest",
+        "passed": true
+      }
+    ],
+    "judge": {
+      "type": "judge.result",
+      "ts": "2026-05-19T03:29:01.484438Z",
+      "run_id": "run-1779161341383",
+      "overall": 6.6,
+      "verdict": "revise"
+    },
+    "status": "closed",
+    "cost": 0,
+    "task_id": "S05",
+    "model": "sonnet-4.6",
+    "final_status": "success"
+  },
+  "run-1779161341484": {
+    "tools": [
+      {
+        "type": "tool.result",
+        "ts": "2026-05-19T03:29:01.584970Z",
+        "run_id": "run-1779161341484",
+        "tool": "run_tests",
+        "status": "ok"
+      }
+    ],
+    "tests": [
+      {
+        "type": "test.result",
+        "ts": "2026-05-19T03:29:01.584990Z",
+        "run_id": "run-1779161341484",
+        "command": "pytest",
+        "passed": true
+      }
+    ],
+    "judge": {
+      "type": "judge.result",
+      "ts": "2026-05-19T03:29:01.585088Z",
+      "run_id": "run-1779161341484",
+      "overall": 3.3,
+      "verdict": "revise"
+    },
+    "status": "closed",
+    "cost": 0,
+    "task_id": "S06",
+    "model": "sonnet-4.6",
+    "final_status": "success"
+  },
+  "run-1779161341585": {
+    "tools": [
+      {
+        "type": "tool.result",
+        "ts": "2026-05-19T03:29:01.685700Z",
+        "run_id": "run-1779161341585",
+        "tool": "run_tests",
+        "status": "ok"
+      }
+    ],
+    "tests": [
+      {
+        "type": "test.result",
+        "ts": "2026-05-19T03:29:01.685720Z",
+        "run_id": "run-1779161341585",
+        "command": "pytest",
+        "passed": true
+      }
+    ],
+    "judge": {
+      "type": "judge.result",
+      "ts": "2026-05-19T03:29:01.685787Z",
+      "run_id": "run-1779161341585",
+      "overall": 9.9,
+      "verdict": "pass"
+    },
+    "status": "closed",
+    "cost": 0,
+    "task_id": "S07",
+    "model": "sonnet-4.6",
+    "final_status": "success"
+  },
+  "run-1779161341685": {
+    "tools": [
+      {
+        "type": "tool.result",
+        "ts": "2026-05-19T03:29:01.786327Z",
+        "run_id": "run-1779161341685",
+        "tool": "run_tests",
+        "status": "ok"
+      }
+    ],
+    "tests": [
+      {
+        "type": "test.result",
+        "ts": "2026-05-19T03:29:01.786347Z",
+        "run_id": "run-1779161341685",
+        "command": "pytest",
+        "passed": true
+      }
+    ],
+    "judge": {
+      "type": "judge.result",
+      "ts": "2026-05-19T03:29:01.786421Z",
+      "run_id": "run-1779161341685",
+      "overall": 5.5,
+      "verdict": "revise"
+    },
+    "status": "closed",
+    "cost": 0,
+    "task_id": "S08",
+    "model": "sonnet-4.6",
+    "final_status": "success"
+  },
+  "run-1779161341786": {
+    "tools": [
+      {
+        "type": "tool.result",
+        "ts": "2026-05-19T03:29:01.887022Z",
+        "run_id": "run-1779161341786",
+        "tool": "run_tests",
+        "status": "ok"
+      }
+    ],
+    "tests": [
+      {
+        "type": "test.result",
+        "ts": "2026-05-19T03:29:01.887046Z",
+        "run_id": "run-1779161341786",
+        "command": "pytest",
+        "passed": true
+      }
+    ],
+    "judge": {
+      "type": "judge.result",
+      "ts": "2026-05-19T03:29:01.887128Z",
+      "run_id": "run-1779161341786",
+      "overall": 8.8,
+      "verdict": "pass"
+    },
+    "status": "closed",
+    "cost": 0,
+    "task_id": "S09",
+    "model": "sonnet-4.6",
+    "final_status": "success"
+  },
+  "run-1779161341887": {
+    "tools": [
+      {
+        "type": "tool.result",
+        "ts": "2026-05-19T03:29:01.987678Z",
+        "run_id": "run-1779161341887",
+        "tool": "run_tests",
+        "status": "ok"
+      }
+    ],
+    "tests": [
+      {
+        "type": "test.result",
+        "ts": "2026-05-19T03:29:01.987697Z",
+        "run_id": "run-1779161341887",
+        "command": "pytest",
+        "passed": true
+      }
+    ],
+    "judge": {
+      "type": "judge.result",
+      "ts": "2026-05-19T03:29:01.987769Z",
+      "run_id": "run-1779161341887",
+      "overall": 3.8,
+      "verdict": "revise"
+    },
+    "status": "closed",
+    "cost": 0,
+    "task_id": "S10",
+    "model": "sonnet-4.6",
+    "final_status": "success"
+  }
+}
