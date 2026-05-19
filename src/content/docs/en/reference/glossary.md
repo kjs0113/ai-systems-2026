@@ -18,6 +18,12 @@ Key terms used in this course, arranged alphabetically.
 **Agentic System**
 : An AI system that autonomously performs real actions such as file modification, code execution, and API calls. It goes beyond simple text generation to interact with its environment.
 
+**Agent Ops**
+: The operational discipline for agentic systems. It focuses on tool boundaries, permissions, event logs, replay, policy gates, human override, and telemetry rather than only model deployment.
+
+**Automatic Prefix Caching**
+: An inference server optimization that reuses KV cache for repeated static prefixes such as system prompts, tool schemas, and instruction files. It is especially useful for Ralph loops with stable long prefixes.
+
 **Bitter Lesson**
 : A principle articulated by Rich Sutton (2019): general methods that leverage computation ultimately prove more effective than specialized methods that leverage domain knowledge. Pre-training scaling (GPT-3 → GPT-4) is the "learning" side; test-time compute scaling (o1, DeepSeek R1) is the "search" side.
 
@@ -28,13 +34,16 @@ Key terms used in this course, arranged alphabetically.
 : The degradation of reasoning quality in long-running agents as the context window fills with failed attempts and stale code.
 
 **Context Window**
-: The maximum number of tokens an LLM can process in a single pass. Approximately 200K tokens for Claude Sonnet 4.6.
+: The maximum number of tokens an LLM can process in a single pass. Current frontier models offer hundreds-of-thousands to million-token-class windows, while effective usage is lower because of tool schemas and safety margins.
 
 **CUD Operations**
 : Create, Update, Delete operations. Classified as High Risk in HOTL governance, requiring a Hard Interrupt for human approval.
 
-**DeepSeek V3**
-: DeepSeek's 685B MoE model with 37B active parameters. Top-tier performance on math, reasoning, and coding. Requires an 8×H100-class cluster.
+**DeepSeek-V4**
+: DeepSeek's current V4 open-weight family. `DeepSeek-V4-Pro` is listed as a 1.6T total / 49B active MoE model, while `DeepSeek-V4-Flash` is listed as a 284B total / 13B active MoE model. Both target 1M context, long-context reasoning, coding, and agentic tasks.
+
+**Disaggregated Prefill**
+: A serving architecture that separates prefill and decode onto different workers or GPUs. It reduces queue blocking when long inputs and short responses share the same serving system.
 
 **DGX H100**
 : NVIDIA's enterprise-grade AI server. The model installed in the Cheju Halla University AI Lab. Equipped with 8 H100 GPUs.
@@ -81,26 +90,29 @@ Key terms used in this course, arranged alphabetically.
 **MIG (Multi-Instance GPU)**
 : NVIDIA technology that partitions a GPU into independent instances. Up to 7 instances on an H100. Provides hardware-level isolation.
 
-**MiniMax M2.1**
-: MiniMax's 230B MoE model (10B active). Specialized for coding agents and tool use. Fully open weights.
+**MiniMax-M2.7**
+: MiniMax's current 229B-class agentic model candidate. It emphasizes coding, search, office work, and long-horizon agentic workflows. Vendor benchmark claims should be revalidated in the course harness.
 
 **MoE (Mixture of Experts)**
-: An LLM architecture that activates only a subset of total parameters during inference, improving efficiency. Used in Qwen3-Coder, DeepSeek V3, MiniMax M2.1, and others.
+: An LLM architecture that activates only a subset of total parameters during inference, improving efficiency. Used in Qwen3-Coder-Next, DeepSeek-V4, MiniMax-M2.7, and others.
 
 **OBO (On-Behalf-Of)**
 : An authentication pattern in which an MCP server operates using a delegated user/agent identity rather than a service account. Uses OAuth 2.1 token exchange to explicitly record "on whose behalf" an action is taken, resolving the accountability breakdown problem in agentic environments.
 
 **Qwen3-Coder**
-: Alibaba's 235B MoE coding-specialized model (22B active, 128K context). Performance approaching commercial models on SWE-bench. Apache 2.0 license.
+: Alibaba's coding-specialized MoE model family. The current course baseline is `Qwen3-Coder-Next`, with 80B total / 3B active parameters, 256K context, and Apache 2.0 licensing.
 
-**GLM-4.7**
-: Zhipu AI's ~32B Dense coding model. High reasoning quality via Interleaved Thinking. Can run on a single GPU. Available on HuggingFace/ModelScope.
+**GLM-5.1**
+: A current public GLM model from the Z.ai/Zhipu family. It emphasizes agentic engineering, coding, terminal tasks, and tool use, and serves as the current GLM comparison baseline.
 
 **SGLang**
 : A leading open-source LLM inference framework alongside vLLM. Provides high throughput via RadixAttention-based KV cache reuse.
 
 **PagedAttention**
 : The core technology of vLLM. Applies OS virtual memory paging to the KV cache, reducing memory waste to under 4%.
+
+**Speculative Decoding**
+: An inference acceleration technique where a draft model, n-gram speculation, or multi-token prediction proposes candidate tokens and the target model verifies them. The goal is lower latency without changing output quality.
 
 **AI Coding CLI**
 : The collective term for command-line tools that run AI agents in the terminal. Includes Claude Code, Gemini CLI, Codex CLI, and OpenCode. Can be automated in headless mode within a Ralph Loop.
@@ -139,4 +151,4 @@ Key terms used in this course, arranged alphabetically.
 : A three-layer defense architecture of AI Gateway → MCP Gateway → API Gateway. The first AI gateway filters prompt injections and PII; the second MCP gateway performs TBAC authorization; the third API gateway applies rate limiting. Each gate handles independent concerns, preventing a single point of failure.
 
 **vLLM**
-: An open-source high-throughput LLM inference library. Maximizes GPU memory efficiency via the PagedAttention algorithm.
+: An open-source high-throughput LLM inference library. Provides PagedAttention, automatic prefix caching, speculative decoding, structured outputs, OpenAI-compatible serving, and observability examples.

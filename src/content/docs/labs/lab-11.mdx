@@ -1,7 +1,7 @@
 ---
 title: "Lab 11: 텔레메트리 & 모니터링"
 description: OpenTelemetry 통합, Prometheus+Grafana 설정, 메트릭 수집
-week: 13
+week: 12
 difficulty: 고급
 estimated_time: 6시간
 assignment_due: "2026-05-26"
@@ -152,10 +152,12 @@ def setup_telemetry(
 ```python
 # instrumented_agent.py
 import anthropic
+import os
 import time
 from opentelemetry import trace
 from opentelemetry.trace import Status, StatusCode
 from opentelemetry import metrics
+from event_recorder import EventRecorder
 from telemetry import setup_telemetry
 
 tracer, meter = setup_telemetry(service_name="lab11-agent")
@@ -184,7 +186,12 @@ iteration_counter = meter.create_counter(
 class InstrumentedAgent:
     def __init__(self):
         self.client = anthropic.Anthropic()
+        self.model = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-6")
         self.messages: list[dict] = []
+        self.recorder = EventRecorder("sessions/example")
+        self.session_event_id = self.recorder.append(
+            "session.start", "agent", {"model": self.model}
+        )
 
     def call(self, prompt: str, iteration: int = 1) -> str:
         with tracer.start_as_current_span("agent.call") as span:
@@ -195,8 +202,14 @@ class InstrumentedAgent:
 
             try:
                 self.messages.append({"role": "user", "content": prompt})
+                request_event_id = self.recorder.append(
+                    "llm.request",
+                    "agent",
+                    {"iteration": iteration, "prompt_length": len(prompt)},
+                    parent_id=self.session_event_id,
+                )
                 response = self.client.messages.create(
-                    model="claude-sonnet-4-6",
+                    model=self.model,
                     max_tokens=2048,
                     messages=self.messages
                 )
@@ -206,7 +219,7 @@ class InstrumentedAgent:
                 self.messages.append({"role": "assistant", "content": text})
 
                 # 메트릭 기록
-                labels = {"model": "claude-sonnet-4-6", "iteration": str(iteration)}
+                labels = {"model": self.model, "iteration": str(iteration)}
                 token_counter.add(
                     response.usage.input_tokens + response.usage.output_tokens,
                     labels
@@ -219,6 +232,17 @@ class InstrumentedAgent:
                 span.set_attribute("output_tokens", response.usage.output_tokens)
                 span.set_attribute("duration_ms", elapsed_ms)
                 span.set_status(Status(StatusCode.OK))
+                self.recorder.append(
+                    "llm.response",
+                    "agent",
+                    {
+                        "iteration": iteration,
+                        "input_tokens": response.usage.input_tokens,
+                        "output_tokens": response.usage.output_tokens,
+                        "duration_ms": elapsed_ms,
+                    },
+                    parent_id=request_event_id,
+                )
 
                 return text
 
@@ -226,10 +250,50 @@ class InstrumentedAgent:
                 span.set_status(Status(StatusCode.ERROR, str(e)))
                 span.record_exception(e)
                 error_counter.add(1, {"error_type": type(e).__name__})
+                self.recorder.append(
+                    "hook.fired",
+                    "agent",
+                    {"error_type": type(e).__name__, "message": str(e)},
+                    parent_id=self.session_event_id,
+                )
                 raise
 ```
 
-### 4. Grafana 대시보드 프로비저닝
+### 4. `event_recorder.py` — 재생 가능한 이벤트 로그
+
+OpenTelemetry는 live monitoring용이고, Agent OS Runtime의 event log는 audit/replay용이다. `instrumented_agent.py`는 주요 lifecycle마다 `.events.jsonl`에도 기록해야 한다.
+
+```python
+# event_recorder.py
+import json
+import time
+from pathlib import Path
+from uuid import uuid4
+
+class EventRecorder:
+    def __init__(self, session_dir: str):
+        self.session_dir = Path(session_dir)
+        self.session_dir.mkdir(parents=True, exist_ok=True)
+        self.path = self.session_dir / ".events.jsonl"
+
+    def append(self, event_type: str, actor: str, payload: dict, parent_id: str | None = None) -> str:
+        event = {
+            "id": str(uuid4()),
+            "ts": time.time(),
+            "type": event_type,
+            "actor": actor,
+            "payload": payload,
+            "schema_version": "v1",
+            "parent_id": parent_id,
+        }
+        with self.path.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(event, ensure_ascii=False) + "\n")
+        return event["id"]
+```
+
+필수 event type: `session.start`, `llm.request`, `llm.response`, `hook.fired`, `tool.invoke`, `tool.result`, `session.close`. 재생 기준은 [Agent OS Checklist](/reference/agent-os-runtime/#checklist)를 따른다.
+
+### 5. Grafana 대시보드 프로비저닝
 
 ```json
 // grafana/provisioning/dashboards/agent-dashboard.json
@@ -279,7 +343,7 @@ class InstrumentedAgent:
 }
 ```
 
-### 5. 부하 생성 스크립트
+### 6. 부하 생성 스크립트
 
 ```python
 # load_generator.py
@@ -327,6 +391,9 @@ if __name__ == "__main__":
 - [ ] `prometheus.yml` — 스크레이핑 설정
 - [ ] `telemetry.py` — OTel 초기화
 - [ ] `instrumented_agent.py` — 4개 메트릭 계측된 에이전트
+- [ ] `event_recorder.py` — `.events.jsonl` 기록기
+- [ ] `sessions/example/.events.jsonl` — 실행 trace
+- [ ] `replay_snapshot.json` — event log에서 재계산한 최종 상태
 - [ ] `load_generator.py` — 부하 생성 스크립트
 - [ ] `screenshots/grafana_dashboard.png` — Grafana 대시보드 캡처
 - [ ] `screenshots/jaeger_trace.png` — Jaeger 트레이스 캡처

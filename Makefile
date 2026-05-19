@@ -78,15 +78,26 @@ endif
 		'' \
 		> "$$FILE"; \
 	printf '%s\n' \
-		"import { Aside, Steps, Badge } from '@astrojs/starlight/components';" \
+		"import { Aside, Steps, Badge, Card, CardGrid } from '@astrojs/starlight/components';" \
 		'' \
 		'## 이론 (Theory)' \
+		'' \
+		'### 오늘의 학습 목표' \
+		'' \
+		'<CardGrid>' \
+		'  <Card title="개념 관점" icon="open-book">TODO</Card>' \
+		'  <Card title="설계 관점" icon="seti:config">TODO</Card>' \
+		'  <Card title="구현 관점" icon="pencil">TODO</Card>' \
+		'  <Card title="운영 관점" icon="rocket">TODO</Card>' \
+		'</CardGrid>' \
 		'' \
 		'TODO' \
 		'' \
 		'## 실습 (Practicum)' \
 		'' \
-		'TODO' \
+		'<Steps>' \
+		'1. **TODO**' \
+		'</Steps>' \
 		'' \
 		'## 과제 (Assignment)' \
 		'' \
@@ -97,6 +108,14 @@ endif
 		'**제출 마감**: TODO' \
 		'' \
 		'</div>' \
+		'' \
+		'## 핵심 정리' \
+		'' \
+		'1. TODO' \
+		'' \
+		'## 더 읽을거리' \
+		'' \
+		'- TODO' \
 		>> "$$FILE"; \
 	echo "Created: $$FILE"
 

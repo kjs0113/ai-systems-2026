@@ -62,6 +62,8 @@ A single agent shows limitations on complex tasks. By separating roles so that e
 
 All agents exchange data using a defined schema.
 
+The minimum shared contract for this lab is Agent OS Runtime's `lead_directive_v1`, `plan_v1`, `worker_report_v1`, and `review_result_v1`. The `planner_output.json` and `coder_output.json` below are domain-specific extensions. Submissions must include the minimum shared contracts as well. Use [Agent OS Contracts](/en/reference/agent-os-runtime/#contracts) as the canonical source.
+
 ```json
 // schemas/planner_output.json
 {
@@ -138,6 +140,7 @@ All agents exchange data using a defined schema.
 # base_agent.py
 import anthropic
 import json
+import os
 from abc import ABC, abstractmethod
 from pathlib import Path
 from jsonschema import validate, ValidationError
@@ -166,8 +169,9 @@ class BaseAgent(ABC):
 
     def _call(self, system: str, user: str) -> str:
         self.messages.append({"role": "user", "content": user})
+        model = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-6")
         response = self.client.messages.create(
-            model="claude-sonnet-4-6",
+            model=model,
             max_tokens=4096,
             system=system,
             messages=self.messages,
@@ -357,12 +361,15 @@ Based on the 2 stages you implemented, document the design for the remaining 3 s
 
 Submit a PR to `assignments/lab-07/[student-id]/`:
 
+- [ ] `schemas/lead_directive_v1.json`, `plan_v1.json`, `worker_report_v1.json`, `review_result_v1.json`
 - [ ] `schemas/planner_output.json`, `schemas/coder_output.json`
 - [ ] `base_agent.py` — Common base class
 - [ ] `planner_agent.py` — Fully functional planner
 - [ ] `coder_agent.py` — Fully functional coder
 - [ ] `pipeline.py` — Script connecting and running Planner→Coder
 - [ ] `pipeline_design.md` — Full 5-stage design document
+- [ ] `sessions/example/.events.jsonl` or equivalent execution trace
+- [ ] `replay_snapshot.json` — final state derived from the execution trace
 - [ ] `README.md` — Execution results and anticipated challenges when extending the pipeline
 
 <Aside type="caution" title="Schema Validation">

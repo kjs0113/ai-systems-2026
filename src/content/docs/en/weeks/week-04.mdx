@@ -36,7 +36,7 @@ import { Aside, Steps, Tabs, TabItem, Badge, Card, CardGrid } from '@astrojs/sta
   <Card title="Theory Perspective" icon="open-book">
     Explain why test-time compute scaling is the theoretical foundation of the loop paradigm.
   </Card>
-  <Card title="Ralph Perspective" icon="seti:code">
+  <Card title="Ralph Perspective" icon="pencil">
     Understand and implement the working principles of harness, backpressure, garbage collection, and cumulative learning.
   </Card>
   <Card title="Extension Perspective" icon="rocket">
@@ -214,13 +214,13 @@ The Ralph loop is intentionally **monolithic**:
 The three pillars of the harness:
 
 1. **Backpressure** — the compiler, type checker, and test suite automatically reject agent output. No matter how confidently the agent writes code, if `pytest` fails, that code is as good as nonexistent.
-2. **Garbage Collection** — `git checkout .` completely removes failed code. The repository always returns to the last successful state. Not like a Jenga tower where a wrong block topples everything, but like a potter's wheel where you rework the clay if the shape isn't right.
+2. **Garbage Collection** — `git checkout .` removes failed code. The repository always returns to the last successful state instead of accumulating new attempts on top of failed changes.
 3. **State Tracking** — the checklist in PROMPT.md and git history record progress. The agent in the next loop can assess where the previous loop left off.
 
-#### Huntley's Jenga vs. Pottery Analogy
+#### Failure Accumulation vs State Reset
 
-- **Traditional software**: stacking Jenga blocks — one wrong block and everything collapses
-- **Ralph loop**: clay on the potter's wheel — if the shape isn't right, rework it; repeat indefinitely
+- **Failure accumulation**: failed changes and reasoning history continue to affect the next attempt
+- **Ralph loop**: remove failed changes, preserve only useful lessons in the state file, then retry
 
 #### Cumulative Learning Structure — AGENTS.md
 
@@ -271,14 +271,14 @@ This is the mechanical implementation of "cumulative learning." Rather than a hu
 
 #### Fresh Context vs Continuous Session — Huntley's Choice
 
-In January 2026, an interesting "showdown" took place between Huntley and Anthropic. Anthropic proposed a stop-hook plugin for the Ralph loop that used a **continuous session** approach (repeating while maintaining the same context).
+In January 2026, Huntley and Anthropic presented different approaches to Ralph loop iteration. Anthropic proposed a stop-hook plugin for the Ralph loop that used a **continuous session** approach (repeating while maintaining the same context).
 
 | Approach | Method | Advantages | Disadvantages |
 |----------|--------|-----------|---------------|
 | **Original Ralph** | New session every loop | Context Rot completely prevented, deterministic | Loses context from previous attempts |
 | **Anthropic plugin** | Iterate within continuous session | Remembers previous attempts, faster convergence | Context Rot risk, non-deterministic |
 
-Huntley **chose fresh context**. His reasoning: "If you fail 30 times in a continuous session, the context fills up with failure history and useful reasoning becomes impossible. Better to record just the essentials in AGENTS.md and start clean every time."
+Huntley **chose fresh context**. His reasoning was that repeated failures in a continuous session can fill the context with failure history and make useful reasoning harder. The alternative is to record only the essential lessons in AGENTS.md and start each iteration with a fresh context.
 
 This trade-off connects directly to Week 5's Context Rot — Ralph's fresh context strategy is the first solution to Context Rot.
 
@@ -434,7 +434,7 @@ We won't implement RLM directly in class, but understanding the principle is use
 
 Write only a research direction in `program.md`, and the agent autonomously designs and executes specific experiments.
 
-Released on March 7, 2026, it accumulated 21K GitHub stars and 8.6 million views, becoming the symbol of the loop paradigm. The code is characterized by extreme simplicity: **630 lines, 3 files**.
+Released on March 7, 2026, it accumulated 21K GitHub stars and 8.6 million views, becoming a visible example of the loop paradigm. The code is compact: **630 lines, 3 files**.
 
 #### Real-World Results — autoresearch by the Numbers
 
@@ -530,7 +530,7 @@ LangChain further distills this as **Agent = Model + Harness**. The model is rep
 
 Running loops costs tokens. Infinite iteration is uneconomical. In practice, you need to calculate the **break-even point**.
 
-**Estimated token cost per iteration** (Sonnet 4.6, one code modification):
+**Estimated token cost per iteration** (commercial coding model, one code modification):
 
 | Item | Tokens | Cost |
 |------|--------|------|
@@ -646,7 +646,7 @@ The MIG we learned in Week 3 provided **GPU compute isolation** — one student'
 Boris's core insight: *"When you trust the containment, you accept edits faster. That speeds up the whole loop."* Trusting the isolation reduces human review time per loop cycle, raising the total throughput of the loop.
 
 <Aside type="caution" title="Two Layers of Isolation">
-MIG isolates hardware; `/sandbox` isolates software. When both layers operate together, loop isolation is complete: running a Ralph loop in `/sandbox` mode inside a MIG slice on the DGX keeps both GPU resources and the filesystem safe.
+MIG isolates hardware; `/sandbox` isolates software. When both layers operate together, loop isolation is strengthened: running a Ralph loop in `/sandbox` mode inside a MIG slice on the DGX protects both GPU resources and filesystem boundaries.
 </Aside>
 
 #### Stack Philosophy — Layers Build on Each Other
@@ -713,7 +713,7 @@ gemini "Auto-generate API docs from code"
 Cursor 2.0 productized this pattern with **Background Agents** (running in isolated VMs) and **Mission Control** (a parallel agent dashboard). Codex CLI recorded 1.6 million weekly active users as of March 2026, establishing itself as the reference implementation for open-source harnesses.
 
 <Aside type="caution" title="Practical Constraints of Agentmaxxing">
-- **Merge conflict explosion**: if N agents modify the same file, conflicts scale as N²
+- **Merge conflict spike**: if N agents modify the same file, conflicts scale as N²
 - **Token cost scales linearly**: running 3 tools simultaneously = 3× the cost
 - **Consistency risk**: if each tool applies a different coding style, the codebase fragments
 - **Solution**: clearly separate each agent's domain (module/file), and unify style via CLAUDE.md/AGENTS.md

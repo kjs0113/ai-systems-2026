@@ -1,24 +1,25 @@
 ---
 title: "11주차: vLLM 고처리량 추론 최적화"
-description: CUDA 최적화, PagedAttention, 배치 처리 — 프로덕션 LLM 서버 운영
+description: PagedAttention을 넘어 — prefix caching, speculative decoding, disaggregated prefill, 관측 가능한 LLM serving 운영
 week: 11
 phase: 4
 phase_title: 오픈소스 모델 & MLOps
 date: "2026-05-12"
 theory_topics:
-  - PagedAttention 알고리즘
-  - CUDA 메모리 최적화
-  - 배치 처리와 스케줄링
+  - vLLM V1 serving architecture
+  - KV cache, prefix caching, speculative decoding
+  - disaggregated prefill과 production observability
 lab_topics:
   - vLLM 설정 최적화
-  - 멀티 모델 서빙
+  - 멀티 모델/멀티 테넌트 서빙
+  - Prometheus/Grafana 관측
 assignment: "실습 병행 진행 (Lab 11 준비)"
 assignment_due: "2026-05-19"
 difficulty: 고급
 estimated_time: 6시간
 ---
 
-import { Aside, Steps, Badge } from '@astrojs/starlight/components';
+import { Aside, Steps, Badge, Card, CardGrid, Tabs, TabItem } from '@astrojs/starlight/components';
 
 <div class="week-meta">
   <span class="phase-tag">Phase 4</span>
@@ -29,92 +30,494 @@ import { Aside, Steps, Badge } from '@astrojs/starlight/components';
 
 ## 이론 (Theory)
 
-### PagedAttention: vLLM의 핵심 혁신
+### 오늘의 학습 목표
 
-전통적 LLM 추론은 KV 캐시(Key-Value Cache)를 연속된 메모리 블록으로 할당하여 심각한 메모리 낭비가 발생한다. vLLM의 **PagedAttention**은 OS의 가상 메모리 페이징 개념을 KV 캐시에 적용한다.
+<CardGrid>
+  <Card title="개념 관점" icon="open-book">
+    PagedAttention, prefix caching, chunked prefill, speculative decoding, disaggregated prefill 5가지 최적화가 각각 어떤 병목을 해결하는지 1문장으로 설명한다.
+  </Card>
+  <Card title="설계 관점" icon="seti:config">
+    workload(채팅·배치·RAG·에이전트) 특성을 진단하고 어떤 옵션을 어느 순서로 켤지 의사결정 표로 정리한다.
+  </Card>
+  <Card title="구현 관점" icon="pencil">
+    `vllm serve` 명령으로 단일/멀티 GPU/MIG 서버를 띄우고, OpenAI 호환 client에서 latency·throughput 지표를 기록하며, admission control 큐를 코드로 구현한다.
+  </Card>
+  <Card title="운영 관점" icon="rocket">
+    TTFT, TPOT, queue time, cache hit ratio, error rate 5개 핵심 지표를 Prometheus/Grafana에 노출하고, 옵션 변경 전·후 차이를 정량적으로 보고한다.
+  </Card>
+</CardGrid>
+
+---
+
+### 추론 서버는 모델의 운영체제다
+
+LLM을 직접 배포할 때 모델 파일만으로는 아무 것도 운영되지 않는다. 실제 서비스 품질은 **추론 서버**가 결정한다.
+
+| 운영 문제 | 추론 서버가 하는 일 |
+|-----------|-------------------|
+| GPU 메모리 부족 | KV cache 관리, quantization, tensor parallelism |
+| 요청 지연 | continuous batching, chunked prefill, speculative decoding |
+| 반복 프롬프트 비용 | automatic prefix caching |
+| 장문 입력 폭주 | prefill/decode 분리, max context policy |
+| 장애 분석 | metrics, trace, request log, token accounting |
+
+vLLM은 이 문제를 OpenAI 호환 API로 감싸서 agent harness가 모델을 바꾸더라도 같은 인터페이스를 유지하게 한다.
+
+### PagedAttention: vLLM의 출발점
+
+전통적 LLM 추론은 KV cache를 연속 메모리로 크게 예약한다. 요청 길이가 서로 다르면 빈 공간이 생기고, 장문 요청이 섞이면 fragmentation이 심해진다. vLLM의 **PagedAttention**은 OS 가상 메모리처럼 KV cache를 block 단위로 나누어 필요한 만큼 연결한다.
 
 <div class="diagram">
   <div class="diagram__compare">
     <div class="diagram__node--red" style="padding:0.875rem 1rem;border-radius:0.625rem;border:1px solid rgba(239,68,68,0.25);">
       <span class="diagram__compare__label" style="color:#EF4444;">전통 방식</span>
-      <span class="diagram__node__label" style="font-size:0.85rem;">[KV캐시: 100% 예약]</span>
-      <span class="diagram__node__sub">실제 사용: 30% &#x2192; 낭비: 70%</span>
+      <span class="diagram__node__label" style="font-size:0.85rem;">[KV cache: 최대 길이 예약]</span>
+      <span class="diagram__node__sub">짧은 요청도 큰 공간 점유</span>
     </div>
     <div class="diagram__node--green" style="padding:0.875rem 1rem;border-radius:0.625rem;border:1px solid rgba(34,197,94,0.25);">
       <span class="diagram__compare__label" style="color:#22C55E;">PagedAttention</span>
-      <span class="diagram__node__label" style="font-size:0.85rem;">[블록 1] [블록 2] [블록 3]</span>
-      <span class="diagram__node__sub">필요한 만큼만 동적 할당 &#x2192; 낭비: ~4%</span>
+      <span class="diagram__node__label" style="font-size:0.85rem;">[block] [block] [block]</span>
+      <span class="diagram__node__sub">필요한 블록만 동적 연결</span>
     </div>
   </div>
 </div>
 
-### vLLM 최적화 설정
+#### 메모리 매핑을 그림으로 보자
 
-```python
-# 프로덕션 vLLM 설정
-from vllm import LLM, SamplingParams
+<div class="diagram">
+  <div class="diagram__title">PagedAttention KV Cache Mapping</div>
+  <div class="diagram__cols diagram__cols--2">
+    <div>
+      <div class="diagram__col-title diagram__col-title--blue">논리 KV cache (sequence별)</div>
+      <div class="diagram__node diagram__node--blue diagram__node--full">
+        <span class="diagram__node__label">seq A — t0..t511</span>
+        <span class="diagram__node__sub">두 블록 사용 (block 0, 1)</span>
+      </div>
+      <div class="diagram__node diagram__node--blue diagram__node--full" style="margin-top: 0.5rem;">
+        <span class="diagram__node__label">seq B — t0..t1023</span>
+        <span class="diagram__node__sub">세 블록 사용 (block 2, 3, 4)</span>
+      </div>
+      <div class="diagram__node diagram__node--blue diagram__node--full" style="margin-top: 0.5rem;">
+        <span class="diagram__node__label">seq C — t0..t127</span>
+        <span class="diagram__node__sub">한 블록 사용 (block 5)</span>
+      </div>
+    </div>
+    <div>
+      <div class="diagram__col-title diagram__col-title--purple">물리 GPU 메모리 블록 (16-token 페이지)</div>
+      <div class="diagram__cols diagram__cols--3" style="gap: 0.4rem;">
+        <div class="diagram__node diagram__node--purple"><span class="diagram__node__label">block 0</span><span class="diagram__node__sub">→ seq A</span></div>
+        <div class="diagram__node diagram__node--purple"><span class="diagram__node__label">block 1</span><span class="diagram__node__sub">→ seq A</span></div>
+        <div class="diagram__node diagram__node--purple"><span class="diagram__node__label">block 2</span><span class="diagram__node__sub">→ seq B</span></div>
+        <div class="diagram__node diagram__node--purple"><span class="diagram__node__label">block 3</span><span class="diagram__node__sub">→ seq B</span></div>
+        <div class="diagram__node diagram__node--purple"><span class="diagram__node__label">block 4</span><span class="diagram__node__sub">→ seq B</span></div>
+        <div class="diagram__node diagram__node--purple"><span class="diagram__node__label">block 5</span><span class="diagram__node__sub">→ seq C</span></div>
+        <div class="diagram__node diagram__node--gray"><span class="diagram__node__label">block 6</span><span class="diagram__node__sub">free</span></div>
+      </div>
+    </div>
+  </div>
+</div>
 
-llm = LLM(
-    model="deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct",
-    # 메모리 설정
-    gpu_memory_utilization=0.90,  # GPU 메모리 90% 활용
-    max_model_len=32768,
-    # 성능 최적화
-    enable_prefix_caching=True,   # 반복 프롬프트 캐싱
-    enable_chunked_prefill=True,  # 청크 단위 prefill
-    # MIG 환경
-    tensor_parallel_size=1,       # MIG 슬라이스 1개
-)
+논리 sequence는 page table을 통해 가용한 물리 블록으로 흩어져 매핑된다. 새 요청이 들어와도 free block을 할당하면 되므로 fragmentation이 사실상 사라진다.
 
-# 배치 처리
-requests = [
-    "Python으로 퀵소트 구현",
-    "JavaScript로 이진 탐색 구현",
-    "Go로 HTTP 서버 구현",
-]
+PagedAttention은 기본기다. 2026년 운영에서 중요한 질문은 "PagedAttention을 쓰는가"가 아니라 **어떤 workload에 어떤 최적화를 켤 것인가**다.
 
-sampling_params = SamplingParams(
-    temperature=0.1,  # 코드 생성: 낮은 temperature
-    top_p=0.9,
-    max_tokens=1024,
-)
+### 운영 최적화 5종
 
-outputs = llm.generate(requests, sampling_params)
-```
+<CardGrid>
+  <Card title="Automatic Prefix Caching" icon="seti:config">
+    반복되는 system prompt, tool schema, AGENTS.md/CLAUDE.md prefix의 KV cache를 재사용한다. Ralph loop처럼 정적 prefix가 긴 workload에서 효과가 크다.
+  </Card>
+  <Card title="Chunked Prefill" icon="seti:clock">
+    긴 입력 prefill을 작은 청크로 나누어 decode 요청과 섞는다. 장문 요청 하나가 전체 큐를 막는 현상을 줄인다.
+  </Card>
+  <Card title="Speculative Decoding" icon="rocket">
+    작은 draft model 또는 n-gram speculation으로 후보 토큰을 먼저 만들고 큰 모델이 검증한다. latency 절감이 목표다.
+  </Card>
+  <Card title="Disaggregated Prefill" icon="seti:db">
+    prefill과 decode를 다른 worker/GPU로 분리한다. 장문 입력과 짧은 응답 요청이 섞인 production workload에 유리하다.
+  </Card>
+  <Card title="Structured Outputs" icon="seti:json">
+    JSON schema, tool call, reasoning output을 serving 계층에서 강제한다. agent harness의 parser 실패율을 줄인다.
+  </Card>
+</CardGrid>
 
-<Aside type="tip" title="Prefix Caching 활용">
-Ralph 루프에서 시스템 프롬프트(PROMPT.md)는 매 루프마다 동일하다.
-`enable_prefix_caching=True`로 시스템 프롬프트 KV 캐시를 재사용하면 처리량이 2-5배 향상된다.
+#### 5가지 최적화 레버 비교표
+
+| 레버 | 주 효과 | 가장 큰 위험 | 측정 지표 |
+|------|--------|-------------|----------|
+| Prefix Caching | TTFT 감소, prefill 비용 절감 | 매번 prompt가 미세하게 다르면 hit 0% | cache hit ratio, TTFT |
+| Chunked Prefill | 장문 입력의 head-of-line blocking 완화 | chunk 단위가 너무 작으면 오버헤드 증가 | p95 latency, queue time |
+| Speculative Decoding | 평균 TPOT 감소 | draft model 품질이 낮으면 reject로 오히려 느려짐 | acceptance rate, TPOT |
+| Disaggregated Prefill | 장문/단문 mix workload throughput ↑ | 추가 inter-node 통신 비용 | throughput, network util |
+| Structured Outputs | parser 실패율 감소 | 일부 schema는 sampling 품질 저하 유발 | invalid JSON rate, score |
+
+#### Prefix caching 시나리오 비교
+
+| 시나리오 | 정적 prefix | 동적 prefix | 예상 cache hit | TTFT 영향 |
+|---------|------------|-------------|---------------|----------|
+| Ralph loop, 같은 PROMPT.md 반복 | 길다 (3-8K) | 작은 turn 차이 | 70-95% | 매우 큼 |
+| Multi-tenant chatbot, system prompt 공통 | 중간 (500-2K) | user message가 매번 다름 | 30-60% | 보통 |
+| RAG with 매번 다른 retrieved chunks | 거의 없음 | 거의 전부 | 0-15% | 거의 없음 |
+| 동일 코드베이스 반복 분석 | 매우 길다 (10K+) | 파일 diff만 변함 | 80-99% | 매우 큼 |
+
+<Aside type="tip" title="Ralph 루프와 prefix caching">
+Ralph 루프는 매 반복마다 같은 PROMPT.md, 같은 project instruction, 같은 tool schema를 다시 넣는다. 이 정적 prefix가 길수록 automatic prefix caching의 가치가 커진다. 반대로 매 턴마다 프롬프트를 완전히 새로 조립하면 cache hit가 낮아진다.
 </Aside>
 
-### MIG 슬라이스별 멀티 모델 서빙
+#### Speculative decoding 시퀀스 다이어그램
+
+<div class="diagram">
+  <div class="diagram__title">Speculative Decoding Sequence</div>
+  <div class="diagram__cols diagram__cols--3">
+    <div class="diagram__col-title diagram__col-title--blue">Client</div>
+    <div class="diagram__col-title diagram__col-title--purple">Target (large)</div>
+    <div class="diagram__col-title diagram__col-title--green">Draft (small)</div>
+  </div>
+  <div class="diagram__flow" style="margin-top: 0.5rem;">
+    <div class="diagram__node diagram__node--blue diagram__node--full">
+      <span class="diagram__node__label">① Client → Target: prompt</span>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__loop">
+      <div class="diagram__loop__label">until stop token</div>
+      <div class="diagram__node diagram__node--purple diagram__node--full">
+        <span class="diagram__node__label">② Target → Draft: speculate next k tokens</span>
+      </div>
+      <div class="diagram__arrow">▼</div>
+      <div class="diagram__node diagram__node--green diagram__node--full">
+        <span class="diagram__node__label">③ Draft → Target: candidate tokens [t1..tk]</span>
+      </div>
+      <div class="diagram__arrow">▼</div>
+      <div class="diagram__node diagram__node--purple diagram__node--full">
+        <span class="diagram__node__label">④ Target verifies all k tokens (one forward pass)</span>
+      </div>
+      <div class="diagram__arrow">▼</div>
+      <div class="diagram__branch">
+        <div style="background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.25); color: #22C55E;">
+          <span class="diagram__branch__icon">accept all k</span>
+          <span class="diagram__branch__desc">Target → Client: emit k tokens</span>
+        </div>
+        <div style="background: rgba(249,115,22,0.07); border: 1px solid rgba(249,115,22,0.25); color: #F97316;">
+          <span class="diagram__branch__icon">reject at j</span>
+          <span class="diagram__branch__desc">emit [t1..tj] + 1 corrected</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+draft model이 정확할수록 한 번에 받아들여지는 토큰이 많아져 평균 TPOT가 줄어든다. draft가 자주 틀리면 verify 비용만 늘어나서 오히려 느려질 수 있다는 점에 유의한다.
+
+#### Disaggregated prefill 아키텍처
+
+<div class="diagram">
+  <div class="diagram__title">Disaggregated Prefill Architecture</div>
+  <div class="diagram__flow">
+    <div class="diagram__node diagram__node--blue diagram__node--full">
+      <span class="diagram__node__label">Frontend — Load Balancer</span>
+      <span class="diagram__node__sub">요청 수신, 응답 반환</span>
+    </div>
+    <div class="diagram__arrow">▼  prefill 단계로 분배</div>
+    <div class="diagram__cols diagram__cols--2">
+      <div class="diagram__node diagram__node--orange diagram__node--full">
+        <span class="diagram__node__label">Prefill Worker 1</span>
+        <span class="diagram__node__sub">긴 입력 KV 생성</span>
+      </div>
+      <div class="diagram__node diagram__node--orange diagram__node--full">
+        <span class="diagram__node__label">Prefill Worker 2</span>
+        <span class="diagram__node__sub">긴 입력 KV 생성</span>
+      </div>
+    </div>
+    <div class="diagram__arrow">▼  KV cache 핸드오프</div>
+    <div class="diagram__node diagram__node--gray diagram__node--full">
+      <span class="diagram__node__label">KV Cache Store</span>
+      <span class="diagram__node__sub">prefill 결과 임시 보관 / 빠른 lookup</span>
+    </div>
+    <div class="diagram__arrow">▼  decode 단계로 라우팅</div>
+    <div class="diagram__cols diagram__cols--3">
+      <div class="diagram__node diagram__node--green diagram__node--full">
+        <span class="diagram__node__label">Decode Worker 1</span>
+        <span class="diagram__node__sub">짧은 토큰 생성</span>
+      </div>
+      <div class="diagram__node diagram__node--green diagram__node--full">
+        <span class="diagram__node__label">Decode Worker 2</span>
+        <span class="diagram__node__sub">짧은 토큰 생성</span>
+      </div>
+      <div class="diagram__node diagram__node--green diagram__node--full">
+        <span class="diagram__node__label">Decode Worker 3</span>
+        <span class="diagram__node__sub">짧은 토큰 생성</span>
+      </div>
+    </div>
+    <div class="diagram__arrow">▲  응답을 LB로 반환</div>
+  </div>
+</div>
+
+긴 입력은 prefill 워커가 처리하고 KV cache만 decode 워커로 넘기는 패턴이다. 장문 입력과 짧은 응답이 혼합된 production에서 자원 활용도를 끌어올린다.
+
+### 워크로드별 최적화 선택
+
+모든 옵션을 한꺼번에 켜는 것이 최적화가 아니다. workload별 병목을 먼저 보고 하나씩 켠다.
+
+| Workload | 주 병목 | 먼저 켤 옵션 | 측정할 지표 |
+|----------|---------|--------------|-------------|
+| 긴 repository context + 짧은 수정 | prefill 비용 | prefix caching, chunked prefill | TTFT, cache hit ratio |
+| 짧은 질의가 매우 많음 | batching 효율 | continuous batching, 적절한 max_num_seqs | throughput, queue time |
+| 긴 문서 요약과 짧은 코드 요청 혼합 | long prefill blocking | chunked prefill, disaggregated prefill | p95 latency, queue time |
+| interactive coding assistant | 첫 토큰 지연 | speculative decoding, 작은 max_tokens | TTFT, perceived latency |
+| strict JSON/tool output | parser 실패 | structured outputs, tool parser 설정 | invalid JSON rate |
+| Ralph 루프 캡스톤 | prefill 반복 | prefix caching + chunked prefill | TTFT, cache hit |
+
+실습 보고서에는 "옵션을 켰다"가 아니라 **옵션을 켜기 전/후 병목 지표가 어떻게 변했는지**를 기록한다.
+
+### vLLM 서버 설정 예시
+
+<Tabs>
+  <TabItem label="Single GPU Lab">
+    ```bash
+    vllm serve deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct \
+      --served-model-name local-coder \
+      --max-model-len 32768 \
+      --gpu-memory-utilization 0.90 \
+      --enable-prefix-caching \
+      --port 8000
+    ```
+  </TabItem>
+  <TabItem label="Multi GPU Qwen">
+    ```bash
+    vllm serve Qwen/Qwen3-Coder-Next \
+      --served-model-name qwen3-coder \
+      --tensor-parallel-size 2 \
+      --max-model-len 65536 \
+      --enable-prefix-caching \
+      --enable-chunked-prefill \
+      --port 8000
+    ```
+  </TabItem>
+  <TabItem label="GLM Tool Calling">
+    ```bash
+    vllm serve zai-org/GLM-5.1 \
+      --served-model-name glm-5.1 \
+      --tensor-parallel-size 4 \
+      --enable-auto-tool-choice \
+      --port 8000
+    ```
+  </TabItem>
+  <TabItem label="Speculative Decoding">
+    ```bash
+    vllm serve Qwen/Qwen3-Coder-Next \
+      --served-model-name qwen3-coder \
+      --speculative-model deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct \
+      --num-speculative-tokens 5 \
+      --port 8000
+    ```
+  </TabItem>
+</Tabs>
+
+### Throughput와 latency를 동시에 봐야 한다
+
+추론 서버 튜닝에서 흔한 실수는 tokens/sec만 보는 것이다. 에이전트 시스템에서는 다음 지표를 함께 봐야 한다.
+
+| 지표 | 의미 | 나쁜 신호 |
+|------|------|----------|
+| TTFT(Time to First Token) | 사용자가 첫 응답을 보기까지 시간 | 장문 prefill이 queue를 막음 |
+| TPOT(Time per Output Token) | 토큰 생성 간격 | decode 단계 GPU utilization 저하 |
+| Throughput | 초당 처리 토큰 | batching 부족 또는 memory fragmentation |
+| Queue time | 요청이 대기한 시간 | concurrency 과다, admission control 부재 |
+| Cache hit ratio | prefix 재사용률 | prompt 조립 방식이 매번 달라짐 |
+| Error rate | 실패/timeout 비율 | max_model_len, OOM, parser 실패 |
+
+#### Prometheus/Grafana 패널 예시
+
+vLLM은 `/metrics` 엔드포인트를 기본 제공한다. 캡스톤 발표용 핵심 패널은 다음 PromQL로 만든다.
+
+```promql
+# Panel 1: TTFT p95 (모델별)
+histogram_quantile(0.95,
+  sum by (le, model_name) (rate(vllm:time_to_first_token_seconds_bucket[5m])))
+
+# Panel 2: 처리량 (tokens/sec)
+sum by (model_name) (rate(vllm:generation_tokens_total[1m]))
+
+# Panel 3: prefix cache hit ratio
+sum(rate(vllm:cache_hit_tokens_total[5m]))
+  /
+sum(rate(vllm:prompt_tokens_total[5m]))
+
+# Panel 4: 큐 대기 (active vs queued)
+vllm:num_requests_running
+vllm:num_requests_waiting
+```
+
+발표 자료에는 옵션을 변경한 시각을 annotation으로 표시해 "켜기 전후 차이"가 한눈에 보이게 한다.
+
+### Admission control과 context budget
+
+추론 서버가 느려지는 순간 무작정 더 많은 요청을 받으면 전체 팀의 실습이 무너진다. production serving은 요청을 받기 전에 다음을 판단한다.
+
+| 통제 항목 | 정책 예시 |
+|----------|----------|
+| 최대 입력 길이 | `max_model_len`보다 낮은 course-level limit을 둔다 |
+| 동시 요청 수 | 팀별 queue와 전역 queue를 분리한다 |
+| 우선순위 | demo/replay 요청을 실험성 batch보다 우선한다 |
+| timeout | prefill timeout과 decode timeout을 분리 기록한다 |
+| fallback | local model 실패 시 commercial API 또는 작은 모델로 reroute한다 |
+
+```python
+# admission.py — 팀별 queue 와 토큰 예산 관리
+import asyncio, time
+from dataclasses import dataclass
+
+@dataclass
+class Budget:
+    max_concurrent: int = 4
+    max_prompt_tokens: int = 16000
+    timeout_s: float = 60.0
+
+team_locks: dict[str, asyncio.Semaphore] = {}
+
+async def admit(team: str, prompt_tokens: int, budget: Budget) -> bool:
+    if prompt_tokens > budget.max_prompt_tokens:
+        return False
+    sem = team_locks.setdefault(team, asyncio.Semaphore(budget.max_concurrent))
+    try:
+        await asyncio.wait_for(sem.acquire(), timeout=budget.timeout_s)
+        return True
+    except asyncio.TimeoutError:
+        return False
+
+async def release(team: str):
+    team_locks[team].release()
+```
+
+Agent OS Runtime 관점에서는 admission control도 policy gate다. "요청을 거절했다"는 것도 실패가 아니라, 시스템이 경계를 지킨 성공 이벤트일 수 있다.
+
+### Multi-tenant serving 설계
+
+DGX H100 환경에서 학생 팀별 실습을 운영할 때는 "모두가 같은 대형 모델을 공유"하는 방식보다 resource boundary를 명확히 나누는 편이 안정적이다.
 
 ```bash
-# 학생 A: Qwen3-Coder (MIG 슬라이스 1, 3g.40gb)
-CUDA_VISIBLE_DEVICES=MIG-GPU-xxx python -m vllm.entrypoints.openai.api_server \
-  --model Qwen/Qwen3-Coder-32B-Instruct --port 8001
+# 팀 A: 1g.10gb slice, 교육용 모델
+CUDA_VISIBLE_DEVICES=MIG-GPU-a vllm serve deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct \
+  --served-model-name team-a-coder \
+  --max-model-len 16384 \
+  --port 8001
 
-# 학생 B: GLM-4.7 (MIG 슬라이스 2, 3g.40gb)
-CUDA_VISIBLE_DEVICES=MIG-GPU-yyy python -m vllm.entrypoints.openai.api_server \
-  --model THUDM/glm-4-9b-chat --port 8002
-
-# 학생 C: DeepSeek-Coder-V2-Lite (MIG 슬라이스 3, 2g.20gb)
-CUDA_VISIBLE_DEVICES=MIG-GPU-zzz python -m vllm.entrypoints.openai.api_server \
-  --model deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct --port 8003
+# 팀 B: 3g.40gb slice, 더 큰 모델
+CUDA_VISIBLE_DEVICES=MIG-GPU-b vllm serve Qwen/Qwen3-Coder-30B-A3B-Instruct \
+  --served-model-name team-b-coder \
+  --max-model-len 32768 \
+  --port 8002
 ```
+
+<Aside type="caution" title="MIG와 tensor parallelism">
+MIG slice는 하드웨어 격리에는 좋지만, slice 간 tensor parallel을 자연스럽게 묶는 용도는 아니다. 대형 모델을 여러 GPU에 걸쳐 돌릴 때는 MIG보다 전체 GPU 또는 명시적 multi-GPU 구성을 우선 검토한다.
+</Aside>
+
+### Observability first
+
+vLLM은 Prometheus/Grafana, OpenTelemetry 예제를 제공한다. 12주차에서 본격적으로 다루지만, 11주차 Lab에서도 최소한 다음 로그는 남겨야 한다.
+
+```json
+{
+  "request_id": "run-20260512-001",
+  "model": "local-coder",
+  "prompt_tokens": 1842,
+  "completion_tokens": 419,
+  "ttft_ms": 820,
+  "tpot_ms": 34,
+  "cache_hit": true,
+  "finish_reason": "stop"
+}
+```
+
+이 형식은 Agent OS Runtime의 `.events.jsonl`과도 연결된다. serving layer는 토큰과 지연시간을 기록하고, agent runtime은 tool call, approval, test result, replay 상태를 기록한다.
 
 ## 실습 (Practicum)
 
 <Steps>
-1. **vLLM 최적화 설정 적용** — `gpu_memory_utilization`, `enable_prefix_caching` 설정 비교
+1. **기준 서버 실행**
 
-2. **배치 처리 구현** — 동시 요청 처리 및 처리량 측정
+   ```bash
+   vllm serve deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct \
+     --served-model-name local-coder \
+     --max-model-len 32768 \
+     --port 8000
+   ```
 
-3. **Prefix Caching 효과 검증** — Ralph 루프 시뮬레이션으로 캐시 히트율 측정
+2. **prefix caching 전후 비교**
 
-4. **성능 프로파일링** — `nvidia-smi dmon`으로 GPU 사용률 모니터링
+   같은 system prompt와 같은 repository summary를 포함한 요청 20개를 실행한다. `--enable-prefix-caching`을 끈 상태와 켠 상태의 TTFT, throughput, cache hit를 비교한다.
+
+3. **chunked prefill 전후 비교**
+
+   20K token 이상의 긴 파일 요약 요청과 짧은 코드 생성 요청을 섞는다. 긴 요청이 짧은 요청의 대기 시간을 얼마나 늘리는지 측정한다.
+
+4. **OpenAI-compatible client 작성**
+
+   ```python
+   from openai import OpenAI
+   import time
+
+   client = OpenAI(base_url="http://localhost:8000/v1", api_key="local")
+
+   started = time.perf_counter()
+   response = client.chat.completions.create(
+       model="local-coder",
+       messages=[{"role": "user", "content": "pytest fixture 예시를 작성해줘"}],
+       temperature=0.2,
+   )
+   elapsed = time.perf_counter() - started
+   print(elapsed, response.choices[0].message.content[:200])
+   ```
+
+5. **admission control 큐 도입**
+
+   `admission.py` 패턴을 적용해 팀별 동시 요청 수를 제한한다. 거절된 요청은 별도 metric(`admission.rejected`)으로 카운트한다.
+
+6. **대시보드 준비**
+
+   Prometheus/Grafana 또는 간단한 CSV 로그로 `ttft_ms`, `tokens/sec`, `error_rate`, `cache_hit`을 기록한다. 12주차에서는 이 값을 OpenTelemetry trace와 연결한다.
 </Steps>
+
+## 운영 체크리스트
+
+| 항목 | 통과 기준 |
+|------|----------|
+| 모델 로딩 | cold start와 warm restart 시간이 기록됨 |
+| API 호환성 | OpenAI client에서 chat completion 성공 |
+| 안정성 | 100개 요청 중 timeout/OOM 0-2개 이하 |
+| 비용 | GPU 시간당 비용과 API 비용 비교표 작성 |
+| 관측성 | 최소 request_id, model, tokens, latency 기록 |
+| 보안 | 외부 네트워크/파일 접근 권한 분리 |
+| Admission control | 팀별 queue가 분리되고 거절 이벤트가 기록됨 |
 
 ## 다음 주 예고
 
-12주차에서는 이 vLLM 서버 위에 **텔레메트리 시스템**을 구축하고, **LLM-as-Judge** 평가 프레임워크를 구현한다.
+12주차에서는 이 vLLM 서버 위에 **텔레메트리, event store, LLM-as-Judge 평가 게이트**를 구축한다. 11주차가 "빠르게 생성하는 법"이라면, 12주차는 "생성 결과를 믿을 수 있게 운영하는 법"이다.
+
+## 핵심 정리
+
+1. **추론 서버는 모델의 OS**: 모델 가중치만으로는 운영이 성립하지 않는다. KV cache·batching·queue·관측성을 함께 설계한다.
+2. **PagedAttention은 출발점**: fragmentation을 거의 제거하지만, 그 위에 어떤 최적화를 켤지가 진짜 운영 결정이다.
+3. **5가지 레버를 따로 평가하라**: prefix caching / chunked prefill / speculative decoding / disaggregated prefill / structured outputs는 각자 다른 병목을 푼다.
+4. **워크로드 진단이 먼저**: 옵션을 무작정 켜지 말고 TTFT·TPOT·queue time·cache hit 중 어디가 병목인지부터 측정한다.
+5. **Throughput 단독 지표는 함정**: 에이전트 UX는 TTFT와 p95 latency, queue time이 결정한다.
+6. **Admission control도 policy gate**: 거절은 실패가 아니라 경계 보호 이벤트로 기록한다.
+7. **Multi-tenant는 boundary로 해결**: MIG slice·port 분리·팀별 model name으로 격리하면 한 팀의 실수가 전체 실습을 무너뜨리지 않는다.
+
+## 더 읽을거리
+
+**핵심 문서**
+- [vLLM Automatic Prefix Caching](https://docs.vllm.ai/en/latest/features/automatic_prefix_caching/)
+- [vLLM Speculative Decoding](https://docs.vllm.ai/en/latest/features/speculative_decoding/)
+- [vLLM Disaggregated Prefill](https://docs.vllm.ai/en/latest/features/disagg_prefill/)
+- [vLLM Structured Outputs](https://docs.vllm.ai/en/latest/features/structured_outputs/)
+
+**관측성**
+- [vLLM Prometheus and Grafana 예제](https://docs.vllm.ai/en/latest/examples/observability/prometheus_grafana/)
+- [vLLM OpenTelemetry POC](https://docs.vllm.ai/en/latest/examples/observability/setup_opentelemetry_poc/)
+
+**논문 / 리포트**
+- Kwon et al., "Efficient Memory Management for Large Language Model Serving with PagedAttention" (SOSP 2023)
+- Leviathan et al., "Fast Inference from Transformers via Speculative Decoding" (ICML 2023)
+- Patel et al., "Splitwise: Efficient Generative LLM Inference Using Phase Splitting" (ISCA 2024)

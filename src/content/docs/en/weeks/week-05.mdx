@@ -29,6 +29,23 @@ import { Aside, Steps, Badge, Card, CardGrid } from '@astrojs/starlight/componen
 
 ## Theory
 
+### Learning Objectives
+
+<CardGrid>
+  <Card title="Concepts" icon="open-book">
+    Define Context Rot and explain why it persists in long-context models in terms of attention dilution and instruction drift.
+  </Card>
+  <Card title="Design" icon="seti:config">
+    Compare three strategies — context window wiping, summarization, state-tracking files — and decide which combination fits a Ralph loop.
+  </Card>
+  <Card title="Implementation" icon="pencil">
+    Author `tasks.md` (or an equivalent state file) that serializes compact progress every turn in a token-efficient way.
+  </Card>
+  <Card title="Operations" icon="rocket">
+    Measure cache hit ratio, prompt tokens, and summarization cost to report the ROI of your context strategy quantitatively.
+  </Card>
+</CardGrid>
+
 ### Why Context Management is Central in Week 5
 
 In Week 4 we learned the power of the loop paradigm — calling the same model repeatedly while using deterministic validation to ensure quality. But for a loop to work, there is a **prerequisite**: **the context must be clean.**
@@ -71,7 +88,7 @@ Context Rot is the phenomenon where an agent's context window becomes increasing
 
 #### Empirical Data: Chroma's Context Rot Research
 
-"Longer context gets worse" is intuitive, but **how much** worse was first quantified by Chroma's 2026 empirical study. Testing 18 frontier models (Claude, GPT, Gemini, Llama, and others):
+"Longer context gets worse" is intuitive, but Chroma's 2026 empirical study provides a representative quantitative measurement of **how much** worse it gets. Testing 18 frontier models (Claude, GPT, Gemini, Llama, and others):
 
 | Finding | Data |
 |---------|------|
@@ -81,40 +98,13 @@ Context Rot is the phenomenon where an agent's context window becomes increasing
 
 The last finding is especially important. When documents are arranged in logical order, models tend to judge "I already saw this earlier, I can skim the rest." Shuffling forces attention at every position, which actually raises accuracy.
 
-#### Why It Happens — Three Compounding Mechanisms
-
-The Chroma study established **how much** accuracy degrades. Follow-up research identified **why** — three mechanisms that amplify each other:
-
-| Mechanism | Description | Scaling |
-|-----------|-------------|---------|
-| **Lost-in-the-middle** | Information in mid-context positions is retrieved less accurately than at the start or end | Position-dependent |
-| **Attention dilution** | As context grows, each token's share of attention decreases | **Quadratic** — doubling length quadruples dilution |
-| **Distractor interference** | Irrelevant information **actively degrades** reasoning about relevant information | Proportional to noise ratio |
-
-<Aside type="note" title="MIT Mechanistic Analysis (2025)">
-MIT researchers identified **causal masking** (tokens only attend to previous tokens) and **RoPE positional encoding decay** as the architectural roots of position bias. These are not bugs but inherent properties of the Transformer architecture — every autoregressive model with RoPE will exhibit mid-window degradation to some degree.
-</Aside>
-
-#### MECW — Maximum Effective Context Window
-
-An important concept from this research: **MECW (Maximum Effective Context Window)** — the point at which a model's accuracy on in-context information drops below a usable threshold. MECW ≠ the advertised maximum context. In benchmarks, top models begin to fail well before their nominal limits. This is why effective usage in the table below is 60-70%, not 100%.
-
-<Aside type="tip" title="Chroma Context-1 — From Research to Product (March 2026)">
-Chroma turned their Context Rot research into a product: **Context-1**, a 20B parameter Mixture-of-Experts agentic search model.
-- **0.94 pruning accuracy** — correctly identifies and removes irrelevant documents mid-search
-- **10x faster, 25x cheaper** than frontier LLMs for retrieval tasks
-- **Self-editing context**: the model actively prunes its own context during inference
-
-Instead of fighting Context Rot after the fact (compaction), Context-1 prevents it **architecturally** by never letting irrelevant content accumulate.
-</Aside>
-
 #### The 1M Token Era — Is a Larger Window the Solution?
 
 Frontier model context windows as of 2026:
 
 | Model | Official Context | Effective Usage |
 |-------|-----------------|-----------------|
-| Claude Opus/Sonnet 4.6 | 1M tokens | ~600-700K |
+| current Claude frontier family | 1M-token class | ~600-700K |
 | GPT-5.4 | 1M tokens | ~600-700K |
 | Gemini 2.5 Pro | 1M tokens | ~600-700K |
 
@@ -124,18 +114,12 @@ The reason effective usage is 60-70%: the remainder is consumed by the system pr
 Models with a 1M token window showed the same pattern in the Chroma study. A larger window means **you can fit more information in**, but the more you add, the more mid-window accuracy degrades. A bigger window is not a solution to Context Rot — it's **a larger space for Context Rot to occur in**.
 </Aside>
 
-<Aside type="caution" title="Enterprise data backs this up">
-<strong>65%</strong> of 2025 enterprise AI failures were attributed to context drift and memory loss during multi-step reasoning — not raw context exhaustion. The problem is not fitting information in; it is keeping the model's <strong>attention</strong> on what matters.
-</Aside>
-
 <Aside type="tip" title="Inside Claude Code...">
 Claude Code has **auto-compaction** built in to prevent Context Rot:
 
-- **Trigger**: Automatically compresses when context reaches **~33K tokens** (lowered from 45K in v2.1.x for earlier triggering). Token-based trigger, **not turn-based**
+- **Trigger**: Automatically compresses when context reaches **~75% of the model's maximum** (`compact-2026-01-12` beta API). Token-based trigger, **not turn-based**
 - **Algorithm**: Preserves the last 4 messages + converts the rest from Markdown to plaintext, removes duplicate tool results
 - **CLAUDE.md 3-level hierarchy**: `~/.claude/CLAUDE.md` (global) → `<project>/.claude/CLAUDE.md` (project) → `<workspace>/CLAUDE.md` (local). Total combined limit of 12,000 characters
-- **Auto-memory (MEMORY.md)**: Automatic cross-session memory introduced in v2.1.59+. Accumulates learned facts (debugging patterns, preferences, etc.) per project in `MEMORY.md`. First 200 lines auto-loaded at session start. CLAUDE.md (rules) and MEMORY.md (learned facts) are complementary
-- **Subagent isolation**: Subagents spawned via the Agent tool start with an **empty context**. They do not inherit the parent's conversation history — the parent must explicitly pass needed information in the prompt
 - **Token tracking**: Records 4 token types per API call — input/cache_creation/cache_read/output. Check in real time with `/cost`
 - **Manual trigger**: Run `/compact` to compress immediately on demand
 
@@ -160,20 +144,6 @@ When auto-compaction fires, **preservation priority** is decisive:
 - The summary itself is 50%+ the size of the original (no compression benefit)
 
 This is why Huntley in Week 4 chose "fresh context" — between loop iterations, **full reset + state file handoff** is more deterministic than compaction.
-
-#### Beyond Heuristics — The ACON Compression Framework
-
-Current compaction strategies (including Claude Code's) are **heuristic-based** — rules like "keep last 4 messages" and "summarize the rest." ACON (Agent Context Optimization, arXiv:2510.00615, October 2025) proposes treating compression as a **formal optimization problem**:
-
-| Metric | Result |
-|--------|--------|
-| Peak token reduction | **26-54%** |
-| Accuracy preservation | **95%+** |
-| Method | Gradient-free, API-compatible (works with any model via API) |
-
-ACON's key insight: instead of fixed rules, dynamically score each context segment's **contribution to the current task** and prune those below a threshold. This is the difference between "always keep the last 4 messages" (heuristic) and "keep the messages most relevant to the current task" (optimization).
-
-Claude Code currently uses heuristics, but ACON represents the direction the field is moving — from rule-based to optimization-based compaction.
 
 ### The Ralph Loop Solution: Context Window Wiping
 
@@ -256,8 +226,8 @@ The ultimate goal of context management is to **do more useful work on the same 
 | Task Type | Share | Recommended Model | Cost (1M tokens) |
 |-----------|-------|------------------|-----------------|
 | Simple lookups, formatting, type checking | 60-70% | **Haiku** | $1 / $5 |
-| Standard coding, bug fixes, feature additions | 25-30% | **Sonnet** | $3 / $15 |
-| Architecture design, complex debugging | 5-10% | **Opus** | $5 / $25 |
+| Standard coding, bug fixes, feature additions | 25-30% | **Sonnet** | $15 / $75 |
+| Architecture design, complex debugging | 5-10% | **Opus** | $15 / $75 |
 
 Model routing alone enables **5-8x cost reduction**. Claude Code's `effort` parameter (see Week 4) is the productized form of this routing.
 
@@ -320,61 +290,6 @@ This pattern is a **higher-level abstraction** of the three state files in today
 
 ---
 
-### Persistent Knowledge Systems — The LLM Wiki Pattern
-
-While the Initializer pattern manages state for a single task, the **LLM Wiki pattern** accumulates knowledge across an entire project permanently. [Proposed by Karpathy](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f), its core principle is "compile knowledge once, keep it current."
-
-**Architecture**:
-
-| Layer | Role | Example |
-|-------|------|---------|
-| **Raw Sources** | Immutable original materials | Paper PDFs, meeting recordings, codebases |
-| **Wiki** | LLM-generated and maintained markdown files | Summaries, cross-references, entity pages |
-| **Schema** | Configuration file defining structure and workflows | Wiki rules described in CLAUDE.md |
-
-**Three Operations**:
-1. **Ingest** — Read new source material, write summaries, update related wiki pages
-2. **Query** — Search the wiki to synthesize answers, file new discoveries back into the wiki
-3. **Lint** — Check for contradictions, stale information, orphaned pages, missing cross-references
-
-<Aside type="tip" title="Why LLMs Are Suited for Wiki Maintenance">
-Humans abandon knowledge systems because they tire of maintaining cross-references, verifying consistency, and updating multiple pages simultaneously. LLMs don't tire of this "bookkeeping" work. The human role shifts to **curation and direction-setting**.
-</Aside>
-
-This pattern is the evolutionary next step beyond the Initializer: 3 state files (single task) → JSON feature list (multi-feature project) → **Wiki (persistent knowledge graph)**. The ultimate form of context management is not re-understanding everything each session, but referencing accumulated knowledge.
-
----
-
-### Knowledge Graph-Based Token Reduction — Graphify
-
-Instead of putting raw files directly into context, **transforming a codebase into a knowledge graph** and querying only the needed parts can dramatically reduce token consumption. [Graphify](https://github.com/safishamsi/graphify) is a practical implementation of this approach.
-
-**How it works**:
-- **Code analysis**: tree-sitter AST extraction parses classes, functions, imports, and call graphs locally (no LLM calls needed, code never leaves your machine)
-- **Document/media analysis**: Semantic extraction from PDFs, images, videos via LLM
-- **Graph construction**: NetworkX + Leiden clustering for community detection, interactive HTML visualization + JSON output
-- **Confidence tagging**: Relationships classified as EXTRACTED (confirmed), INFERRED (with confidence scores), or AMBIGUOUS
-
-**Token efficiency**: **71.5x** token reduction compared to reading raw files directly on mixed corpora. Once the graph is built, only incremental updates via SHA256 caching are needed.
-
-This approach can be combined with the LLM Wiki pattern: use Graphify to graph the codebase structure, then layer insights and decisions on top with an LLM Wiki.
-
-#### LazyGraphRAG — Lightweight Graph Retrieval at Scale
-
-While Graphify graphs a single codebase locally, Microsoft's **LazyGraphRAG** applies graph-based retrieval to enterprise-scale document collections:
-
-| Metric | LazyGraphRAG vs Full GraphRAG |
-|--------|-------------------------------|
-| Indexing cost | **0.1%** (1/1000) |
-| Query cost | **4%** (1/25) |
-| Quality | Outperforms vector RAG, RAPTOR, and competing methods |
-
-LazyGraphRAG builds graphs via lazy evaluation without pre-summarization, achieving retrieval quality superior even to 1M-token context windows. It is deployed in production on Microsoft Discovery (Azure).
-
-Graphify (local codebase, individual use) vs LazyGraphRAG (massive document sets, enterprise) — two points on the cost-quality spectrum for knowledge graph approaches.
-
----
-
 ### Context Strategy Comparison by Tool
 
 Context management approaches differ by tool. As of 2026, three strategies are competing:
@@ -384,39 +299,11 @@ Context management approaches differ by tool. As of 2026, three strategies are c
 | **Explicit** | Cursor | User manually selects which files go into context | Precise control, minimal token waste | Manual labor, risk of omission |
 | **Ambient** | Windsurf (Cascade) | Tool automatically detects relevant files | Convenient, prevents omissions | Risk of over-inclusion, token waste |
 | **Hybrid** | Claude Code | File-based persistence (CLAUDE.md) + auto-compaction | Balanced, loop-friendly | Requires setup, learning curve |
-| **Tiered** | GitHub Copilot | 3-tier memory (user/repo/session) + Agent Mode | Familiar VS Code UX, 28-day auto-memory | VS Code-centric, limited CLI control |
-| **Sandboxed** | Codex CLI | Container isolation + AGENTS.md | Safest execution, tool-neutral | No MCP support, 192K context limit |
-| **Large-window** | Gemini CLI | 1M context + GEMINI.md | Free tier, largest context | Newer ecosystem, less tooling |
-| **Autonomous** | Devin | Full autonomous sessions | End-to-end automation | Degrades after ~35 min / 10 ACUs |
 
 VS Code Copilot introduced **3-tier memory** (user/repository/session) in 2026, separating user preferences (global) → project rules (repo) → current conversation (session). This is the same design principle as Claude Code's 3-level CLAUDE.md hierarchy (global/project/local).
 
-<Aside type="note" title="Protocol Context: MCP vs A2A">
-The context management approaches above address how a **single agent** interacts with tools and files. In Week 7, we'll see how the **A2A protocol** (Google, 2025) extends this to agent-to-agent context sharing — MCP (agent↔tools) and A2A (agent↔agent) are complementary.
-</Aside>
-
-#### Instruction File Convergence — The Industry Validates File-Based Context
-
-A remarkable trend in 2025-2026: **every major AI coding tool independently converged on file-based context management**. They compete on nearly everything else, but arrived at the same architecture for context management:
-
-| Tool | Instruction File | Hierarchy |
-|------|-----------------|-----------|
-| **Claude Code** | `CLAUDE.md` | 3-level: `~/.claude/` (global) → `project/.claude/` (project) → `workspace/` (local) |
-| **OpenAI Codex CLI** | `AGENTS.md` | Hierarchical directory tree discovery (closest file wins) |
-| **Google Gemini CLI** | `GEMINI.md` | Project root |
-| **Cursor** | `.cursor/rules/*.mdc` | Glob-pattern scoped rules |
-| **GitHub Copilot** | `.github/copilot-instructions.md` | Single file + 28-day auto-memory |
-| **Windsurf** | Cascade Memories | Auto-generated from usage patterns |
-
-<Aside type="tip" title="Why This Convergence Matters for Context Management">
-This convergence validates the **"configuration as persistent context"** paradigm. Instead of relying on the model to remember everything within a session, these tools externalize context into deterministic, version-controlled files. This is the same principle as the state tracking files in this week's lesson (`fix_plan.md`, `claude-progress.txt`) — but applied to behavioral rules rather than task state.
-
-The convergence also reveals a design spectrum:
-- **Manual persistence**: Developer writes and maintains context (Cursor rules, CLAUDE.md)
-- **Auto-generated persistence**: Tool learns and writes context (Windsurf Cascade Memories, Copilot auto-memory)
-- **Hybrid**: Developer writes rules, tool learns facts (Claude Code's CLAUDE.md + MEMORY.md)
-
-→ In Week 6, we'll examine **what to write** in these files. This week's focus is **why they exist** — their role as a context management strategy.
+<Aside type="note" title="Bridge to Week 6">
+Whatever context strategy you choose, ultimately **what you put inside the context** determines quality. **Instruction tuning**, covered next week (Week 6), answers exactly this question �� what constraints to write in CLAUDE.md and how to write them.
 </Aside>
 
 ---
@@ -470,7 +357,6 @@ users[3]{id,name,email}:
 3. What is the basis for the advice to **keep CLAUDE.md under 200 lines**? Connect your answer to SkillReducer's "less-is-more" effect.
 4. Reason why **shuffled documents scored higher accuracy than ordered documents** in the Chroma study. What does this imply for context design?
 5. Why does the Initializer pattern store the feature list **as JSON**? What problem arises if you use Markdown instead?
-6. **MECW (Maximum Effective Context Window) is always less than the advertised maximum.** If 65% of enterprise AI failures stem from context drift during multi-step reasoning, how should you design agent sessions? Discuss in connection with the "sprint" pattern (short 5-10 message interactions with fresh context).
 
 ---
 
@@ -486,12 +372,13 @@ Measure context usage directly and compare before and after compaction to experi
    Run the `/cost` command in a Claude Code session to check the current session's token usage. After 10 turns of conversation, measure again and record the increase.
 
    ```python
+   import os
    import anthropic
 
    def count_tokens(messages: list) -> int:
        client = anthropic.Anthropic()
        response = client.messages.count_tokens(
-           model="claude-opus-4-6",
+           model=os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5"),
            messages=messages
        )
        return response.input_tokens
@@ -528,18 +415,14 @@ Measure context usage directly and compare before and after compaction to experi
 
 ---
 
-## Key Summary
+## Key Takeaways
 
 1. **Context Rot is an empirical phenomenon** — Chroma study: accuracy degrades as input grows longer across all 18 models. 30%+ degradation at mid-window positions.
 2. **A 1M token window is not the solution** — a bigger window just means a larger space for Context Rot to occur in. Effective usage is 60-70%.
 3. **Compaction is token-based** — auto-triggered at ~75% of model maximum. Preserves the last 4 messages, summarizes the rest.
-4. **Ralph's fresh context is best between loops** — use compaction inside a loop, full reset + state file handoff between loops.
+4. **Ralph's fresh context is the default between loops** — use compaction inside a loop, full reset + state file handoff between loops.
 5. **40-70% of tokens are wasted** — cut costs with model routing (Haiku 60-70%), prompt caching (read at 0.1x), and keeping CLAUDE.md under 200 lines.
 6. **Initializer pattern** — manage state deterministically with a 2-phase structure: JSON feature list + claude-progress.txt + init.sh.
-7. **LLM Wiki pattern** — beyond per-session state files, an architecture where LLMs permanently maintain a knowledge wiki. Knowledge accumulates through Ingest → Query → Lint cycles.
-8. **Knowledge graph token reduction** — tools like Graphify that transform codebases into graphs achieve 71.5x token savings vs raw file reading. LazyGraphRAG achieves similar quality at 0.1% of full GraphRAG cost for enterprise scale.
-9. **Instruction file convergence** — All major coding tools (Claude Code, Codex CLI, Gemini CLI, Cursor, Copilot, Windsurf) independently converged on file-based context persistence. Configuration files are the universal answer to cross-session context management.
-10. **MECW < advertised maximum** — Maximum Effective Context Window is always less than the nominal limit. 65% of enterprise failures stem from context drift, not context exhaustion. Design for short, focused sessions.
 
 ## Further Reading
 
@@ -547,10 +430,3 @@ Measure context usage directly and compare before and after compaction to experi
 - [Anthropic: Prompt Caching Documentation](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching) — Cache pricing, TTL, and usage
 - [SkillReducer (arXiv:2603.29919)](https://arxiv.org/abs/2603.29919) — The less-is-more effect: compressing tool descriptions improves quality
 - [Simon Willison: YAML vs Token-Saving Formats](https://simonwillison.net/) — 9,649 experiments showing familiar formats outperform
-- [Karpathy: LLM Wiki — Building Persistent Knowledge Systems](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) — Pattern for LLMs maintaining persistent knowledge wikis
-- [Graphify](https://github.com/safishamsi/graphify) — Transform codebases/documents into knowledge graphs, tree-sitter AST + Leiden clustering, 71.5x token savings
-- [Chroma Context-1](https://www.trychroma.com/research/context-1) — 20B MoE agentic search model, 0.94 pruning accuracy, self-editing context
-- [ACON: Agent Context Optimization (arXiv:2510.00615)](https://arxiv.org/abs/2510.00615) — Formal optimization approach to context compression, 26-54% token reduction with 95%+ accuracy
-- [LazyGraphRAG — Microsoft Research](https://www.microsoft.com/en-us/research/blog/lazygraphrag/) — 0.1% of GraphRAG indexing cost with comparable quality, deployed on Azure Discovery
-- [OpenAI Codex CLI — AGENTS.md](https://developers.openai.com/codex/guides/agents-md) — Tool-neutral hierarchical instruction file standard
-- [A2A Protocol (Google, 2025)](https://github.com/a2aproject/A2A) — Agent-to-agent communication protocol, complementary to MCP (detailed in Week 7)

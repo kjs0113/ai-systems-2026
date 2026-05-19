@@ -6,7 +6,7 @@ import starlight from '@astrojs/starlight';
 const SEMESTER_START = new Date('2026-03-03'); // 1주차 시작일
 const now = new Date();
 const weekNum = Math.max(1, Math.min(16,
-  Math.floor((now - SEMESTER_START) / (7 * 24 * 60 * 60 * 1000)) + 1
+  Math.floor((now.getTime() - SEMESTER_START.getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1
 ));
 const activePhase = weekNum <= 3 ? 1 : weekNum <= 6 ? 2 : weekNum <= 9 ? 3 : weekNum <= 12 ? 4 : 5;
 
@@ -107,8 +107,8 @@ export default defineConfig({
           collapsed: Math.abs(3 - activePhase) > 1,
           items: [
             { label: '7주차: 멀티에이전트 SDLC 설계', translations: { en: 'Week 7: Multi-Agent SDLC Design' }, link: '/weeks/week-07' },
-            { label: '8주차: 프로젝트 계획 발표 (중간고사 대체)', translations: { en: 'Week 8: Project Proposal Presentation' }, link: '/weeks/week-08' },
-            { label: '9주차: 플래너와 QA 에이전트 구현', translations: { en: 'Week 9: Planner & QA Agent Implementation' }, link: '/weeks/week-09' },
+            { label: '8주차: 플래닝 에이전트', translations: { en: 'Week 8: Planning Agent' }, link: '/weeks/week-08' },
+            { label: '9주차: QA 에이전트', translations: { en: 'Week 9: QA Agent' }, link: '/weeks/week-09' },
           ],
         },
         {
@@ -126,7 +126,7 @@ export default defineConfig({
           translations: { en: 'Phase 5: Capstone Ralphthon' },
           collapsed: Math.abs(5 - activePhase) > 1,
           items: [
-            { label: '13주차: 캡스톤 프로젝트 착수', translations: { en: 'Week 13: Capstone Project Kickoff' }, link: '/weeks/week-13' },
+            { label: '13주차: 캡스톤 프로젝트 설계', translations: { en: 'Week 13: Capstone Project Design' }, link: '/weeks/week-13' },
             { label: '14주차: Ralphthon 실행', translations: { en: 'Week 14: Ralphthon Execution' }, link: '/weeks/week-14' },
             { label: '15주차: 시스템 통합과 최종 테스트', translations: { en: 'Week 15: System Integration & Final Testing' }, link: '/weeks/week-15' },
             { label: '16주차: 최종 발표와 수업 마무리', translations: { en: 'Week 16: Final Presentations & Wrap-up' }, link: '/weeks/week-16' },
@@ -158,8 +158,7 @@ export default defineConfig({
           collapsed: true,
           items: [
             { label: '캡스톤 개요', translations: { en: 'Capstone Overview' }, link: '/capstone' },
-            { label: '프로젝트 등록', translations: { en: 'Project Registration' }, link: '/capstone/teams' },
-            { label: '계획서 작성 가이드', translations: { en: 'Proposal Writing Guide' }, link: '/capstone/proposal-guide' },
+            { label: '팀 구성', translations: { en: 'Team Formation' }, link: '/capstone/teams' },
             { label: '평가 기준', translations: { en: 'Rubric' }, link: '/capstone/rubric' },
             { label: '제출 현황', translations: { en: 'Submissions' }, link: '/capstone/submissions' },
           ],
@@ -172,17 +171,12 @@ export default defineConfig({
             { label: '참고자료 홈', translations: { en: 'Reference Home' }, link: '/reference' },
             { label: '개발 도구', translations: { en: 'Development Tools' }, link: '/reference/tools' },
             { label: 'AI 코딩 도구 선택', translations: { en: 'AI Coding Tool Selection' }, link: '/reference/tool-selection' },
+            { label: 'Agent OS Runtime', translations: { en: 'Agent OS Runtime' }, link: '/reference/agent-os-runtime' },
             { label: '논문 & 자료', translations: { en: 'Papers & Resources' }, link: '/reference/papers' },
             { label: '용어집', translations: { en: 'Glossary' }, link: '/reference/glossary' },
             { label: '인프라 가이드', translations: { en: 'Infrastructure Guide' }, link: '/reference/infrastructure' },
             { label: 'Claude Code 내부 구조', translations: { en: 'Claude Code Internals' }, link: '/reference/claude-code-internals' },
-            { label: 'Karpathy Guidelines', translations: { en: 'Karpathy Guidelines' }, link: '/reference/karpathy-guidelines' },
           ],
-        },
-        {
-          label: '과제 현황',
-          translations: { en: 'Assignments' },
-          link: '/assignments',
         },
         {
           label: '기여 가이드',

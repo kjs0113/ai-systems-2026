@@ -1,7 +1,7 @@
 ---
 title: "Lab 10: vLLM Deployment"
 description: Install vLLM on DGX H100, deploy DeepSeek-Coder-V2, performance benchmarking
-week: 11
+week: 10
 difficulty: advanced
 estimated_time: "8 hours"
 assignment_due: "2026-05-12"
@@ -39,9 +39,11 @@ import { Steps, Aside, Tabs, TabItem, Badge } from '@astrojs/starlight/component
 2. **Install vLLM**
 
    ```bash
-   pip install vllm==0.4.3
-   # Check CUDA version before installing — H100 uses CUDA 12.x
-   pip install torch==2.3.0 --index-url https://download.pytorch.org/whl/cu121
+   pip install -U uv
+   uv pip install vllm --torch-backend=auto
+
+   # If uv is unavailable: use the CUDA 12.9 wheel index
+   pip install vllm --extra-index-url https://download.pytorch.org/whl/cu129
    ```
 
 3. **Log in to Hugging Face**
@@ -69,17 +71,18 @@ import { Steps, Aside, Tabs, TabItem, Badge } from '@astrojs/starlight/component
 #!/usr/bin/env bash
 MODEL_PATH="$HOME/models/deepseek-coder-v2-lite"
 PORT=8000
+API_KEY="not-required"
 GPU_UTIL=0.90          # GPU memory utilization
 MAX_MODEL_LEN=32768    # Maximum context length
 
-python -m vllm.entrypoints.openai.api_server \
-  --model "$MODEL_PATH" \
+vllm serve "$MODEL_PATH" \
   --dtype bfloat16 \
   --tensor-parallel-size 2 \
   --gpu-memory-utilization $GPU_UTIL \
   --max-model-len $MAX_MODEL_LEN \
   --port $PORT \
   --host 0.0.0.0 \
+  --api-key "$API_KEY" \
   --served-model-name deepseek-coder-v2 \
   --trust-remote-code \
   2>&1 | tee vllm_server.log
@@ -186,17 +189,18 @@ async def single_request(
     total_tokens = 0
 
     try:
-        async with client.chat.completions.with_streaming_response.create(
+        stream = await client.chat.completions.create(
             model="deepseek-coder-v2",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=max_tokens,
-            stream=True
-        ) as resp:
-            async for chunk in resp.parse():  # type: ignore
-                if first_token_time is None and chunk.choices:
-                    first_token_time = time.perf_counter()
-                if chunk.usage:
-                    total_tokens = chunk.usage.completion_tokens
+            stream=True,
+            stream_options={"include_usage": True},
+        )
+        async for chunk in stream:
+            if first_token_time is None and chunk.choices:
+                first_token_time = time.perf_counter()
+            if chunk.usage:
+                total_tokens = chunk.usage.completion_tokens
 
         end = time.perf_counter()
         ttft = (first_token_time - start) * 1000 if first_token_time else 0
@@ -244,7 +248,7 @@ async def run_benchmark(
         concurrency=concurrency,
         avg_ttft_ms=statistics.mean(ttfts) if ttfts else 0,
         p50_ttft_ms=statistics.median(ttfts) if ttfts else 0,
-        p99_ttft_ms=sorted(ttfts)[int(len(ttfts) * 0.99)] if ttfts else 0,
+        p99_ttft_ms=sorted(ttfts)[min(len(ttfts) - 1, int(len(ttfts) * 0.99))] if ttfts else 0,
         avg_throughput_tps=statistics.mean(tps_list) if tps_list else 0,
         total_throughput_tps=total_tokens / (end_total - start_total),
         success_rate=len(valid) / len(prompts)
@@ -274,28 +278,26 @@ if __name__ == "__main__":
 <Tabs>
   <TabItem label="Claude Code">
     ```bash
-    export ANTHROPIC_BASE_URL="http://localhost:8000/v1"
-    export ANTHROPIC_MODEL="deepseek-coder-v2"
+    # Claude Code assumes the Anthropic API by default.
+    # If your installed version supports a local OpenAI-compatible endpoint, document the exact config in README.md.
     ```
   </TabItem>
   <TabItem label="Gemini CLI">
     ```bash
-    # Gemini CLI does not support direct local model integration
-    # Use indirectly via OpenAI-compatible API
-    export OPENAI_API_BASE="http://localhost:8000/v1"
-    export OPENAI_API_KEY="not-required"
+    # OpenAI-compatible endpoint support varies by Gemini CLI version.
+    # The required verification path is local_agent.py below.
     ```
   </TabItem>
   <TabItem label="Codex CLI">
     ```bash
-    export OPENAI_API_BASE="http://localhost:8000/v1"
-    export OPENAI_API_KEY="not-required"
+    # For Codex CLI, confirm the provider/base_url settings supported by your installed version.
+    # Direct local-server calls are verified with local_agent.py.
     ```
   </TabItem>
   <TabItem label="OpenCode">
     ```bash
     # Specify custom endpoint in OpenCode settings
-    export OPENAI_API_BASE="http://localhost:8000/v1"
+    export OPENAI_BASE_URL="http://localhost:8000/v1"
     export OPENAI_API_KEY="not-required"
     ```
   </TabItem>

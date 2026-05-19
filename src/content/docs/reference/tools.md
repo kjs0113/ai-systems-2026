@@ -145,7 +145,7 @@ Claude Code 내부에서 도구는 **3-Layer**로 합성된다:
 
 ### Gemini CLI (Google)
 
-무료 티어를 제공하는 Google의 AI 코딩 CLI. 1M 토큰 컨텍스트 창, MCP 지원.
+무료 티어를 제공하는 Google의 AI 코딩 CLI. 1M 토큰 컨텍스트 창, Google Search grounding, MCP, extensions를 지원한다.
 
 ```bash
 # 설치
@@ -163,12 +163,14 @@ cat PROMPT.md | gemini
 - `GEMINI.md` 프로젝트별 지침 파일
 - 무료 티어: 1,000 req/day
 - 1M 토큰 컨텍스트 창
+- Google Search grounding
+- extensions 기반 도구 확장
 
 ---
 
 ### Codex CLI (OpenAI)
 
-OpenAI의 터미널 기반 코딩 에이전트. 내장 샌드박스로 안전한 자동 실행 가능.
+OpenAI의 터미널 기반 코딩 에이전트. 내장 샌드박스, `AGENTS.md`, MCP, skills, subagents를 지원한다. Codex App/Web은 클라우드 sandbox에서 비동기 코딩 작업을 수행하는 별도 표면이다.
 
 ```bash
 # 설치
@@ -184,7 +186,9 @@ codex --approval-mode full-auto "$(cat PROMPT.md)"
 **주요 기능**:
 - 내장 샌드박스 (가장 안전한 자동 실행)
 - `AGENTS.md` 프로젝트별 지침 파일
-- MCP 미지원
+- MCP 서버 통합 (`~/.codex/config.toml` 또는 `.codex/config.toml`)
+- skills, hooks, subagents
+- CLI, IDE extension, App/Web 간 워크플로우 연결
 - ChatGPT Plus 또는 API 키 필요
 
 ---
@@ -234,55 +238,6 @@ client = OpenAI(base_url="http://localhost:8000/v1", api_key="token")
 
 ---
 
-### Graphify
-
-코드베이스와 문서를 지식 그래프로 변환하는 AI 코딩 어시스턴트 스킬. tree-sitter AST 추출(23개 언어, LLM 호출 불필요)로 코드 구조를 분석하고, NetworkX + Leiden 클러스터링으로 커뮤니티 탐지 및 인터랙티브 시각화를 생성한다.
-
-```bash
-# 설치
-pip install graphify-ai
-
-# 코드베이스 그래프 구축
-graphify build ./src --output graph.json
-
-# 인터랙티브 시각화 생성
-graphify visualize graph.json --output graph.html
-```
-
-**주요 기능**:
-- tree-sitter 기반 로컬 AST 분석 (코드가 외부로 전송되지 않음)
-- 혼합 코퍼스에서 원본 대비 **71.5배** 토큰 절감
-- 신뢰도 태깅: EXTRACTED / INFERRED / AMBIGUOUS
-- SHA256 캐시 기반 증분 업데이트
-- Claude Code, Gemini CLI, Codex, OpenCode 등 연동
-
-> 컨텍스트 관리에서의 활용은 [5주차 강의](/weeks/week-05) 참조.
-
----
-
-### Ollama
-
-로컬 및 클라우드 LLM 배포 도구. 단일 명령으로 모델 실행, NVIDIA 클라우드 GPU 원격 추론 지원.
-
-```bash
-# 설치 (macOS)
-brew install ollama
-
-# 설치 (Linux)
-curl -fsSL https://ollama.com/install.sh | sh
-
-# 로컬 모델 실행
-ollama run gemma4:31b
-
-# 클라우드 모델 (GPU 불필요)
-ollama launch claude --model gemma4:31b-cloud
-
-# AI 코딩 CLI 연동
-ollama launch claude --model glm-5.1:cloud
-```
-
----
-
 ### Model Context Protocol (MCP)
 
 에이전트와 외부 도구를 연결하는 표준 프로토콜.
@@ -299,6 +254,7 @@ ollama launch claude --model glm-5.1:cloud
 ```json
 // Claude Code: ~/.claude/settings.json
 // Gemini CLI: ~/.gemini/settings.json
+// Codex CLI: ~/.codex/config.toml 또는 .codex/config.toml
 {
   "mcpServers": {
     "filesystem": {
@@ -325,20 +281,26 @@ pip install opentelemetry-sdk opentelemetry-exporter-prometheus
 
 ---
 
-### 오픈소스 코딩 LLM
+### 오픈웨이트 코딩 LLM
 
-로컬 배포 가능한 주요 코딩 모델. vLLM 또는 SGLang으로 서빙하여 OpenAI 호환 API로 사용.
+로컬 배포 가능한 주요 코딩 모델. vLLM 또는 SGLang으로 서빙하여 OpenAI 호환 API로 사용. 아래 표는 2026-05 기준의 대표 모델이다.
 
 | 모델 | 파라미터 | 활성 | 컨텍스트 | HuggingFace |
 |------|---------|------|---------|-------------|
-| **Gemma 4** | 31B (Dense) | 전체 | 256K | `google/gemma-4-31b-it` |
-| **GLM-5.1** | 미공개 | 미공개 | 198K | API 전용 (현재) |
-| **Qwen3-Coder** | 235B (MoE) | 22B | 128K | `Qwen/Qwen3-Coder-32B-Instruct` |
-| **DeepSeek V3** | 685B (MoE) | 37B | 128K | `deepseek-ai/DeepSeek-V3` |
-| **GLM-4.7** | ~32B (Dense) | 전체 | 128K | `THUDM/glm-4-9b-chat` |
-| **MiniMax M2.1** | 230B (MoE) | 10B | 128K | `MiniMax/MiniMax-M2.1` |
+| **Qwen3-Coder-Next** | 80B (MoE) | 3B | 256K | `Qwen/Qwen3-Coder-Next` |
+| **DeepSeek-V4-Pro** | 1.6T (MoE) | 49B | 1M | `deepseek-ai/DeepSeek-V4-Pro` |
+| **DeepSeek-V4-Flash** | 284B (MoE) | 13B | 1M | `deepseek-ai/DeepSeek-V4-Flash` |
+| **GLM-5.1** | 754B | 모델 카드 기준 | long-context agent work | `zai-org/GLM-5.1` |
+| **MiniMax-M2.7** | 229B | 모델 카드 기준 MoE 계열 | 장문 agentic workflow | `MiniMaxAI/MiniMax-M2.7` |
 | **DeepSeek-Coder-V2** | 236B (MoE) | 21B | 128K | `deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct` |
-| **Qwen3 14B/8B** | 14B/8B | 전체 | 128K | `Qwen/Qwen3-14B`, `Qwen/Qwen3-8B` |
+| **Qwen3 경량 계열** | 30B-A3B/14B/8B 등 | 모델별 상이 | 모델별 상이 | `Qwen/*` |
+
+**최신 모델 카드**:
+- [Qwen3-Coder-Next](https://huggingface.co/Qwen/Qwen3-Coder-Next)
+- [DeepSeek-V4-Pro](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro)
+- [DeepSeek-V4-Flash](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash)
+- [GLM-5.1](https://huggingface.co/zai-org/GLM-5.1)
+- [MiniMax-M2.7](https://huggingface.co/MiniMaxAI/MiniMax-M2.7)
 
 > 모델별 상세 비교와 하드웨어 요건은 [10주차 강의](/weeks/week-10) 참조.
 

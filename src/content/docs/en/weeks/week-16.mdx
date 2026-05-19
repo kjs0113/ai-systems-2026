@@ -1,103 +1,391 @@
 ---
-title: "Week 16: Final Presentations and Course Wrap-up"
-description: Ralphthon final presentations — team demos, peer evaluation, and the future of AI systems
+title: "Week 16: Final Presentations and Course Wrap-Up"
+description: Ralphthon final presentations — team demos, peer review, portfolio framing, and the future of AI systems
 week: 16
 phase: 5
 phase_title: Capstone Ralphthon
 date: "2026-06-16"
 theory_topics:
   - The future of AI systems
-  - The next phase of agentic systems
-  - Career preparation guide
+  - The next stage of agentic systems
+  - Portfolio and career preparation
 lab_topics:
   - Final presentations and demos
-  - Peer evaluation
-assignment: "Peer Review"
+  - Peer review
+  - Personal reflection
+assignment: "Peer review"
 assignment_due: "2026-06-23"
 difficulty: beginner
-estimated_time: "4 hours"
+estimated_time: 4 hours
 ---
 
-import { Aside, Badge, Card, CardGrid } from '@astrojs/starlight/components';
+import { Aside, Badge, Card, CardGrid, Steps } from '@astrojs/starlight/components';
 
 <div class="week-meta">
   <span class="phase-tag">Phase 5</span>
   <Badge text="Week 16" variant="note" />
-  <Badge text="Final Presentations" variant="success" />
+  <Badge text="Final Presentation" variant="success" />
   <Badge text="Lecture: 2026-06-16" variant="default" />
 </div>
 
-## Final Presentation Schedule
+## Theory
 
-Individual projects. Each student: **15 min talk + 5 min Q&A = 20 min**. Slot count adjusts to the number of enrolled students.
-
-**Example schedule** (slot count adjusts to the number of enrolled students):
-
-| Time | Slot | Notes |
-|------|------|-------|
-| 09:00–09:20 | #1 | 15-min talk + 5-min Q&A |
-| 09:20–09:40 | #2 | |
-| 09:40–10:00 | #3 | |
-| 10:00–10:15 | Break | |
-| 10:15–10:35 | #4 | |
-| 10:35–10:55 | #5 | |
-| ... | ... | Extend for additional students |
-| Last 30 min | Write peer evaluations | |
-| Last 10 min | Course wrap-up & grade announcement | |
-
-**Presentation order**: Reverse of the Week 8 order (whoever presented first then presents last).
-
-## Peer Evaluation Criteria
-
-Each student's presentation is evaluated on the following 5 items (20 points each, 100 points total):
-
-1. **Technical Completeness** — Does the agent pipeline actually work?
-2. **Problem-Solving Ability** — Is the chosen problem appropriate and is the solution effective?
-3. **Clarity of Presentation** — Was the complex system explained in an accessible way?
-4. **Application of Ralph Loop Philosophy** — Were harness engineering principles properly implemented?
-5. **Learning Reflection** — Were failures and lessons shared honestly?
-
-## The Future of AI Systems
+### Capabilities you take from this course
 
 <CardGrid>
-  <Card title="Near-term (2026–2027)" icon="rocket">
-    - HOTL becomes the standard development methodology
-    - Full enforcement of the EU AI Act makes Governance-as-Code mandatory
-    - Open-source models reach performance near commercial APIs
+  <Card title="Systems thinking" icon="open-book">
+    Treat AI not as a model but as a system of governance, tool boundary, events, gates, and humans.
   </Card>
-  <Card title="Mid-term (2027–2030)" icon="star">
-    - Fully autonomous SDLC — humans only provide requirements
-    - Meta-agentic systems where agents design other agents
-    - AI Engineer = integrated role of system architect + supervisor
+  <Card title="Design ability" icon="seti:config">
+    Design task packets, runtime layers, gate policies, and escalation paths — and leave decision traces in ADRs.
+  </Card>
+  <Card title="Implementation ability" icon="pencil">
+    Wire Ralph loops, MCP, vLLM, OpenTelemetry, and LLM-as-Judge into a closed-loop MVP.
+  </Card>
+  <Card title="Operational ability" icon="rocket">
+    Operate telemetry, replay, release gates, and human override; report cost and failure rate quantitatively.
   </Card>
 </CardGrid>
 
-<Aside type="note" title="A Note as This Course Ends">
-You are no longer just developers who write code — you are **systems engineers who direct AI agents**.
-Ralph Loop, HOTL governance, multi-agent SDLC — these will become the standard of the future software industry.
-Use this course as a starting point. Keep learning. Keep building.
+---
+
+### The point of the final presentation
+
+The final presentation is not "show off a slick demo." It is **the moment to prove you can treat an AI system as an engineering object**. Evaluators want to see:
+
+1. Which repeated work did you solve?
+2. How far did the agent run autonomously?
+3. How did the harness contain failure?
+4. On what grounds did you judge result quality?
+5. What will you cut or strengthen in the next version?
+
+### Final presentation schedule
+
+| Time | Team | Notes |
+|------|------|-------|
+| 09:00-09:15 | Team 1 | 12-min talk + 3-min Q&A |
+| 09:20-09:35 | Team 2 | 12-min talk + 3-min Q&A |
+| 09:40-09:55 | Team 3 | 12-min talk + 3-min Q&A |
+| 10:00-10:15 | Team 4 | 12-min talk + 3-min Q&A |
+| 10:20-10:35 | Team 5 | 12-min talk + 3-min Q&A |
+| 10:40-11:00 | Break + extended Q&A | |
+| 11:00-11:30 | Peer review | |
+| 11:30-12:00 | Course wrap-up | |
+
+### Presentation rubric
+
+Each talk is graded out of 100.
+
+| Item | Points | Core question |
+|------|------:|---------------|
+| Technical completeness | 25 | Does the closed loop actually run? |
+| Harness design | 25 | Are gate, retry, replay, and policy implemented? |
+| Problem framing | 15 | Is the chosen task appropriate and repeatable? |
+| Observability and evaluation | 20 | Are numbers, event logs, and judge/test results connected? |
+| Presentation and reflection | 15 | Are failures and scope cuts shared honestly? |
+
+<Aside type="note" title="Signals of a good talk">
+Replace "the AI answered like this" with "for this run id, this task packet entered, passed this gate, and on failure left this event."
 </Aside>
 
-## Career Preparation Guide
+#### Evidence checklist
 
-How to represent the skills built in this course on your resume:
+Every claim on the slide must come with evidence.
+
+| Claim | Required evidence |
+|-------|------------------|
+| The system works | live demo or recording + run id |
+| It is repeatable | three runs with the same task packet |
+| It fails safely | the failure-path event log |
+| Quality was evaluated | a deterministic-test + judge + human-review table |
+| Cost is understood | a token / GPU / operator cost formula |
+| Next step is known | a backlog grounded in failure reasons |
+
+Cut any claim without evidence.
+
+### Peer-review criteria
+
+Peer review is engineering review, not a popularity vote. For each team, write five answers.
+
+1. The most convincing design decision.
+2. The most dangerous failure mode.
+3. A gate this system would need to be production-ready.
+4. The clearest number or piece of evidence in the talk.
+5. One-sentence improvement suggestion.
+
+#### Peer-review scoring grid
+
+| Area | 1 point | 3 points | 5 points |
+|------|---------|----------|----------|
+| Problem clarity | "wanted to try AI" | one user / one task | quantified repeated cost |
+| System design | single prompt | role separation | runtime-layer mapping |
+| Evidence | demo video only | one run | three + replay + judge |
+| Failure sharing | hidden | partial | failure log + response |
+| Next steps | vague | feature additions | gate / observability priorities |
+
+### The future of AI systems
+
+The patterns you built in Phases 4-5 line up directly with the trends after 2026. Six axes will keep guiding you whatever you build next.
+
+<CardGrid>
+  <Card title="2026-2027: Harness as product" icon="rocket">
+    Codex, Claude Code, Gemini CLI, GitHub Agent HQ — the differentiator is not the model but execution environment, permissions, sandbox, MCP, and review workflow.
+  </Card>
+  <Card title="Agent Ops as a discipline" icon="seti:config">
+    MLOps owned model deployment. Agent Ops will own tool boundary, memory, event log, policy gate, and human override.
+  </Card>
+  <Card title="Eval-first culture" icon="approve-check-circle">
+    LLM-as-Judge, human-in-the-loop, and offline eval sets become first-line criteria for model selection and release.
+  </Card>
+  <Card title="Memory & long context" icon="open-book">
+    Beyond 1M context, the new design variable is what to keep, summarize, and forget — and how.
+  </Card>
+  <Card title="Tool / Skill marketplace" icon="puzzle">
+    MCP, skills, and subagents become OS-level interfaces, with security, billing, and evaluation following along.
+  </Card>
+  <Card title="Compliance & safety" icon="seti:lock">
+    EU AI Act, ISO 42001, NIST AI RMF — governance-as-code becomes part of the engineering standard.
+  </Card>
+</CardGrid>
+
+### Capabilities that travel beyond this course
+
+| What you learned | Portfolio framing |
+|------------------|-------------------|
+| HOTL governance | designed human approval and automated policy gates as separate concerns |
+| MCP and tool boundary | constrained the agent's tool surface to be auditable |
+| Ralph Loop | implemented repeated execution with deterministic backpressure and rollback |
+| Context engineering | designed instruction, task packet, memory, and compaction strategy |
+| vLLM / MLOps | served local models with an OpenAI-compatible API plus telemetry |
+| LLM-as-Judge | integrated probabilistic evaluation with deterministic gates |
+
+### Course-wide synthesis
+
+Week 16 is when Weeks 1-15 become one connected story.
+
+<div class="diagram">
+  <div class="diagram__title">From Phase 1 Concepts to Capstone Artifacts</div>
+  <div class="diagram__cols diagram__cols--2">
+    <div class="diagram__node diagram__node--blue diagram__node--full">
+      <span class="diagram__node__label">HOTL · MIG · MCP</span>
+      <span class="diagram__node__sub">Phase 1</span>
+      <span class="diagram__node__detail">→ approval / resource boundary / tool boundary</span>
+    </div>
+    <div class="diagram__node diagram__node--cyan diagram__node--full">
+      <span class="diagram__node__label">Ralph Loop · Context · Instruction</span>
+      <span class="diagram__node__sub">Phase 2</span>
+      <span class="diagram__node__detail">→ repeated run / state file / PROMPT.md</span>
+    </div>
+    <div class="diagram__node diagram__node--purple diagram__node--full">
+      <span class="diagram__node__label">Multi-agent SDLC</span>
+      <span class="diagram__node__sub">Phase 3</span>
+      <span class="diagram__node__detail">→ Lead / Planner / Worker / Reviewer</span>
+    </div>
+    <div class="diagram__node diagram__node--orange diagram__node--full">
+      <span class="diagram__node__label">vLLM · Telemetry · Judge</span>
+      <span class="diagram__node__sub">Phase 4</span>
+      <span class="diagram__node__detail">→ serving / OTel / event store / LLM-as-Judge</span>
+    </div>
+    <div class="diagram__node diagram__node--green diagram__node--full">
+      <span class="diagram__node__label">Ralphthon</span>
+      <span class="diagram__node__sub">Phase 5</span>
+      <span class="diagram__node__detail">→ closed-loop MVP / release gate / final demo</span>
+    </div>
+    <div class="diagram__node diagram__node--gray diagram__node--full">
+      <span class="diagram__node__label">Synthesis</span>
+      <span class="diagram__node__sub">Final presentation</span>
+      <span class="diagram__node__detail">→ AI as an engineering target</span>
+    </div>
+  </div>
+</div>
+
+| Early concept | How it surfaces in the capstone |
+|--------------|--------------------------------|
+| HOTL | human approval, override, peer review |
+| MIG / resource boundary | model serving budget, per-team GPU/queue separation |
+| MCP / tool boundary | allowed tools, denied tools, audit log |
+| Ralph Loop | repeated runs, deterministic backpressure |
+| Context engineering | task packet, instruction, compact replay state |
+| Multi-agent SDLC | Lead, Planner, Worker, Reviewer handoff |
+| MLOps / telemetry | vLLM metrics, OTel spans, event store |
+
+A team that explains these connections is presenting a synthesis of the whole course, not just a demo.
+
+### Capstone case study (fictional team)
+
+A worked example so students can copy the structure.
+
+<div class="diagram">
+  <div class="diagram__title">Case Study — "Repo Doctor" Team Final Demo</div>
+  <div class="diagram__flow">
+    <div class="diagram__node diagram__node--blue diagram__node--full">
+      <span class="diagram__node__label">Situation</span>
+      <span class="diagram__node__sub">Department GitHub: 30+ PRs/week. Reviewer fatigue, reaction time 38h average.</span>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--cyan diagram__node--full">
+      <span class="diagram__node__label">Task</span>
+      <span class="diagram__node__sub">Read PR diffs, auto-generate three risk-ranked review comments. Human approves the merge.</span>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--purple diagram__node--full">
+      <span class="diagram__node__label">Action</span>
+      <span class="diagram__node__sub">task packet · MCP read-only tools · pytest gate · LLM Judge · OTel · replay snapshot.</span>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--green diagram__node--full">
+      <span class="diagram__node__label">Result</span>
+      <span class="diagram__node__sub">3-run avg reaction 38h → 11h. judge correlation Spearman 0.78. cost / PR $0.04 (local) vs $0.18 (api).</span>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--orange diagram__node--full">
+      <span class="diagram__node__label">Reflection</span>
+      <span class="diagram__node__sub">One false-pass (1 override). Next: secret-scan policy gate, paired-reviewer mode.</span>
+    </div>
+  </div>
+</div>
+
+### Designing the portfolio narrative
+
+In a personal portfolio, "what I built" is weaker than "what engineering judgments I made."
 
 ```markdown
-## Project Experience
-- **Ralphthon Capstone**: Multi-agent autonomous SDLC design and implementation
-  - Tech: Ralph Loop, HOTL, vLLM, DeepSeek-Coder-V2, MCP
-  - Outcome: 90% automation of code generation → testing → deployment pipeline
-  - Infrastructure: NVIDIA DGX H100 (MIG), Kubernetes
+## Ralphthon Capstone: Agentic Code Review Harness
 
-## Tech Stack
-- AI Systems: Agentic workflows, harness engineering, LLM operations
-- MLOps: vLLM, OpenTelemetry, LLM-as-Judge
-- Infrastructure: DGX H100, MIG, Docker, Kubernetes
+- Built a human-on-the-loop agent runtime for repeatable PR review tasks.
+- Designed task packets, scoped tool permissions, event-sourced run logs, and replay snapshots.
+- Integrated deterministic gates (pytest, schema validation) with an LLM-as-Judge quality rubric.
+- Served local coding models through a vLLM OpenAI-compatible API and compared cost/latency against commercial APIs.
+- Reported 3-run success rate, token cost, latency, and failure recovery behavior.
 ```
 
-## Congratulations!
+#### STAR + Engineering Decisions
 
-Thank you to all the students who studied with us for 16 weeks.
-We hope everything you built in this course becomes a major asset in your career.
+| Beat | Recommended phrasing |
+|------|---------------------|
+| Situation | "User Y had problem X with cost Z" |
+| Task | "We solved scope A; out of scope was B" |
+| Action | "Three ADRs + task packet + gate policy" |
+| Result | "Numbers + run id + limitations" |
+| Engineering decisions | "Why this model / harness / evaluation" |
+| Next | "One or two items to cut or harden in the next version" |
+
+### Continuing-learning roadmap
+
+The first six months after graduation are the riskiest. Pre-writing milestones keeps direction.
+
+<CardGrid>
+  <Card title="Next 6 months" icon="rocket">
+    Add one new model or task type to the capstone system. Read one SRE primer. Accumulate ten ADRs.
+  </Card>
+  <Card title="Next 1 year" icon="seti:config">
+    Operate for five real users. Catalog 30 failure modes. Submit one Agent Ops conference talk.
+  </Card>
+  <Card title="Next 2 years" icon="open-book">
+    Move into a platform role on a team. Publish one MLOps + LLMOps + Agent Ops integration writeup.
+  </Card>
+</CardGrid>
+
+### Personal reflection prompts
+
+<Steps>
+1. **What was the largest scope cut?**
+
+   Frame the cut as an engineering decision, not a failure.
+
+2. **Where did the AI repeatedly fail?**
+
+   Do not blame the model — describe what changed in instruction / gate / context.
+
+3. **What dangerous behavior would have happened without the harness?**
+
+   Pick one of file writes, external APIs, cost, security, or wrong judgments and be specific.
+
+4. **What is the next version's first improvement?**
+
+   Prioritize observability, evaluation, and stability before new features.
+</Steps>
+
+### Course wrap-up
+
+This course can be reduced to one sentence.
+
+> The stronger the model, the more important the harness around it.
+
+Your capstone may not be a finished product. But if you connected task packet, tool boundary, event log, policy gate, judge, and telemetry yourself, you already treated AI as engineering rather than as prompts.
+
+## Practicum
+
+<Steps>
+1. **Deliver the final presentation**
+
+   15 minutes in STAR order. Live demo + 90-second fallback.
+
+2. **Write peer reviews**
+
+   For each team, fill the five questions and the 1-3-5 grid.
+
+3. **Answer the four reflection prompts**
+
+   One paragraph each on scope cut, repeated failures, harness value, and next improvements.
+
+4. **Author a one-page portfolio narrative**
+
+   Five sentences in STAR + Engineering Decisions form, with headline numbers.
+
+5. **File a continuing-learning roadmap**
+
+   Save the 6-month / 1-year / 2-year cards in your personal notes.
+</Steps>
+
+## Assignment
+
+<div class="assignment-box">
+
+### Peer review and personal reflection
+
+**Due**: 2026-06-23 23:59
+
+**Peer review**:
+1. Five-question evaluation per team
+2. 1-3-5 scoring grid in five areas
+3. One most-instructive design decision
+4. One most-dangerous failure mode
+
+**Personal reflection**:
+1. Your role and actual contribution
+2. Where AI failed and how the harness compensated
+3. Three principles you will carry to the next project
+4. A five-sentence portfolio summary
+5. Three roadmap cards (6 months / 1 year / 2 years)
+
+</div>
+
+## Key Takeaways
+
+1. **It is a system, not a model**: AI is a system that bundles governance, tools, events, gates, and humans.
+2. **Cut every claim without evidence**: every line on the slide should map to a run id, an event log entry, or a dashboard.
+3. **Peer review is review, not applause**: name the most dangerous failure mode and the next gate to add.
+4. **Read the future across six axes**: harness as product / Agent Ops / Eval-first / Memory / Marketplace / Compliance.
+5. **Portfolio = decision trace**: what you rejected is a stronger signal than what you built.
+6. **Carry three roadmap cards**: 6 months / 1 year / 2 years pre-written goals keep you on track.
+7. **The course in one sentence**: the stronger the model, the more important the harness around it.
+
+## Further Reading
+
+**Career / learning roadmap**
+- Will Larson, _Staff Engineer_
+- Tanya Reilly, _The Staff Engineer's Path_
+- Charity Majors, "The Engineer / Manager Pendulum"
+
+**Outlook / policy**
+- Anthropic, "Building Anthropic" (recurring updates)
+- EU AI Act full text / digest
+- NIST AI RMF 1.0
+- Stanford HAI AI Index Report
+
+**Community**
+- LangChain · LlamaIndex · MCP community channels
+- KAIST AI Systems Seminar, Korean Software Engineering Society
 
 **Questions or feedback**: yj.lee@chu.ac.kr or [GitHub Issue](https://github.com/halla-ai/ai-systems-2026/issues)

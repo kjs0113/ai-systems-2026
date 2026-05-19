@@ -1,198 +1,480 @@
 ---
-title: "8주차: 프로젝트 계획 발표 (중간고사 대체)"
-description: 개인 캡스톤 프로젝트 계획 발표 — 중간고사 기간
+title: "8주차: 플래닝 에이전트 구현"
+description: 추상적 요구사항에서 결정론적 기계 가독형 명세서까지 — Planner Agent 상세 구현
 week: 8
 phase: 3
-phase_title: 중간 평가
+phase_title: 멀티에이전트 SDLC
 date: "2026-04-21"
 theory_topics:
-  - 프로젝트 계획서 구조와 작성법
-  - 에이전틱 시스템 설계 패턴 복습 (Week 1–7)
+  - 플래닝 에이전트 아키텍처
+  - 명세서(spec.md) 자동 생성
+  - 코드베이스 분석 기법
 lab_topics:
-  - 개인 프로젝트 계획 발표 (15분 + Q&A)
-  - 상호 피드백과 교수 코칭
-assignment: "캡스톤 프로젝트 계획서"
-assignment_due: "2026-04-20"
-difficulty: 중급
-estimated_time: 4시간
+  - 플래너 에이전트 구현
+  - spec.md 자동 생성 파이프라인
+assignment: "Lab 08: 플래닝 에이전트 구현"
+assignment_due: "2026-04-28"
+difficulty: 고급
+estimated_time: 8시간
 ---
 
-import { Aside, Steps, Badge, Card, CardGrid } from '@astrojs/starlight/components';
+import { Aside, Steps, Tabs, TabItem, Badge, Card, CardGrid } from '@astrojs/starlight/components';
 
 <div class="week-meta">
-  <span class="phase-tag">중간 평가</span>
+  <span class="phase-tag">Phase 3</span>
   <Badge text="8주차" variant="note" />
-  <Badge text="중간고사 대체" variant="danger" />
+  <Badge text="고급" variant="danger" />
   <Badge text="강의일: 2026-04-21" variant="default" />
 </div>
 
-<Aside type="tip" title="소규모 개인 프로젝트 운영">
-이 수업은 소규모 운영 방식을 반영하여 캡스톤을 **팀 프로젝트가 아닌 개인 프로젝트**로 진행한다. 8주차 중간고사는 필기 시험 대신 **개인 프로젝트 계획 발표**로 대체된다.
-</Aside>
+## 이론 (Theory)
 
-## 8주차 개요
-
-8주차는 중간고사 기간이다. 이 수업에서는 필기 시험 대신 **개인 캡스톤 프로젝트 계획서를 작성하고 발표**한다. 1–7주차에서 배운 개념(HOTL, MCP, Ralph Loop, Context Rot, 인스트럭션 튜닝, 멀티에이전트 SDLC)을 실제 프로젝트 설계로 연결하는 것이 목표다.
-
-**중간 프로젝트 비중**: **20%** (전체 성적)
-
----
-
-## 제출 방법
-
-### 제출 위치
-
-GitHub PR로 다음 경로에 계획서를 제출한다:
-
-```
-capstone/projects/[학번]/proposal.md
-```
-
-예: `capstone/projects/20230001/proposal.md`
-
-### 제출 절차
-
-<Steps>
-1. **저장소 포크 & 브랜치 생성**
-
-   ```bash
-   git clone <course-repo>
-   cd <course-repo>
-   git checkout -b proposal/20230001
-   ```
-
-2. **디렉토리 생성 및 계획서 작성**
-
-   ```bash
-   mkdir -p capstone/projects/20230001
-   # proposal.md 작성 (템플릿은 아래 가이드 참조)
-   ```
-
-3. **빌드 검증**
-
-   ```bash
-   pnpm install --frozen-lockfile
-   pnpm run build
-   ```
-
-   빌드 실패 시 PR 제출 금지.
-
-4. **PR 제출**
-
-   - PR 제목: `[제안] 캡스톤 계획서 - 20230001 홍길동`
-   - Base: `main` / Compare: `proposal/20230001`
-   - 본문에 프로젝트 한 줄 요약 포함
-
-5. **프로젝트 등록**
-
-   [프로젝트 등록 페이지](/capstone/teams)에서 본인 정보도 함께 추가.
-</Steps>
-
-### 제출 마감
-
-- **계획서 PR 마감**: **2026-04-20 23:59** (8주차 강의 전날)
-- **발표**: 2026-04-21 수업 시간
-- **최종 승인**: 발표 후 교수 피드백을 반영하여 2026-04-28까지 revision
-
----
-
-## 계획서 작성 가이드
-
-계획서의 **일관성과 구체성**을 위해 표준 템플릿을 따른다. 상세 가이드와 템플릿은 다음 페이지에 있다:
+### 오늘의 학습 목표
 
 <CardGrid>
-  <Card title="프로젝트 계획서 가이드" icon="open-book">
-    표준 템플릿 + 작성 원칙 + 예시
-
-    → [/capstone/proposal-guide](/capstone/proposal-guide)
+  <Card title="개념 관점" icon="open-book">
+    플래너 에이전트가 9-phase SDLC의 병목인 이유를 설명하고, Worker만으로는 흡수하지 못하는 설계 결정 종류를 분류한다.
   </Card>
-  <Card title="프로젝트 등록" icon="list-format">
-    계획서 제출 전에 본인 프로젝트 등록
-
-    → [/capstone/teams](/capstone/teams)
+  <Card title="설계 관점" icon="seti:config">
+    `spec.md` 스키마(목표·범위·제약·acceptance·escalation)를 직접 설계하고 검증 게이트를 정의한다.
+  </Card>
+  <Card title="구현 관점" icon="pencil">
+    codebase analysis 단계와 spec generation 단계를 분리한 플래너를 코드로 구현하고, spec validation을 자동화한다.
+  </Card>
+  <Card title="운영 관점" icon="rocket">
+    spec drift(요구사항 변경 vs 구현 불일치)를 감지하고 수정 흐름을 운영하는 체크리스트를 운영한다.
   </Card>
 </CardGrid>
 
-### 필수 섹션 요약
+---
 
-계획서는 다음 8개 섹션을 **모두 포함**해야 한다:
+### 왜 플래너 에이전트가 파이프라인의 병목인가
 
-1. **문제 정의** — 현재 상황, 왜 에이전틱 접근이 필요한가
-2. **제안 시스템 설계** — 에이전트 구성, 파이프라인 아키텍처, MCP 도구
-3. **기술 스택** — 모델, 프레임워크, 언어, 배포
-4. **수업 기법 적용 매핑** — 1–7주차 기법 중 어떤 것을 어떻게 쓸지 명시
-5. **개발 일정** — 13–16주차 마일스톤
-6. **성공 기준** — 정량적 지표
-7. **위험 요소와 대응** — 예상 리스크와 완화 전략
-8. **참고자료**
+Week 7에서 설계한 9-phase 에이전틱 SDLC를 떠올려보자. Phase 1-3 (요구사항 수집 → 아키텍처 설계 → 태스크 분해)은 전적으로 **플래너의 영역**이다. 이 세 단계의 산출물 품질이 Phase 4-9 전체의 성공률을 결정한다.
 
-<Aside type="caution" title="가장 중요한 섹션">
-§2 (시스템 설계)와 §4 (수업 기법 적용)가 채점 배점의 절반을 차지한다. **다이어그램 1개 이상**과 **수업 주차별 기법 매핑 테이블**을 반드시 포함하라.
+직관적으로 생각해보면: 코더 에이전트가 아무리 뛰어나도, 입력으로 받은 spec.md에 "사용자 인증 기능 추가" 한 줄만 있다면 올바른 코드를 생성할 수 없다. 반대로 acceptance criteria가 테스트 가능한 수준으로 명확하면, 심지어 소형 모델도 충분한 코드를 생성할 수 있다.
+
+**MetaGPT (ICLR 2024)** 논문은 이를 실증한다. PM → Architect → Engineer 시퀀스에서 각 역할이 생성하는 SOP(Standard Operating Procedure) 문서의 품질과 최종 코드 품질 사이에 **0.72의 상관관계**가 있음을 보고했다. 특히 PM 역할이 작성한 PRD(Product Requirements Document)의 명확성이 가장 강한 예측 변수였다.
+
+sdlc-toolkit의 `/spec` 스킬은 이 통찰을 구현한다. 새 요구사항을 처리하기 전, 기존 프로젝트의 LESSON 파일들을 grep하여 과거 실패 패턴을 컨텍스트에 주입한다. 같은 실수를 반복하지 않는 것 — 이것이 결정론적 파이프라인과 단순 LLM 호출의 차이다.
+
+<Aside type="tip">
+**핵심 명제**: 플래너 에이전트는 파이프라인의 첫 번째 게이트다. 명세서의 품질 = 파이프라인 전체 성공률. 플래너에 투자하는 것이 코더 에이전트를 고도화하는 것보다 ROI가 높다.
 </Aside>
 
 ---
 
-## 발표 일정
+### 플래너 에이전트의 역할
 
-각 학생 **15분 발표 + 5분 Q&A + 교수 피드백 5분 = 25분**. 발표 슬롯은 참여 학생 수에 맞춰 배정된다.
+플래너 에이전트는 **모호한 인간 요구사항**을 **코더 에이전트가 처리 가능한 구체적 태스크**로 변환한다. 이 변환은 단일 단계가 아니라 **2단계 분리 패턴**으로 구현된다.
 
-**시간표 예시**:
+**2단계 분리 패턴**: `/spec` → `/architect`
 
-| 시간 | 순번 | 비고 |
-|------|------|------|
-| 09:00–09:25 | 1번 | 발표 시작 |
-| 09:25–09:50 | 2번 | |
-| 09:50–10:15 | 3번 | |
-| 10:15–10:30 | 휴식 | |
-| 10:30–10:55 | 4번 | |
-| 10:55–11:20 | 5번 | |
-| ... | ... | 학생 수에 맞춰 확장 |
-| 종료 20분 전 | 종합 피드백 & 상호 평가 | |
+sdlc-toolkit은 요구사항 명세와 아키텍처 설계를 의도적으로 분리한다. 이 분리는 소프트웨어 엔지니어링의 관심사 분리(Separation of Concerns) 원칙을 에이전트 설계에 적용한 것이다.
 
-**발표 순서**는 계획서 PR이 merge된 시간 순서로 배정된다 (빨리 낸 사람이 먼저 발표).
+- `/spec` — **"무엇을"**: 요구사항, acceptance criteria, 제약 조건, out-of-scope 항목 정의. 구현 방법은 언급하지 않는다.
+- `/architect` — **"어떻게"**: 아키텍처 결정, 모듈 분해, TASK 파일 생성, 의존성 DAG 구성.
+
+이 분리의 실질적 이점: spec 단계에서 LLM이 구현 세부사항에 매몰되지 않고 요구사항의 완전성(completeness)에 집중할 수 있다. architect 단계에서는 이미 확정된 요구사항을 전제로 최적 구조를 탐색한다.
+
+흐름: **Requirement Spec** → **Architecture Document** + **TASK 파일들** (의존성 DAG 포함)
+
+<Aside type="tip">
+Week 7에서 설계한 아티팩트 스키마가 여기서 코드로 구현된다. spec.md의 frontmatter 구조, TASK 파일의 `dependencies` 배열, acceptance criteria 형식 — 모두 Week 7 설계의 직접 구현이다.
+</Aside>
+
+<div class="diagram">
+  <div class="diagram__flow">
+    <div class="diagram__node diagram__node--purple">
+      <span class="diagram__node__label">"사용자 인증 기능을 추가해줘"</span>
+      <span class="diagram__node__sub">모호한 인간 요구사항</span>
+    </div>
+    <div class="diagram__arrow">&#x2193;<span class="diagram__arrow--label">Planner Agent</span></div>
+    <div class="diagram__node diagram__node--blue diagram__node--wide">
+      <span class="diagram__node__label">spec.md</span>
+      <ul>
+        <li>task-001: JWT 토큰 생성 모듈 (auth/jwt.py)</li>
+        <li>task-002: 비밀번호 해싱 유틸리티 (auth/hash.py)</li>
+        <li>task-003: 로그인 API 엔드포인트 (api/auth.py:45-80)</li>
+        <li>task-004: 인증 미들웨어 (middleware/auth.py)</li>
+      </ul>
+      <span class="diagram__node__detail">각 태스크에 acceptance criteria 포함</span>
+    </div>
+  </div>
+</div>
 
 ---
 
-## 평가 기준
+### 플래너 에이전트 구현
 
-| 항목 | 배점 | 설명 |
-|------|------|------|
-| 문제 정의의 명확성 | 4점 | 왜 이 문제인가, 왜 에이전틱 접근인가 |
-| 시스템 설계의 구체성 | 6점 | 에이전트 구성, 아티팩트, 파이프라인 |
-| 수업 기법 적용 | 4점 | 1–7주차 기법과의 명시적 연결 |
-| 실현 가능성 | 3점 | 13–16주차 일정 내 완성 가능성 |
-| 발표 품질 | 3점 | 명확한 전달, Q&A 대응 |
-| **합계** | **20점** | 전체 성적의 20% |
+```python
+# planner_agent.py
+import os
+import anthropic
+import json
+from pathlib import Path
+
+SYSTEM_PROMPT = """당신은 소프트웨어 아키텍트 역할을 하는 플래너 에이전트입니다.
+주어진 요구사항과 코드베이스를 분석하여 구체적이고 실행 가능한 태스크 목록을 생성합니다.
+
+출력 형식: JSON
+{
+  "tasks": [
+    {
+      "id": "task-XXX",
+      "description": "구체적인 구현 내용",
+      "target_files": ["파일 경로"],
+      "dependencies": ["task-XXX"],
+      "acceptance_criteria": ["검증 조건들"]
+    }
+  ]
+}"""
+
+class PlannerAgent:
+    def __init__(self):
+        self.client = anthropic.Anthropic()
+
+    def analyze_codebase(self, project_root: Path) -> str:
+        """코드베이스 구조를 텍스트로 요약"""
+        structure = []
+        for f in project_root.rglob("*.py"):
+            structure.append(f"- {f.relative_to(project_root)}")
+        return "\n".join(structure)
+
+    def plan(self, requirement: str, project_root: Path) -> dict:
+        codebase = self.analyze_codebase(project_root)
+
+        response = self.client.messages.create(
+            model=os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5"),
+            max_tokens=4096,
+            system=SYSTEM_PROMPT,
+            messages=[{
+                "role": "user",
+                "content": f"요구사항: {requirement}\n\n코드베이스:\n{codebase}"
+            }]
+        )
+
+        return json.loads(response.content[0].text)
+
+    def generate_spec_md(self, plan: dict, output_path: Path):
+        """JSON 계획을 Markdown 명세서로 변환"""
+        with open(output_path, 'w') as f:
+            f.write("# 프로젝트 명세서\n\n")
+            for task in plan['tasks']:
+                f.write(f"## {task['id']}: {task['description']}\n")
+                f.write(f"- 대상 파일: {', '.join(task['target_files'])}\n")
+                f.write("- 완료 조건:\n")
+                for criterion in task['acceptance_criteria']:
+                    f.write(f"  - [ ] {criterion}\n")
+                f.write("\n")
+```
+
+#### 명세서 검증과 의존성 DAG
+
+기본 구현 이후, 두 가지 핵심 기능을 추가해야 한다: 명세서 품질 자동 검증과 태스크 의존성 DAG 구성.
+
+```python
+def validate_spec(self, plan: dict) -> tuple[bool, list[str]]:
+    """생성된 명세서의 품질을 자동 검증"""
+    issues = []
+
+    for task in plan['tasks']:
+        # acceptance criteria 완전성 검증
+        if not task.get('acceptance_criteria'):
+            issues.append(f"{task['id']}: acceptance_criteria 누락")
+        elif len(task['acceptance_criteria']) < 2:
+            issues.append(f"{task['id']}: acceptance_criteria 최소 2개 필요")
+
+        # assumptions 존재 여부
+        if 'assumptions' not in task:
+            issues.append(f"{task['id']}: assumptions 필드 누락")
+
+        # out-of-scope 명시 여부 (태스크 레벨이 아닌 spec 레벨)
+        if 'out_of_scope' not in plan:
+            issues.append("spec 레벨 out_of_scope 미정의")
+            break  # 한 번만 보고
+
+    return len(issues) == 0, issues
+
+
+def create_task_dag(self, plan: dict, output_dir: Path):
+    """TASK 파일 생성 및 의존성 DAG 구성 (Week 7 tier 개념 구현)"""
+    task_map = {t['id']: t for t in plan['tasks']}
+
+    # tier 계산: 의존성 없는 태스크 = tier 1, 의존성 있는 태스크 = max(dep_tier) + 1
+    tiers = {}
+    def get_tier(task_id: str) -> int:
+        if task_id in tiers:
+            return tiers[task_id]
+        task = task_map[task_id]
+        deps = task.get('dependencies', [])
+        if not deps:
+            tiers[task_id] = 1
+        else:
+            tiers[task_id] = max(get_tier(d) for d in deps) + 1
+        return tiers[task_id]
+
+    for task in plan['tasks']:
+        get_tier(task['id'])
+
+    # TASK 파일 생성
+    output_dir.mkdir(parents=True, exist_ok=True)
+    for task in plan['tasks']:
+        task_file = output_dir / f"{task['id']}.md"
+        with open(task_file, 'w') as f:
+            f.write(f"---\nid: {task['id']}\ntier: {tiers[task['id']]}\n")
+            f.write(f"dependencies: {task.get('dependencies', [])}\n---\n\n")
+            f.write(f"## {task['description']}\n\n")
+            f.write("### Acceptance Criteria\n")
+            for ac in task['acceptance_criteria']:
+                f.write(f"- [ ] {ac}\n")
+```
+
+---
+
+### 코드베이스 분석 고도화
+
+기존 `analyze_codebase()`는 파일 목록만 반환한다. 코더 에이전트에게 필요한 컨텍스트는 훨씬 더 풍부해야 한다.
+
+sdlc-toolkit의 `/architect` 스킬이 사용하는 **3단계 분석 패턴**을 보자.
+
+<Aside type="caution">
+전체 코드를 컨텍스트에 넣으면 Week 5에서 배운 **Context Rot**이 발생한다. 파일 수가 50개를 넘는 순간 LLM의 중간 컨텍스트 주의력이 급감한다. 각 단계별 **요약 후 주입** 전략이 필수다.
+</Aside>
+
+<Tabs>
+  <TabItem label="1단계: 구조 분석">
+```python
+def analyze_structure(self, project_root: Path) -> dict:
+    """파일/디렉토리/모듈 트리 구성"""
+    structure = {"files": [], "directories": set(), "modules": []}
+
+    for f in project_root.rglob("*.py"):
+        rel = f.relative_to(project_root)
+        structure["files"].append(str(rel))
+        structure["directories"].add(str(rel.parent))
+
+        # __init__.py가 있는 디렉토리 = Python 패키지
+        if (f.parent / "__init__.py").exists():
+            module = str(rel.parent).replace("/", ".")
+            if module not in structure["modules"]:
+                structure["modules"].append(module)
+
+    structure["directories"] = sorted(structure["directories"])
+    return structure
+```
+  </TabItem>
+  <TabItem label="2단계: 의미 분석">
+```python
+import ast
+
+def analyze_semantics(self, project_root: Path) -> dict:
+    """함수/클래스 시그니처, import 그래프 추출"""
+    symbols = {}
+
+    for f in project_root.rglob("*.py"):
+        rel = str(f.relative_to(project_root))
+        try:
+            tree = ast.parse(f.read_text())
+        except SyntaxError:
+            continue
+
+        file_symbols = {"classes": [], "functions": [], "imports": []}
+
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef):
+                methods = [n.name for n in ast.walk(node)
+                           if isinstance(n, ast.FunctionDef)]
+                file_symbols["classes"].append(
+                    {"name": node.name, "methods": methods}
+                )
+            elif isinstance(node, ast.FunctionDef) and node.col_offset == 0:
+                args = [a.arg for a in node.args.args]
+                file_symbols["functions"].append(
+                    {"name": node.name, "args": args, "line": node.lineno}
+                )
+            elif isinstance(node, (ast.Import, ast.ImportFrom)):
+                file_symbols["imports"].append(ast.dump(node))
+
+        symbols[rel] = file_symbols
+
+    return symbols
+```
+  </TabItem>
+  <TabItem label="3단계: 컨텍스트 분석">
+```python
+def analyze_context(self, project_root: Path) -> dict:
+    """기존 컨벤션, 아키텍처 패턴 추출"""
+    context = {
+        "naming_convention": None,
+        "test_framework": None,
+        "patterns": [],
+        "entry_points": []
+    }
+
+    # 네이밍 컨벤션 감지 (snake_case vs camelCase)
+    py_files = list(project_root.rglob("*.py"))
+    snake_count = sum(1 for f in py_files if "_" in f.stem)
+    context["naming_convention"] = (
+        "snake_case" if snake_count > len(py_files) / 2 else "camelCase"
+    )
+
+    # 테스트 프레임워크 감지
+    if (project_root / "pytest.ini").exists() or \
+       any(project_root.rglob("conftest.py")):
+        context["test_framework"] = "pytest"
+    elif any(project_root.rglob("test_*.py")):
+        context["test_framework"] = "unittest"
+
+    # 엔트리포인트 감지
+    for candidate in ["main.py", "app.py", "run.py", "__main__.py"]:
+        if (project_root / candidate).exists():
+            context["entry_points"].append(candidate)
+
+    return context
+```
+  </TabItem>
+</Tabs>
+
+세 단계를 통합한 `analyze_codebase_full()` 메서드는 각 단계 결과를 요약하여 LLM에 주입할 compact 표현을 생성한다. 전체 소스코드가 아니라 구조적 요약이 컨텍스트 효율을 10배 이상 높인다.
+
+---
+
+### 명세서 검증 게이트
+
+생성된 spec.md가 코더 에이전트가 실행하기에 충분한지 자동 검증하는 `/validate` 패턴이다. Week 7에서 설계한 "3회 재시도 → 인간 에스컬레이션" 흐름의 구현이다.
+
+```python
+VALIDATION_CHECKLIST = [
+    ("frontmatter_valid",    lambda s: bool(s.get("title") and s.get("description"))),
+    ("has_what_and_why",     lambda s: "what" in s.get("description","").lower()
+                                       or "why" in s.get("description","").lower()),
+    ("ac_specific",          lambda s: all(
+                                 len(ac) > 20 and not ac.endswith("...")
+                                 for ac in s.get("acceptance_criteria", [])
+                             )),
+    ("no_impl_details",      lambda s: not any(
+                                 kw in str(s.get("acceptance_criteria",""))
+                                 for kw in ["import", "def ", "class ", "```"]
+                             )),
+]
+
+class SpecValidator:
+    def __init__(self, client: anthropic.Anthropic, max_retries: int = 3):
+        self.client = client
+        self.max_retries = max_retries
+
+    def validate(self, spec: dict) -> tuple[bool, list[str]]:
+        failures = []
+        for name, check_fn in VALIDATION_CHECKLIST:
+            try:
+                if not check_fn(spec):
+                    failures.append(name)
+            except Exception as e:
+                failures.append(f"{name}: error({e})")
+        return len(failures) == 0, failures
+
+    def validate_with_retry(self, spec: dict, requirement: str) -> dict:
+        """자동 재생성 + 검증. 3회 실패 시 인간 에스컬레이션."""
+        for attempt in range(self.max_retries):
+            passed, failures = self.validate(spec)
+            if passed:
+                return spec
+
+            print(f"[attempt {attempt+1}/{self.max_retries}] 검증 실패: {failures}")
+
+            # 실패 항목을 피드백으로 재생성 요청
+            spec = self._regenerate_spec(spec, requirement, failures)
+
+        # 3회 모두 실패 → 인간 에스컬레이션
+        raise ValueError(
+            f"명세서 자동 검증 실패 (3회). 수동 검토 필요.\n"
+            f"마지막 실패 항목: {failures}"
+        )
+
+    def _regenerate_spec(self, spec: dict, requirement: str,
+                         failures: list[str]) -> dict:
+        feedback = "\n".join(f"- {f}" for f in failures)
+        response = self.client.messages.create(
+            model=os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5"),
+            max_tokens=2048,
+            messages=[{
+                "role": "user",
+                "content": (
+                    f"다음 명세서의 검증 항목이 실패했습니다:\n{feedback}\n\n"
+                    f"원본 요구사항: {requirement}\n\n"
+                    f"검증을 통과하도록 명세서를 수정하세요. JSON 출력."
+                )
+            }]
+        )
+        return json.loads(response.content[0].text)
+```
+
+---
+
+### 강의 중 토론 질문
+
+<CardGrid>
+  <Card title="Q1. 모호성 감지">
+    플래너가 생성한 spec.md의 acceptance criteria가 "모호하다"와 "구체적이다"의 경계는 어디인가? 자동으로 모호성을 감지할 수 있는가? 모호성의 기계적 정의를 제안해보라.
+  </Card>
+  <Card title="Q2. 분리의 이점">
+    sdlc-toolkit은 요구사항 명세(`/spec`)와 아키텍처 설계(`/architect`)를 의도적으로 분리한다. 이 분리의 이점은 무엇인가? 두 단계를 하나로 합치면 어떤 문제가 생기는가?
+  </Card>
+  <Card title="Q3. Context Rot 트레이드오프">
+    코드베이스 전체를 컨텍스트에 넣는 것과 요약 후 넣는 것의 트레이드오프를 Week 5의 Context Rot 관점에서 분석하라. 어느 시점에서 요약 전략으로 전환해야 하는가?
+  </Card>
+  <Card title="Q4. MetaGPT vs sdlc-toolkit">
+    MetaGPT의 PM 역할과 sdlc-toolkit의 `/spec` 스킬을 비교하라. 어느 쪽이 더 결정론적인가? 결정론성을 높이는 설계 원칙은 무엇인가?
+  </Card>
+</CardGrid>
 
 ---
 
 ## 실습 (Practicum)
 
-<Aside type="tip" title="오늘 수업의 목표">
-본인 프로젝트를 발표하고, 다른 학생들의 계획을 들으며 상호 피드백을 교환한다. 교수 피드백을 반영하여 최종 계획서를 확정한다.
+<Aside type="tip">
+Week 7에서 설계한 아티팩트 스키마 — spec.md frontmatter 구조, TASK 파일 형식, acceptance criteria 템플릿 — 를 이번 주에 Python 코드로 구현한다. 설계와 구현 사이의 간극을 직접 경험하는 것이 이번 실습의 핵심 목표다.
 </Aside>
 
 <Steps>
-1. **발표 준비 (수업 전)**
+1. **플래너 에이전트 구현** — 위 코드를 기반으로 확장
 
-   15분 슬라이드 준비. [계획서 가이드의 발표 구성](/capstone/proposal-guide#발표-구성-15분) 참조.
+2. **코드베이스 분석 고도화** — 단순 파일 목록에서 함수/클래스 목록까지 분석
 
-2. **발표 (수업 중)**
+3. **spec.md 생성 파이프라인** — 실제 프로젝트(Lab 04의 calculator)에 적용
 
-   다이어그램 중심으로 시스템 설계를 설명. 수업 기법 매핑 테이블을 반드시 보여주어라.
-
-3. **상호 피드백**
-
-   다른 학생 발표에 대해 최소 2개의 건설적 질문/제안 제출. 평가 양식은 수업 중 배포.
-
-4. **교수 피드백 반영 (수업 후)**
-
-   발표 시 받은 피드백을 계획서에 반영. 수정된 `proposal.md`를 같은 PR에 push.
-
-5. **최종 승인**
-
-   2026-04-28까지 계획 확정. 13주차부터 실제 구현 착수.
+4. **생성된 spec.md 검증** — 코더 에이전트가 실제로 실행 가능한지 확인
 </Steps>
+
+---
+
+## 핵심 정리
+
+- **플래너 = 파이프라인의 첫 게이트.** 명세서 품질이 전체 성공률을 결정한다. MetaGPT의 실증 데이터(상관계수 0.72)가 뒷받침한다.
+- **2단계 분리**: `/spec`(무엇을) → `/architect`(어떻게). 관심사 분리 원칙의 에이전트 설계 적용.
+- **코드베이스 분석 3단계**: 구조(파일 트리) → 의미(시그니처, import 그래프) → 컨텍스트(컨벤션, 패턴). 전체 코드 주입은 Context Rot 유발.
+- **검증 게이트**: 자동 체크리스트(4개 항목) + 3회 재시도 + 인간 에스컬레이션. Week 7 설계의 코드 구현.
+- **의존성 DAG**: TASK 파일의 `dependencies` 배열과 tier 계산이 Week 7의 병렬화 설계를 구현한다. Tier 1 태스크는 동시 실행 가능.
+
+---
+
+## 더 읽을거리
+
+<CardGrid>
+  <Card title="MetaGPT (ICLR 2024)">
+    SOP 기반 멀티에이전트 프레임워크. PM → Architect → Engineer 시퀀스와 문서 품질-코드 품질 상관관계 실증. 플래너 설계의 핵심 레퍼런스.
+  </Card>
+  <Card title="SWE-agent (Princeton, 2024)">
+    코드베이스 탐색과 계획 수립 자동화. Agent-Computer Interface(ACI) 설계를 통해 LLM이 파일 시스템을 효과적으로 탐색하는 방법을 제시.
+  </Card>
+  <Card title="Anthropic Claude Code Agent Tool">
+    서브에이전트 스폰, 모델 라우팅, worktree 격리. 플래너-코더 분리를 프로덕션에서 구현하는 실제 패턴.
+  </Card>
+  <Card title="sdlc-toolkit /spec + /architect">
+    요구사항-아키텍처 분리 패턴의 프로덕션 구현. LESSON 파일 기반 과거 실패 학습, validate 게이트, TASK DAG 생성까지 포함한 포괄적 레퍼런스.
+  </Card>
+</CardGrid>
 
 ---
 
@@ -200,42 +482,14 @@ capstone/projects/[학번]/proposal.md
 
 <div class="assignment-box">
 
-### 캡스톤 프로젝트 계획서
+### Lab 08: 플래닝 에이전트 구현
 
-**제출 마감**: 2026-04-20 23:59 (PR 기준)
-**발표일**: 2026-04-21 (8주차 강의)
-**최종 수정 마감**: 2026-04-28 (피드백 반영)
+**제출 마감**: 2026-04-28 23:59
 
 **요구사항**:
-1. `capstone/projects/[학번]/proposal.md` 파일 작성 (템플릿 준수)
-2. 8개 필수 섹션 모두 포함
-3. 파이프라인 다이어그램 1개 이상
-4. 수업 기법 매핑 테이블 (최소 5개 주차 연결)
-5. 정량적 성공 기준 (최소 3개 지표)
-6. [프로젝트 등록 페이지](/capstone/teams)에 본인 정보 추가
-7. `pnpm run build` 통과 상태로 PR 제출
-
-**제출 후**:
-- 15분 슬라이드 준비
-- 수업 중 발표 + 상호 피드백
-- 2026-04-28까지 최종 revision
+1. 동작하는 `PlannerAgent` 구현 (`planner_agent.py`)
+2. 코드베이스 분석 기능 (함수/클래스 수준)
+3. 실제 프로젝트 적용 후 생성된 `spec.md`
+4. Lab 04 calculator 프로젝트를 플래너로 확장하는 end-to-end 시연
 
 </div>
-
----
-
-## 핵심 정리
-
-1. **8주차는 시험 대신 계획 발표** — 이론을 외우는 것이 아니라 **설계로 연결**하는 능력을 평가
-2. **개인 프로젝트** — 팀이 아닌 개인 단위로 진행 (소규모 수업 운영)
-3. **표준 템플릿 준수** — 일관된 구조로 평가 공정성 확보. [계획서 가이드](/capstone/proposal-guide) 참조
-4. **구체성 > 일반성** — "AI로 코드 개선" 대신 "pytest 실패 → 수정 커밋 자동 생성"
-5. **수업 기법 매핑 필수** — 1–7주차 중 최소 5개 주차의 기법을 명시적으로 연결
-6. **제출 경로**: `capstone/projects/[학번]/proposal.md` (GitHub PR)
-
-## 더 읽을거리
-
-- [프로젝트 계획서 작성 가이드](/capstone/proposal-guide) — 템플릿과 작성 원칙
-- [캡스톤 프로젝트 개요](/capstone) — 전체 일정과 평가
-- [프로젝트 등록](/capstone/teams) — 본인 프로젝트 등록
-- [평가 기준 상세](/capstone/rubric) — 캡스톤 전체 rubric

@@ -103,7 +103,7 @@ User Input → Planner → Coder (Ralph Loop) → QA Gate → Human Approval →
 
 | 범주 | 선택 | 근거 |
 |------|------|------|
-| LLM | Claude Opus 4.6 (Planner), Sonnet 4.6 (Coder) | 비용/품질 균형 (Week 5 참조) |
+| LLM | 최신 frontier reasoning model (Planner), 비용 효율 coding model (Coder) | 비용/품질 균형 (Week 5, Week 10 참조) |
 | 프레임워크 | Claude Code + Custom Agents | .claude/agents/ 디렉토리 활용 |
 | 언어 | Python 3.12 | 팀 표준 |
 | 테스트 | pytest | CI 통합 용이 |
@@ -173,7 +173,7 @@ User Input → Planner → Coder (Ralph Loop) → QA Gate → Human Approval →
 - **O** "pytest 실패 로그를 입력받아 수정 커밋을 생성하는 에이전트" — 구체적 입출력
 
 - **X** "Claude를 사용한다"
-- **O** "Planner는 Opus 4.6 (`--effort high`), Coder는 Sonnet 4.6 (`--effort medium`)"
+- **O** "Planner는 최신 frontier reasoning model (`--effort high`), Coder는 비용 효율 coding model (`--effort medium`)"
 
 - **X** "좋은 결과를 낼 것이다"
 - **O** "테스트 커버리지 80% 이상, 평균 수정 1.5회 내 수렴"

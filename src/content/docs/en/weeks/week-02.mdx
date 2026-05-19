@@ -33,16 +33,16 @@ import { Aside, Steps, Tabs, TabItem, Card, CardGrid, Badge } from '@astrojs/sta
 ### Learning Objectives
 
 <CardGrid>
-  <Card title="Design Perspective" icon="seti:diagram">
+  <Card title="Design Perspective" icon="setting">
     Understand HOTL not as "a structure where humans occasionally approve things," but as a control system that explicitly designs the autonomy boundaries and interrupt points of an agent.
   </Card>
-  <Card title="Regulatory Perspective" icon="seti:shield">
+  <Card title="Regulatory Perspective" icon="seti:lock">
     Compare the implementation-level requirements of the EU AI Act and Korea's AI Framework Act (effective January 2026), and translate human oversight, logging, and incident reporting obligations into code.
   </Card>
-  <Card title="Incident Analysis Perspective" icon="seti:warning">
+  <Card title="Incident Analysis Perspective" icon="warning">
     Analyze real AI agent security incidents from 2025–2026 to learn concrete attack vectors and defense patterns, not abstract risks.
   </Card>
-  <Card title="Implementation Perspective" icon="seti:code">
+  <Card title="Implementation Perspective" icon="pencil">
     Connect policy files, approval gates, audit logs, and tests to directly build the minimum executable unit of Governance-as-Code.
   </Card>
 </CardGrid>
@@ -375,16 +375,16 @@ One-sentence summary: **If the AI Act says "what must be done," NIST AI RMF stru
 Governance-as-Code is the approach of turning policies into executable rules rather than keeping them only in documents. The minimum stack has four layers.
 
 <CardGrid>
-  <Card title="1. Risk Classification" icon="seti:filter">
+  <Card title="1. Risk Classification" icon="magnifier">
     Classify actions as `LOW`, `MEDIUM`, `HIGH`, or `CRITICAL`. This classification is the input value for all subsequent controls.
   </Card>
-  <Card title="2. Policy Engine" icon="seti:settings">
+  <Card title="2. Policy Engine" icon="setting">
     Takes the classification result and context and returns one of: allow, block, or pending approval. Rego, Cedar, Python rule engines, etc.
   </Card>
-  <Card title="3. Approval Workflow" icon="seti:checklist">
+  <Card title="3. Approval Workflow" icon="seti:todo">
     Bundles the reason, diff, impact scope, and rollback plan so humans can actually review them.
   </Card>
-  <Card title="4. Audit Trail" icon="seti:book">
+  <Card title="4. Audit Trail" icon="seti:notebook">
     Records inputs, decisions, approvers, execution results, and hashes to enable post-incident reconstruction and auditing.
   </Card>
 </CardGrid>

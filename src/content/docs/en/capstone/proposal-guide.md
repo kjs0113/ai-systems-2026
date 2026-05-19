@@ -103,7 +103,7 @@ User Input → Planner → Coder (Ralph Loop) → QA Gate → Human Approval →
 
 | Category | Choice | Rationale |
 |----------|--------|-----------|
-| LLM | Claude Opus 4.6 (Planner), Sonnet 4.6 (Coder) | Cost/quality balance (Week 5) |
+| LLM | current frontier reasoning model (Planner), cost-efficient coding model (Coder) | cost/quality balance (Weeks 5 and 10) |
 | Framework | Claude Code + Custom Agents | .claude/agents/ directory |
 | Language | Python 3.12 | Course standard |
 | Testing | pytest | Easy CI integration |
@@ -173,7 +173,7 @@ Name the techniques from each week you will **actually apply**. Not "I've heard 
 - **O** "An agent that takes pytest failure logs as input and produces fix commits" — concrete I/O
 
 - **X** "Uses Claude"
-- **O** "Planner uses Opus 4.6 (`--effort high`), Coder uses Sonnet 4.6 (`--effort medium`)"
+- **O** "Planner uses a current frontier reasoning model (`--effort high`), Coder uses a cost-efficient coding model (`--effort medium`)"
 
 - **X** "Will produce good results"
 - **O** "Test coverage ≥ 80%, converges in ≤ 1.5 fixes on average"

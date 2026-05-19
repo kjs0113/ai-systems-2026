@@ -8,21 +8,32 @@ import { Aside, Card, CardGrid, Badge } from '@astrojs/starlight/components';
 This page summarizes student assignments submitted via GitHub PRs. See the [Contributing Guide](/en/contribute) for submission instructions.
 
 <Aside type="tip" title="Submission Path">
-Add files to `assignments/week-XX/[student-id]/` or `assignments/lab-XX/[student-id]/` directories. PR titles should follow the format `[Submit] Lab XX - StudentID Name`.
+Add files to `assignments/week-XX/[student-id]/` or `assignments/lab-XX/[student-id]/` directories. PR titles should follow the format `[Submit] Lab XX - StudentID Name`. Capstone proposals go in `assignments/capstone/projects/[student-id]/proposal.md`.
 </Aside>
 
 ---
 
 ## Submission Overview
 
-| Student ID | Week 01 | Week 02 | Week 03 | Week 04 |
-|------------|:-------:|:-------:|:-------:|:-------:|
-| 202021016 | | | | <Badge text="Submitted" variant="caution" /> |
-| 202021035 | <Badge text="Submitted" variant="success" /> | | | |
-| 202121014 | <Badge text="Submitted" variant="success" /> | | | <Badge text="Submitted" variant="success" /> |
-| 202321005 | <Badge text="Submitted" variant="success" /> | | <Badge text="Submitted" variant="success" /> | <Badge text="Submitted" variant="success" /> |
-| 202321006 | <Badge text="Submitted" variant="success" /> | <Badge text="Submitted" variant="success" /> | <Badge text="Submitted" variant="success" /> | <Badge text="Submitted" variant="success" /> |
-| 202321010 | <Badge text="Submitted" variant="success" /> | | <Badge text="Submitted" variant="success" /> | <Badge text="Submitted" variant="success" /> |
+### Weekly Assignments (Week 01–08)
+
+| Student ID | W01 | W02 | W03 | W04 | W05 | W06 | W07 | W08 |
+|------------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| 202021016 | | | | <Badge text="Submitted" variant="caution" /> | | | | |
+| 202021035 | <Badge text="Submitted" variant="success" /> | | | <Badge text="Submitted" variant="success" /> | | | | |
+| 202121014 | <Badge text="Submitted" variant="success" /> | | | <Badge text="Submitted" variant="success" /> | | | | |
+| 202321005 | <Badge text="Submitted" variant="success" /> | | <Badge text="Submitted" variant="success" /> | <Badge text="Submitted" variant="success" /> | | | | |
+| 202321006 | <Badge text="Submitted" variant="success" /> | <Badge text="Submitted" variant="success" /> | <Badge text="Submitted" variant="success" /> | <Badge text="Submitted" variant="success" /> | <Badge text="Submitted" variant="success" /> | <Badge text="Submitted" variant="success" /> | <Badge text="Submitted" variant="success" /> | <Badge text="Submitted" variant="success" /> |
+| 202321010 | <Badge text="Submitted" variant="success" /> | | <Badge text="Submitted" variant="success" /> | <Badge text="Submitted" variant="success" /> | <Badge text="Submitted" variant="success" /> | <Badge text="Submitted" variant="success" /> | <Badge text="Submitted" variant="success" /> | |
+
+### Labs and Capstone
+
+| Student ID | Lab 02 | Lab 03 | Lab 05 | Lab 06 | Lab 07 | Capstone |
+|------------|:------:|:------:|:------:|:------:|:------:|:--------:|
+| 202121014 | <Badge text="Submitted" variant="success" /> | <Badge text="Submitted" variant="success" /> | <Badge text="Submitted" variant="success" /> | <Badge text="Submitted" variant="success" /> | <Badge text="Submitted" variant="success" /> | |
+| 202321005 | | | | | | <Badge text="Submitted" variant="success" /> |
+| 202321006 | | | | | | <Badge text="Submitted" variant="success" /> |
+| 202321010 | | | | | | <Badge text="Submitted" variant="success" /> |
 
 - <Badge text="Submitted" variant="success" /> Meets assignment requirements
 - <Badge text="Submitted" variant="caution" /> Submitted but needs supplementation
@@ -101,6 +112,9 @@ Add files to `assignments/week-XX/[student-id]/` or `assignments/lab-XX/[student
   <Card title="202021016" icon="warning">
     Insufficient content. README is a copy of the project root README, AGENTS.md contains only "CLAUDE.md". No harness.sh or loop implementation submitted. **Needs supplementation.**
   </Card>
+  <Card title="202021035">
+    harness.sh (159 lines) + run_task.py. tasks.json-based task queue, 3-iteration progress archive, metrics.csv collection. Clean separation of AGENTS.md and PROMPT.md for role clarity.
+  </Card>
   <Card title="202121014">
     harness.sh (103 lines), backpressure.py, AGENTS.md (Learned Patterns + Anti-Patterns + Progress checklist), PROMPT.md, 805-line execution log. Records divide-by-zero handling learning process for calculator task.
   </Card>
@@ -117,12 +131,140 @@ Add files to `assignments/week-XX/[student-id]/` or `assignments/lab-XX/[student
 
 ---
 
+## Week 05: Context Management and Token Optimization
+
+**Assignment**: Context Manager, token counter, Context Rot measurement and auto-reset
+
+<CardGrid>
+  <Card title="202321006">
+    `context_manager.py` dynamic context pruning + priority-based filtering. `token_counter.py` accurate token counting for Claude models. Context Rot mitigation via sliding window.
+  </Card>
+  <Card title="202321010">
+    Token counter-integrated Ralph loop, Context Rot simulation and measurement, Hybrid auto-context reset. `fix_plan.md` + `claude-progress.txt` state tracking. Analysis scripts with before/after visualization graphs (5 types).
+  </Card>
+</CardGrid>
+
+---
+
+## Week 06: Instruction Tuning and Log Analysis
+
+**Assignment**: Prompt improvement experiments, log analysis, Instruction Tuning impact measurement
+
+<CardGrid>
+  <Card title="202321006">
+    Added architecture constraints to `PROMPT.md`, achieving 30% reduction in logic errors. `log_analyzer.py` tracks agent reasoning paths, identifies common failure points. Confirmed stabilization effect of explicit CLAUDE.md rules.
+  </Card>
+  <Card title="202321010">
+    Instruction Tuning experiment — testset + before/after output comparison. Generated error rate graph, metrics graph, error type classification graph. Systematic organization under lab06 subdirectory.
+  </Card>
+</CardGrid>
+
+---
+
+## Week 07: Multi-Agent SDLC Design
+
+**Assignment**: 5-stage pipeline multi-agent architecture, JSON artifact-based communication, verification gates
+
+<CardGrid>
+  <Card title="202321006">
+    5-phase gated pipeline architecture diagram, DAG-based task decomposition + tiered parallelization strategy, phase transition quality checklists, recovery strategies for 3 failure scenarios. 4 schemas (`requirement.json`, `task.json`, `pipeline_state.json`, `lesson.json`).
+  </Card>
+  <Card title="202321010">
+    Planner → Context → Builder → Reviewer → Finalizer 5-stage pipeline. 4+ standard JSON schemas, DAG dependency graph + parallelization tier analysis, 5 gate checklists per phase, automatic recovery mechanisms for 3 scenarios.
+  </Card>
+</CardGrid>
+
+---
+
+## Week 08: Capstone Proposals
+
+**Assignment**: Capstone project proposal — problem definition, system design, milestones
+
+<Aside type="note">
+Capstone proposals are recommended at `assignments/capstone/projects/[student-id]/proposal.md`. Some submissions are under `assignments/week-08/`.
+</Aside>
+
+<CardGrid>
+  <Card title="202321005 — Socratic Tutor">
+    Educational agent that corrects student misconceptions through questions alone, never revealing answer code. **Dual-loop · 4-module · 3-tier defense** architecture with Analysis/Dialogue/Review/Logging modules, Q-Critic + Validator parallel AND gate.
+  </Card>
+  <Card title="202321006 — Collaboration Nudge Agent">
+    Real-time **bus factor** calculation on GitHub PR events to detect knowledge monopoly. Extracts design context via AI interview, redistributes knowledge to suitable team members. Prevents problems typically discovered only after employee departure.
+  </Card>
+  <Card title="202321010 — Docs-Code Drift Detector">
+    **AST-based** comparison of type/parameter definitions in READMEs, docstrings, and API docs against actual code to detect drift. Auto-generates documentation fix PRs (code fixes are suggestions only).
+  </Card>
+</CardGrid>
+
+---
+
+## Lab 02: HOTL Governance Agent
+
+**Assignment**: Combine HOTL governance layer + audit logging on an Anthropic SDK-based agent
+
+<CardGrid>
+  <Card title="202121014">
+    `governance.py` 4-tier risk classification + approval policy, `agent.py` Claude suggestion/fallback passthrough, pytest tests, JSONL audit log sample. Documented design decisions.
+  </Card>
+</CardGrid>
+
+---
+
+## Lab 03: FastMCP Server Implementation
+
+**Assignment**: FastMCP-based Tool + Resource + Prompt primitives, Path Traversal defense, safe subprocess policy
+
+<CardGrid>
+  <Card title="202121014">
+    filesystem/git/custom server registration (`settings.json`), custom MCP server (`custom_server.py`), 3 pytest samples. Covers baseline security requirements.
+  </Card>
+</CardGrid>
+
+---
+
+## Lab 05: Context Management Lab
+
+**Assignment**: Token tracking, Rolling Window context compression, state save/restore
+
+<CardGrid>
+  <Card title="202121014">
+    `python main.py` runs full demo automatically. Token usage tracking, Rolling Window compression, execution state save/restore, auto-generation of `claude-progress.txt`.
+  </Card>
+</CardGrid>
+
+---
+
+## Lab 06: Prompt Improvement and A/B Test
+
+**Assignment**: Analyze `harness.log`, extract recurring failure patterns, A/B compare two prompt versions
+
+<CardGrid>
+  <Card title="202121014">
+    `log_analyzer.py` classifies recurring log error patterns + generates `error_report.md`, compares prompt v1 (baseline) and v2 (improved), `ab_test.py` records results to `ab_results.json`.
+  </Card>
+</CardGrid>
+
+---
+
+## Lab 07: Multi-Agent Pipeline
+
+**Assignment**: `Planner → Coder` 2-stage pipeline with JSON schema-based structured outputs
+
+<CardGrid>
+  <Card title="202121014">
+    Planner/Coder output JSON schemas, `base_agent.py` common class, `planner_agent.py` (goal → subtask decomposition), `coder_agent.py` (plan → change set), `pipeline.py` sequential connection. Design documentation included.
+  </Card>
+</CardGrid>
+
+---
+
 ## Common Feedback
 
 <Aside type="caution" title="Submission Guidelines">
-1. **Exclude `.pyc` files** — Add `__pycache__/` and `*.pyc` to `.gitignore`
+1. **Work from latest main** — Always `git pull origin main` before creating a PR. PRs from outdated bases cause catastrophic mass deletion of other students' submissions
 2. **Only modify your own student ID folder** — Don't modify other students' files or course materials when working from a fork
-3. **No Korean filenames** — macOS NFD decomposition issues. Use English filenames
-4. **Don't put assignment files in `src/content/docs/`** — This is the course site source directory
-5. **Check before PR** — Review changed file list with `git diff --stat origin/main`
+3. **Exclude `.pyc` files** — Add `__pycache__/` and `*.pyc` to `.gitignore`
+4. **No Korean filenames** — macOS NFD decomposition issues. Use English filenames
+5. **Don't put assignment files in `src/content/docs/`** — This is the course site source directory
+6. **Check before PR** — Review changed file list with `git diff --stat origin/main`
 </Aside>

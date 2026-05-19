@@ -1,24 +1,25 @@
 ---
-title: "Week 13: Capstone Project Kickoff"
-description: Preparing for Ralphthon — individual project kickoff and system architecture design
+title: "Week 13: Capstone Project Design"
+description: Ralphthon preparation — problem framing, Agent OS Runtime architecture, team contracts, and acceptance criteria
 week: 13
 phase: 5
 phase_title: Capstone Ralphthon
 date: "2026-05-26"
 theory_topics:
-  - Ralphthon overview and evaluation criteria
-  - System architecture design methodology
-  - From Week 8 proposal to detailed design document
+  - Ralphthon overview and grading criteria
+  - Agent OS Runtime-based system design
+  - Team collaboration protocols and artifact contracts
 lab_topics:
-  - Project scaffolding and environment setup
-  - Writing the architecture design document
-assignment: "Capstone: Architecture Design Document"
+  - Team formation and role assignment
+  - Architecture design document
+  - Task packet and acceptance gate definition
+assignment: "Capstone: Architecture design document"
 assignment_due: "2026-06-02"
 difficulty: advanced
-estimated_time: "10 hours"
+estimated_time: 10 hours
 ---
 
-import { Aside, Steps, Badge, Card, CardGrid } from '@astrojs/starlight/components';
+import { Aside, Steps, Badge, Card, CardGrid, Tabs, TabItem } from '@astrojs/starlight/components';
 
 <div class="week-meta">
   <span class="phase-tag">Phase 5</span>
@@ -27,84 +28,463 @@ import { Aside, Steps, Badge, Card, CardGrid } from '@astrojs/starlight/componen
   <Badge text="Lecture: 2026-05-26" variant="default" />
 </div>
 
-## What is Ralphthon?
+## Theory
 
-**Ralphthon** is the capstone project for this course. Working **individually**, you will design and implement an **autonomous agentic system that solves a real software problem**, based on the Ralph Loop methodology.
-
-The name is borrowed from the industry term "Hackathon." As the Ralph Loop methodology spread in early 2026, **Ralphthon** culture emerged — and this is your chance to experience it firsthand.
-
-<Aside type="note" title="Week 8 proposal → Week 13 design document">
-The big picture of your topic and architecture was already locked in during the [Week 8 project proposal](/en/weeks/week-08). Week 13 is about expanding that into an **implementation-ready detailed design** — per-agent interfaces, state file schemas, MCP tool lists, test plans.
-</Aside>
-
-## Project Kickoff
+### Learning Objectives
 
 <CardGrid>
-  <Card title="Format" icon="rocket">
-    **Individual projects**. Implementation begins Week 13, based on the Week 8 approved proposal.
+  <Card title="Concepts" icon="open-book">
+    Explain why a Ralphthon is unlike a hackathon (closed-loop system framing) and apply the five conditions of a good capstone topic to your team's candidate ideas.
   </Card>
-  <Card title="Topic" icon="document">
-    Keep the topic from your Week 8 proposal. Scope adjustments after feedback are allowed.
+  <Card title="Design" icon="seti:config">
+    Map the Agent OS Runtime L1-L7 core onto your capstone, and add L8 workflow-plane cycle / phase / policy definitions only if your team needs multi-phase orchestration.
+  </Card>
+  <Card title="Implementation" icon="pencil">
+    Distribute responsibilities across Lead / Planner / Worker / Reviewer / Operator, and write three ADRs and five risk-register items.
+  </Card>
+  <Card title="Operations" icon="rocket">
+    Reverse-plan Weeks 14-16 (build / integrate / present), pin the demo path, and explicitly declare a "Won't have" list.
   </Card>
 </CardGrid>
 
-## Recommended Project Ideas
+---
 
-Beyond the cliché "automatic code review," here are 6 ideas that attack **novel problems** with agentic systems. Selected so you can connect this course's core techniques (loops, multi-agent, MCP, knowledge graphs) to real-world problems.
+### What is a Ralphthon?
 
-1. **Paper Reproducer Agent** — Given an arXiv PDF, build a dependency environment, run the experiments, and reproduce the headline results (tables/figures). On failure, produce a diagnostic report pinpointing where the divergence occurred (environment, data, hyperparameters, or algorithm). Directly attacks the **research reproducibility** problem.
+**Ralphthon** is a team capstone that uses the Ralph-loop methodology to solve a real software problem. Unlike a typical hackathon, the deliverable is not "an app" — it is **a repeatable agent system**.
 
-2. **Personal Knowledge Graph Distiller** — Merge scattered notes from Obsidian, web bookmarks, and note apps into a Graphify-based knowledge graph, identify isolated "lone nodes," and have an LLM propose new connections. Periodically auto-generates a **"forgotten ideas recap"** note. Applies the [Week 5 LLM Wiki pattern](/en/weeks/week-05#persistent-knowledge-systems--the-llm-wiki-pattern).
-
-3. **Docs-Code Drift Detector** — Cross-verify claims in README, docstrings, and API docs against the actual code behavior at the AST level. When inconsistencies are found — e.g., "the doc says `parse_json(str) → dict` but the code returns a list" — auto-generate a fix PR. A **doc-code consistency** agent.
-
-4. **Issue Roundtable** — Given a GitHub Issue, have 4 agents (Planner/Architect/Coder/QA) debate the solution in an **open-discussion format**. When they disagree, log why; once a consensus design emerges, implement, test, and open a PR. The key is that the **decision process is preserved as an auditable conversation log**.
-
-5. **Socratic Homework Tutor** — Evaluate student-submitted code against a rubric but **refuse to hand over the answer** — instead, use Socratic questioning to guide thinking. Dynamically adjust hint strength based on the student's responses, then summarize the path the student took to reach the answer. A deeper application of Week 6's Learning output style.
-
-6. **Dependency Upgrade Context Agent (Dependabot++)** — For npm/pip dependency upgrade proposals, synthesize changelog, breaking changes, actual usage patterns, and test coverage into a **"risk score + stepwise migration plan + expected edit locations."** Goes beyond Dependabot's naive version bumps with **context-aware upgrades**.
-
-<Aside type="tip" title="Topic-selection principles">
-- **Concrete I/O**: "Good results" ❌ → "arXiv 2408.02442 → 85%+ reproduction rate report" ✓
-- **Agentic necessity**: If a single LLM call can solve it, it is not a capstone project
-- **Instructor approval**: To propose a new topic, first get feedback at the Week 8 proposal presentation
+<Aside type="note" title="Capstone goal">
+The final grade is not "did the AI write a lot of code." The goal is a system in which humans define the requirements and boundaries, agents execute repeatedly, and a harness enforces quality and safety.
 </Aside>
 
-## Architecture Design Checklist
+#### Hackathon vs Ralphthon
+
+| Axis | Generic hackathon | Ralphthon |
+|------|-------------------|-----------|
+| Deliverable | one demo app | a repeatable agent system |
+| Success criterion | demo works | the same task packet executes consistently three times |
+| AI usage | freeform (code copilot) | task packet → harness → gate |
+| Evaluation evidence | demo video | event log, replay snapshot, gate results |
+| Team composition | freeform | Lead / Planner / Worker / Reviewer / Operator |
+| Failure handling | improvised | runbook + retry budget + escalation |
+| Post-event operations | usually ends | replay and ADRs make it reproducible |
+
+### Conditions of a good topic
+
+| Condition | Description | Bad example |
+|-----------|-------------|-------------|
+| Repeatable | the same kind of task happens many times | one-off demo |
+| Verifiable | tests, rubrics, judges, and human review apply | "write something good" |
+| Bounded | files, tools, and permissions can be limited | free rein over the internet |
+| Recoverable | wrong outputs can be rolled back or retried | direct DB mutations |
+| Role-separable | planner / worker / reviewer / operator split | one person owns everything |
+
+### Capstone through the Agent OS Runtime lens
+
+The Week 13 design document must specify at least five of the L1-L7 core layers below. Add the L8 workflow plane only if your team is explicitly designing a multi-phase cycle.
+
+| Layer | What to define for the capstone |
+|-------|------------------------------|
+| L1 MCP Tool Protocol | allowed / denied tools, tool input/output schemas, tool events |
+| L2 Provider Completion | model profiles, cost/latency budgets, fallback rules |
+| L3 Plan-Work-Review Collaboration | Lead, Planner, Worker, Reviewer state transitions |
+| L4 Event Store | `.events.jsonl`, replay snapshot |
+| L5 Markdown-SSOT Skill Runtime | role instructions, rubrics, allowed tool scope |
+| L6 Hook Lifecycle | approvals, secret scans, loop stops, escalation hooks |
+| L7 Schema IPC Registry | task packet, worker report, review verdict, run report schemas |
+| Optional L8 Workflow Plane | cycle / phase / policy / persona / artifact Markdown SSOT |
+
+> See [Agent OS 7+1-Layer Architecture (L1–L7 core + L8 workflow plane)](/en/reference/agent-os-runtime/#7-layer-architecture) for layer-by-layer detail. Teams that want to design multi-phase cycles (e.g. brainstorm → fix → ship) should also consult the [L8 Workflow Plane](/en/reference/agent-os-runtime/#workflow-plane-l8) five-axis model (cycle / phase / policy / persona / artifact). L8 is **optional** — the capstone rubric is fully satisfied by the L1–L7 core alone; L8 is for teams that want to lift cycle sequencing, policies, and personas into Markdown SSOT.
+
+#### Core + L8 mapping
+
+<div class="diagram">
+  <div class="diagram__title">Agent OS Runtime — L1-L7 Core + Optional L8</div>
+  <div class="diagram__stack">
+    <div class="diagram__node diagram__node--blue">
+      <span class="diagram__node__label">Optional L8 Workflow Plane</span>
+      <span class="diagram__node__sub">cycle · phase · policy · persona · artifact</span>
+    </div>
+    <div class="diagram__node diagram__node--cyan">
+      <span class="diagram__node__label">L7 Schema IPC</span>
+      <span class="diagram__node__sub">task packet · report · verdict schemas</span>
+    </div>
+    <div class="diagram__node diagram__node--green">
+      <span class="diagram__node__label">L6 Hook Lifecycle</span>
+      <span class="diagram__node__sub">approval · secret scan · loop stop</span>
+    </div>
+    <div class="diagram__node diagram__node--orange">
+      <span class="diagram__node__label">L5 Skill Runtime</span>
+      <span class="diagram__node__sub">Markdown instruction · allowed tools</span>
+    </div>
+    <div class="diagram__node diagram__node--purple">
+      <span class="diagram__node__label">L4 Event Store</span>
+      <span class="diagram__node__sub">.events.jsonl · replay snapshot</span>
+    </div>
+    <div class="diagram__node diagram__node--red">
+      <span class="diagram__node__label">L3 Collaboration</span>
+      <span class="diagram__node__sub">Lead · Planner · Worker · Reviewer</span>
+    </div>
+    <div class="diagram__node diagram__node--gray">
+      <span class="diagram__node__label">L2 Provider Completion</span>
+      <span class="diagram__node__sub">model profile · fallback · budget</span>
+    </div>
+    <div class="diagram__node diagram__node--gray">
+      <span class="diagram__node__label">L1 MCP Tool Protocol</span>
+      <span class="diagram__node__sub">allowed tools · input/output schema</span>
+    </div>
+  </div>
+</div>
+
+Every core layer carries an artifact. You do not have to build all of L1-L7 in Week 13, but at least five core layers must be concrete and the rest must have Week 14 owners. Teams that choose L8 also keep cycle/phase/policy Markdown and `workflow.*` event evidence as separate deliverables.
+
+### Recommended team roles
+
+<CardGrid>
+  <Card title="Lead / Architect" icon="star">
+    Owns problem framing, scope, and final design. Prevents scope creep and locks acceptance criteria.
+  </Card>
+  <Card title="Harness Engineer" icon="seti:config">
+    Builds task packets, the event store, policy gates, and the retry/rollback logic.
+  </Card>
+  <Card title="Agent Engineer" icon="pencil">
+    Builds role prompts, tool policies, model routing, and CLI integration.
+  </Card>
+  <Card title="QA / Operator" icon="approve-check-circle">
+    Owns tests, judge rubrics, telemetry dashboards, and demo stability.
+  </Card>
+</CardGrid>
+
+#### Team topology
+
+<div class="diagram">
+  <div class="diagram__title">Capstone Team Topology</div>
+  <div class="diagram__flow">
+    <div class="diagram__node diagram__node--blue diagram__node--full">
+      <span class="diagram__node__label">Lead / Architect</span>
+      <span class="diagram__node__sub">issues directives · controls scope</span>
+    </div>
+    <div class="diagram__arrow">▼ directive</div>
+    <div class="diagram__node diagram__node--cyan diagram__node--full">
+      <span class="diagram__node__label">Planner Agent</span>
+      <span class="diagram__node__sub">spec / plan generation</span>
+    </div>
+    <div class="diagram__arrow">▼ plan</div>
+    <div class="diagram__node diagram__node--purple diagram__node--full">
+      <span class="diagram__node__label">Worker Agent</span>
+      <span class="diagram__node__sub">patch / artifact production</span>
+    </div>
+    <div class="diagram__arrow">▼ patch</div>
+    <div class="diagram__node diagram__node--orange diagram__node--full">
+      <span class="diagram__node__label">Reviewer Agent</span>
+      <span class="diagram__node__sub">review verdict</span>
+    </div>
+    <div class="diagram__arrow">▼ verdict</div>
+    <div class="diagram__node diagram__node--green diagram__node--full">
+      <span class="diagram__node__label">Operator / QA</span>
+      <span class="diagram__node__sub">gate integration · dashboards · demo stability</span>
+    </div>
+    <div class="diagram__arrow">▲ gate result back to Lead</div>
+    <div class="diagram__node diagram__node--gray diagram__node--full">
+      <span class="diagram__node__label">Event Store</span>
+      <span class="diagram__node__sub">tool · review · metric events all converge → replay snapshot</span>
+    </div>
+  </div>
+</div>
+
+The point is that the Lead does not make every decision. The Operator reads metrics and the dashboard for live signal.
+
+### Recommended project ideas
+
+1. **Autonomous code review** — Read GitHub PRs and emit risk-ranked review comments.
+2. **Test generator** — Find missing branches in existing code and generate pytest cases.
+3. **Documentation automation** — Refresh README/API docs after a change and detect drift.
+4. **Bug triage + patch agent** — Convert issues into task packets and propose small patches.
+5. **Performance optimization agent** — Find benchmark regressions and propose candidate fixes.
+6. **Course-material validator** — Inspect MDX links, frontmatter, and outdated tech tables.
+7. **MCP security audit agent** — Find risky patterns in MCP server manifests and tool descriptions.
+
+### Defining the MVP scope
+
+A good capstone does not announce a finished product on day one. Split must-haves and won't-haves explicitly.
+
+| Bucket | Examples | Decision rule |
+|--------|----------|---------------|
+| Must have | task packet, single worker loop, deterministic gate, event log | without it, there is no closed loop |
+| Should have | reviewer / judge, replay snapshot, simple dashboard | strengthens the final evidence |
+| Could have | web UI, multi-model router, agent marketplace | only if time remains |
+| Won't have | full autonomous deploy, external account control, complex permission delegation | risk and cost too high |
+
+The Week 13 design document must contain a `Won't have` list. A plan without scope cuts is a wish list, not a plan.
+
+### Designing the task packet
+
+A natural-language sentence is too unstable for an agent. In the capstone, every task is sent as a packet.
+
+```yaml
+task_id: capstone-017
+objective: "Add retry handling to the GitHub issue importer"
+scope:
+  files:
+    - src/importer/github.py
+    - tests/test_github_importer.py
+allowed_tools:
+  - read_file
+  - edit_file
+  - run_tests
+acceptance:
+  - "pytest tests/test_github_importer.py passes"
+  - "No network call in unit tests"
+  - "Retry count is configurable"
+budget:
+  max_turns: 6
+  max_tokens: 120000
+escalation:
+  ask_human_if:
+    - "API contract must change"
+    - "Secret or credential is required"
+```
+
+#### Task packet rubric — good / borderline / anti-pattern
+
+| Field | Good | Borderline | Anti-pattern |
+|-------|------|-----------|-------------|
+| Objective | verb + measurable outcome | vague verb | "make it better" |
+| Scope | files / dirs explicit | "related code" | entire repo |
+| Allowed tools | limited to read/edit/run_tests | broad | "any" |
+| Acceptance | 3-5 pass/fail items | one item | none |
+| Budget | turns and tokens specified | one of the two | unlimited |
+| Escalation | condition + owner | condition only | none |
+
+#### Task packet JSON Schema (excerpt)
+
+```json
+{
+  "type": "object",
+  "required": ["task_id", "objective", "scope", "acceptance", "budget"],
+  "properties": {
+    "task_id": {"type": "string", "pattern": "^[a-z0-9-]{4,}$"},
+    "objective": {"type": "string", "minLength": 10},
+    "scope": {
+      "type": "object",
+      "properties": {
+        "files": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "allowed_tools": {"type": "array", "items": {"type": "string"}},
+    "acceptance": {
+      "type": "array", "minItems": 1, "items": {"type": "string"}
+    },
+    "budget": {
+      "type": "object",
+      "required": ["max_turns", "max_tokens"],
+      "properties": {
+        "max_turns": {"type": "integer", "maximum": 15},
+        "max_tokens": {"type": "integer"}
+      }
+    },
+    "escalation": {"type": "object"}
+  }
+}
+```
+
+Promising not to accept any task that fails this schema validator pays large dividends once the capstone starts.
+
+### Risk-assessment framework
+
+Do not list risks abstractly. Use a STRIDE-inspired table.
+
+| Threat category | Capstone application | Example |
+|-----------------|---------------------|---------|
+| Spoofing | model identity | another model answers under the same alias |
+| Tampering | task / artifact tampering | event log post-processed, results forgeable |
+| Repudiation | accountability dodge | overrides happen anonymously |
+| Information disclosure | sensitive data leak | code or secrets sent to an external API |
+| Denial of service | resource exhaustion | infinite retry, queue overflow |
+| Elevation of privilege | privilege overreach | edits files outside the allowed scope |
+
+For each row, state in one line how the current plan blocks the threat. If there is no block, that is a Week 14 to-build item.
+
+### Architecture Decision Record
+
+Each team writes ADRs for major decisions. At least three are required.
+
+```markdown
+# ADR-001: Use vLLM OpenAI-compatible API
+
+## Context
+We need to compare local and commercial models through the same harness.
+
+## Decision
+Expose local models through vLLM's OpenAI-compatible API and route calls through one client wrapper.
+
+## Consequences
+- Good: model provider can be swapped without changing agent code.
+- Bad: model-specific tool-call parsers still require configuration.
+```
+
+#### Good ADR vs bad ADR
+
+| Aspect | Good ADR | Bad ADR |
+|--------|---------|---------|
+| Context | one or two sentences on "why now" | a corporate vision |
+| Decision | one sentence + the alternative we rejected | "Use X" |
+| Consequences | both Good and Bad | only Good |
+| Owner | one named person | anonymous |
+| Date | the decision date | empty |
+
+### Design document structure
+
+<Tabs>
+  <TabItem label="Required outline">
+    ```markdown
+    # Team Name Capstone Design
+
+    ## 1. Problem
+    ## 2. Users and Risk Boundary
+    ## 3. Agent Architecture
+    ## 4. Runtime Layers
+    ## 5. Task Packet Schema
+    ## 6. Evaluation Gates
+    ## 7. Telemetry and Replay
+    ## 8. Implementation Plan
+    ## 9. Demo Scenario
+    ```
+  </TabItem>
+  <TabItem label="Diagram example">
+    <div class="diagram">
+      <div class="diagram__title">Capstone Agent Flow</div>
+      <div class="diagram__flow">
+        <div class="diagram__chain">
+          <div class="diagram__node diagram__node--blue"><span class="diagram__node__label">Lead</span></div>
+          <div class="diagram__arrow">→</div>
+          <div class="diagram__node diagram__node--cyan"><span class="diagram__node__label">Planner</span></div>
+          <div class="diagram__arrow">→</div>
+          <div class="diagram__node diagram__node--purple"><span class="diagram__node__label">Worker</span></div>
+          <div class="diagram__arrow">→</div>
+          <div class="diagram__node diagram__node--orange"><span class="diagram__node__label">Reviewer</span></div>
+        </div>
+        <div class="diagram__arrow">▼</div>
+        <div class="diagram__node diagram__node--gray diagram__node--wide">
+          <span class="diagram__node__label">Gate — Tests + Judge</span>
+        </div>
+        <div class="diagram__branch">
+          <div style="background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.25); color: #22C55E;">
+            <span class="diagram__branch__icon">pass</span>
+            <span class="diagram__branch__desc">→ Artifact</span>
+          </div>
+          <div style="background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); color: #EF4444;">
+            <span class="diagram__branch__icon">fail</span>
+            <span class="diagram__branch__desc">→ Planner loop</span>
+          </div>
+        </div>
+        <div class="diagram__arrow">▼ all stages → events.jsonl</div>
+        <div class="diagram__node diagram__node--gray diagram__node--full">
+          <span class="diagram__node__label">events.jsonl</span>
+          <span class="diagram__node__sub">replay snapshot reproducible</span>
+        </div>
+      </div>
+    </div>
+  </TabItem>
+</Tabs>
+
+<Aside type="caution" title="Trim during design">
+A small closed loop beats a large dream. If Week 14 cannot run a happy path end-to-end, Week 15 integration collapses. Start with a small topic, clear gates, and a single demo path.
+</Aside>
+
+### Risk register
+
+Risks belong in a structured register: trigger, owner, response.
+
+| Risk | Trigger | Owner | Response |
+|------|---------|-------|----------|
+| Model output repeatedly violates JSON schema | invalid JSON rate > 20% | Agent Engineer | structured output or repair step |
+| No tests, so quality cannot be evaluated | deterministic gate is empty | QA / Operator | minimum smoke test + fixture |
+| Scope creep | happy path not passing by end of Week 14 | Lead | drop all "Could have" items |
+| Cost overrun | run-level token budget exceeded | Harness Engineer | apply max_turns, context trim, cache prefix |
+| Unstable demo | one of three repeated runs fails | QA / Operator | shrink live demo, prepare a recording |
+
+This table is used as input for the Week 14 midpoint report and the Week 15 release gate.
+
+## Practicum
 
 <Steps>
-1. **Problem Definition** — Clearly define the real problem to solve and the criteria for success
+1. **Define the team's problem**
 
-2. **Agent Role Design** — How many agents? What are each agent's roles and responsibilities?
+   Pick a real, repeatable task and define the user in one sentence.
 
-3. **Data Flow Design** — Define the artifact formats passed between agents
+2. **Write success criteria**
 
-4. **Harness Design** — Backpressure mechanisms, garbage collection policies
+   Replace "good" with five pass/fail criteria.
 
-5. **Infrastructure Design** — Which MIG slices? Which models?
+3. **Decompose agent roles**
 
-6. **Evaluation Method** — How will the system's performance be measured?
+   Pick only the necessary roles among Lead / Planner / Worker / Reviewer / Operator.
+
+4. **Map runtime layers**
+
+   For each layer, decide which file, script, log, or policy belongs there.
+
+5. **Author the task packet schema**
+
+   Attach one JSON Schema and three examples (good / borderline / anti-pattern).
+
+6. **Write three ADRs**
+
+   One for model selection, one for harness library, one for evaluation strategy.
+
+7. **Pin the demo path**
+
+   Choose one happy path and one failure-recovery path to show in the final presentation.
 </Steps>
-
-<Aside type="note" title="Design Document Requirements">
-The architecture design document submitted as the Week 13 assignment must include an agent interaction diagram, a data flow diagram, and a rationale for technology stack choices.
-</Aside>
 
 ## Assignment
 
 <div class="assignment-box">
 
-### Capstone: Architecture Design Document
+### Capstone: Architecture design document
 
-**Submission deadline**: 2026-06-02 23:59
+**Due**: 2026-06-02 23:59
 
-**Submission path**: `capstone/projects/[student-id]/design.md`
+**Submission path**: `capstone/teams/[team]/design.md`
 
-**Requirements**:
-1. Problem definition and solution approach
+**Required**:
+1. Problem statement and user / risk boundary
 2. Agent architecture diagram
-3. Technology stack selection and rationale
-4. Week-by-week implementation plan
-5. Definition of success metrics
+3. Mapping for at least five Agent OS Runtime layers
+4. Task packet schema and three examples (good / borderline / anti-pattern)
+5. Deterministic gate + LLM Judge + human review criteria
+6. Risk register with five entries (trigger / owner / response)
+7. Three or more ADRs
+8. Implementation plan for Weeks 14-16 and a draft demo script
 
 </div>
+
+## Key Takeaways
+
+1. **A Ralphthon is not "build an app"**: it is designing, operating, and proving a closed-loop system.
+2. **Five conditions of a good topic**: repeatable / verifiable / bounded / recoverable / role-separable.
+3. **You do not have to build all L1-L7 core layers**: declare at least five core layers in Week 13 and assign owners for the rest. L8 is optional.
+4. **"Won't have" is the real plan**: a plan without scope cuts is a wish list.
+5. **Force the task packet through schema**: only packets that pass the JSON Schema validator are accepted by workers.
+6. **An ADR is a record of decisions**: what you rejected matters more than what you chose.
+7. **The risk register is the entrance to Week 14**: each risk is a triple of trigger, owner, and response — and is tracked weekly.
+
+## Further Reading
+
+**Foundational**
+- [Agent OS Runtime — core architecture + L8 workflow plane](/en/reference/agent-os-runtime/#7-layer-architecture)
+- [Agent OS Contracts](/en/reference/agent-os-runtime/#contracts)
+- [Agent OS Runtime — capstone reference](/en/reference/agent-os-runtime/)
+
+**ADR / design culture**
+- Michael Nygard, "Documenting Architecture Decisions" (the original ADR pattern)
+- ThoughtWorks Tech Radar — ADR adoption
+
+**Evaluation / risk**
+- STRIDE threat modeling primer
+- Google SRE Workbook — Risk Analysis
+
+**Capstone artifacts**
+- [Capstone overview](/en/capstone/)
+- [Capstone evaluation criteria](/en/capstone/evaluation/)

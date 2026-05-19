@@ -135,6 +135,7 @@ class CodebaseAnalyzer:
 ```python
 # spec_generator.py
 import anthropic
+import os
 from datetime import datetime
 from pathlib import Path
 from codebase_analyzer import CodebaseSnapshot
@@ -156,6 +157,7 @@ Be concrete. Reference actual file names and function names from the codebase.
 class SpecGenerator:
     def __init__(self):
         self.client = anthropic.Anthropic()
+        self.model = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-6")
 
     def generate(self, snapshot: CodebaseSnapshot, objective: str) -> str:
         prompt = f"""
@@ -167,7 +169,7 @@ Objective: {objective}
 Generate a detailed spec.md for this task.
 """
         response = self.client.messages.create(
-            model="claude-sonnet-4-6",
+            model=self.model,
             max_tokens=2048,
             system=SPEC_SYSTEM,
             messages=[{"role": "user", "content": prompt}]

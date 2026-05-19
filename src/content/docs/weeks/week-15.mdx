@@ -1,6 +1,6 @@
 ---
 title: "15주차: 시스템 통합과 최종 테스트"
-description: 캡스톤 프로젝트 통합 완성 — 자동 테스트, 성능 측정, 발표 준비
+description: 캡스톤 프로젝트 통합 완성 — release gate, 성능 측정, 실패 복구, 발표 리허설
 week: 15
 phase: 5
 phase_title: 캡스톤 Ralphthon
@@ -11,6 +11,7 @@ theory_topics:
   - 발표 자료 구성법
 lab_topics:
   - End-to-end 통합 테스트
+  - release readiness review
   - 발표 리허설
 assignment: "캡스톤: 최종 발표 자료"
 assignment_due: "2026-06-16"
@@ -18,7 +19,7 @@ difficulty: 고급
 estimated_time: 15시간
 ---
 
-import { Aside, Steps, Badge } from '@astrojs/starlight/components';
+import { Aside, Steps, Badge, Card, CardGrid, Tabs, TabItem } from '@astrojs/starlight/components';
 
 <div class="week-meta">
   <span class="phase-tag">Phase 5</span>
@@ -27,43 +28,328 @@ import { Aside, Steps, Badge } from '@astrojs/starlight/components';
   <Badge text="강의일: 2026-06-09" variant="default" />
 </div>
 
-## 통합 테스트 체크리스트
+## 이론 (Theory)
 
-<Steps>
-1. **기능 테스트** — 각 에이전트 개별 기능 100% 통과
+### 오늘의 학습 목표
 
-2. **통합 테스트** — 전체 파이프라인 end-to-end 실행 3회 이상 성공
+<CardGrid>
+  <Card title="개념 관점" icon="open-book">
+    Release Gate가 deterministic gate와 어떻게 다른지 설명하고, smoke / integration / soak / chaos 4가지 통합 테스트 전략을 비교한다.
+  </Card>
+  <Card title="설계 관점" icon="seti:config">
+    feature freeze 정책과 release readiness checklist를 만들고, 발표 스토리를 STAR 프레임워크로 구성한다.
+  </Card>
+  <Card title="구현 관점" icon="pencil">
+    same task packet 3회 반복, replay snapshot 검증, 실패 복구 path 자동화 같은 Release Gate 항목을 코드와 evidence로 통과시킨다.
+  </Card>
+  <Card title="운영 관점" icon="rocket">
+    토큰·비용·지연·실패율 표를 source run id와 함께 슬라이드에 첨부해 "수치만 있는 결과"가 아니라 "추적 가능한 결과"로 만든다.
+  </Card>
+</CardGrid>
 
-3. **스트레스 테스트** — 연속 10개 태스크 처리 시 안정성 확인
+---
 
-4. **실패 복구 테스트** — 의도적 실패 주입 후 자동 복구 확인
+### 통합 주간의 목표
 
-5. **성능 측정** — 처리 시간, 토큰 사용량, 성공률 기록
-</Steps>
+15주차는 기능 추가 주간이 아니다. 이미 만든 closed loop를 **신뢰 가능한 데모와 보고서**로 만드는 주간이다. 새 기능을 추가하기보다 실패율을 줄이고, 수치를 정리하고, 발표 흐름을 고정한다.
 
-## 발표 자료 구성
-
-**권장 발표 구조 (15분)**:
-
-1. **문제 정의** (2분) — 어떤 문제를 해결하려 했나?
-2. **아키텍처** (3분) — 어떻게 설계했나? 다이어그램 필수
-3. **라이브 데모** (5분) — 실제 에이전트 실행 (사전 녹화 권장)
-4. **결과 및 성과** (3분) — 성능 수치, 인상적인 결과
-5. **배운 점** (2분) — 가장 어려웠던 점, 다시 한다면?
-
-<Aside type="tip" title="데모 준비">
-라이브 데모는 네트워크 문제, API 오류 등 예측 불가한 실패가 발생할 수 있다. 반드시 **사전 녹화본을 백업**으로 준비하라.
+<Aside type="caution" title="새 기능 금지 원칙">
+15주차에 새 agent role, 새 모델, 새 UI를 추가하면 대부분 최종 발표 안정성이 떨어진다. 새 기능은 "demo path를 더 안정적으로 만드는 경우"에만 허용한다.
 </Aside>
 
-## 최종 제출물 목록
+#### 15주차 흐름도
+
+<div class="diagram">
+  <div class="diagram__title">Week 15 — Integration to Presentation</div>
+  <div class="diagram__flow">
+    <div class="diagram__node diagram__node--blue diagram__node--full">
+      <span class="diagram__node__label">① Feature Freeze 선언</span>
+      <span class="diagram__node__sub">freeze.md 작성 · scope cut 확정</span>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--cyan diagram__node--full">
+      <span class="diagram__node__label">② 통합 테스트 매트릭스 실행</span>
+      <span class="diagram__node__sub">smoke · integration · soak · chaos</span>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--purple diagram__node--full">
+      <span class="diagram__node__label">③ Release Gate 통과</span>
+      <span class="diagram__node__sub">build/test · E2E 3회 · replay · evaluation · security · demo</span>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--orange diagram__node--full">
+      <span class="diagram__node__label">④ 성능·비용 보고서</span>
+      <span class="diagram__node__sub">latency / tokens / cost / judge / pass-fail</span>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--green diagram__node--full">
+      <span class="diagram__node__label">⑤ 발표 리허설 (STAR)</span>
+      <span class="diagram__node__sub">cold start · time-box · failure injection · evidence check</span>
+    </div>
+  </div>
+</div>
+
+### Release Gate 설계 원리
+
+Release Gate는 단일 테스트가 아니라 **여러 종류의 gate를 묶은 정책**이다. 각 gate는 deterministic / probabilistic / approval 중 하나의 성격을 가진다.
+
+| Gate | 성격 | 통과 기준 | 예시 |
+|------|------|----------|------|
+| Build/Test | deterministic | 명령 종료 코드 0 | `make test`, `pytest` |
+| Schema | deterministic | JSON Schema validate | task packet, judge output |
+| Replay | deterministic | event log → snapshot 일치 | `replay()` 함수 결과 비교 |
+| Performance | deterministic-ish | 임계값 초과 여부 | p95 latency < N |
+| Judge | probabilistic | overall ≥ 7.0 등 | LLM Judge JSON |
+| Security | approval | 사람이 체크리스트 사인 | secret scan + manual review |
+| Demo | approval | 라이브 데모 + 백업 영상 | 90초 녹화본 |
+
+<Aside type="note" title="Probabilistic gate는 보강 신호">
+Judge나 LLM 점수는 deterministic gate를 대체하지 않는다. Judge가 통과해도 build/test가 실패하면 gate fail이다.
+</Aside>
+
+### Feature freeze 원칙
+
+15주차 시작 시점에 각 팀은 `freeze.md`를 작성한다.
+
+| 항목 | 작성 내용 |
+|------|----------|
+| Demo path | 발표에서 반드시 보여줄 1개 happy path |
+| Recovery path | 실패를 안전하게 처리하는 1개 path |
+| Frozen features | 더 이상 바꾸지 않을 기능 목록 |
+| Allowed fixes | 버그 수정, 테스트 안정화, 문서/수치 정리 |
+| Explicit cuts | 최종 발표에서 제외할 기능 |
+
+freeze 이후의 변경은 `release gate` 통과율을 높일 때만 허용한다.
+
+### Release Gate 통과 절차
+
+최종 제출 전 다음 gate를 모두 통과해야 한다.
+
+| Gate | 기준 | 증거 |
+|------|------|------|
+| Build/Test | `make test` 또는 동등 명령 통과 | CI 로그 또는 터미널 캡처 |
+| End-to-end | 같은 task packet 3회 연속 실행 | run id 3개 |
+| Replay | event log에서 최종 상태 재구성 | `replay_snapshot.json` |
+| Evaluation | deterministic + judge 결과 기록 | 평가표 |
+| Security | secret, credential, out-of-scope write 없음 | 체크리스트 |
+| Demo | 네트워크 없이 설명 가능한 백업 자료 | 녹화본/스크린샷 |
+
+#### Release readiness review
+
+최종 리허설 전 팀 내부에서 20분짜리 release review를 진행한다.
+
+1. `make test` 또는 동등 명령을 실행하고 결과를 캡처한다.
+2. 같은 task packet을 3회 실행하고 run id를 기록한다.
+3. 가장 최근 실패 run을 하나 골라 failure reason을 설명한다.
+4. `replay_snapshot.json`이 event log와 일치하는지 확인한다.
+5. 발표 슬라이드의 모든 수치 옆에 source run id를 붙인다.
+6. secret, credential, out-of-scope write가 없는지 서로 교차 검토한다.
+
+이 review에서 발견된 문제는 새 기능보다 우선한다.
+
+### 통합 테스트 매트릭스
+
+캡스톤 시스템은 단위 테스트만으로 검증되지 않는다. 4가지 종류의 통합 테스트를 균형 있게 실행한다.
+
+| 테스트 종류 | 목적 | 통과 기준 | 빈도 |
+|-----------|------|----------|------|
+| Smoke | 시스템이 기동하는가 | `make run` 1회 통과 | 매 commit |
+| Integration | end-to-end happy path가 통과하는가 | 같은 task 3회 연속 통과 | 일 1회 |
+| Soak | 일정 시간/요청 수 지속 시 메모리/큐 안정 | 10분/100건 동안 OOM 없음 | 발표 전 1회 |
+| Chaos | 의도적 실패에서 복구하는가 | invalid task / network drop / model 500 → safe close | 발표 전 1회 |
+
+<Tabs>
+  <TabItem label="Happy Path">
+    ```text
+    task packet -> planner -> worker -> tests pass -> judge pass -> artifact saved
+    ```
+    최소 3회 반복 실행한다. 세 번 중 한 번이라도 실패하면 failure reason을 기록하고 원인을 수정한다.
+  </TabItem>
+  <TabItem label="Failure Path">
+    ```text
+    invalid task -> schema validation fail -> no file write -> run.closed(failed)
+    ```
+    잘못된 입력에서 시스템이 안전하게 멈추는지 보여준다.
+  </TabItem>
+  <TabItem label="Recovery Path">
+    ```text
+    tests fail -> reviewer says revise -> retry once -> pass or closed(failed)
+    ```
+    retry budget이 무한 루프를 막는지 확인한다.
+  </TabItem>
+  <TabItem label="Chaos">
+    ```text
+    api 500 -> retry with backoff -> still 500 -> escalate to human + run.closed(failed)
+    ```
+    의도적 장애 주입으로 시스템 복구 능력을 증명한다.
+  </TabItem>
+</Tabs>
+
+### 성능/비용 보고서 작성법
+
+각 팀은 최소 다음 표를 포함한다.
+
+| 지표 | Run 1 | Run 2 | Run 3 | 평균 | baseline 비교 |
+|------|------:|------:|------:|-----:|--------------:|
+| total latency sec | | | | | |
+| prompt tokens | | | | | |
+| completion tokens | | | | | |
+| tool calls | | | | | |
+| retry count | | | | | |
+| judge score | | | | | |
+| pass/fail | | | | | |
+
+비용은 정확한 청구액보다 **비교 가능한 계산식**이 중요하다.
+
+```text
+commercial_api_cost = input_tokens * input_price + output_tokens * output_price
+local_gpu_cost = gpu_hour_price * elapsed_seconds / 3600
+operator_cost = human_minutes * hourly_rate / 60
+```
+
+<Aside type="tip" title="운영 비용의 함정">
+로컬 모델은 토큰당 비용이 낮아 보여도 GPU idle time, 모델 로딩 시간, 운영자 시간, 실패 재시도 비용을 합치면 비싸질 수 있다. 최종 보고서에서는 token cost만이 아니라 end-to-end task cost를 비교한다.
+</Aside>
+
+#### 통계적 신뢰성
+
+3-5회 실행만으로 평균을 보고하면 분산을 놓친다. 다음 한 줄을 첨부하면 신뢰성이 올라간다.
+
+| 항목 | 권장 표기 |
+|------|----------|
+| 평균 | mean ± stdev |
+| 분포 | min / median / p95 |
+| 표본 수 | n=N (3회 미만이면 발표 시 명시) |
+| 실패율 | failures / total |
+
+### 발표 스토리텔링 — STAR 프레임워크
+
+발표에서 데모만 보여주면 평가자는 "운인지 설계인지" 판단할 수 없다. STAR 구조로 엮으면 의도가 드러난다.
+
+| 구간 | STAR 의미 | 캡스톤 적용 |
+|-----|---------|-------------|
+| Situation | 왜 이 문제인가 | 사용자/반복 업무/실패 비용 |
+| Task | 우리가 해결한 범위 | demo path · scope cut |
+| Action | 어떻게 만들었는가 | task packet · gate · replay 설계 결정 |
+| Result | 정량 증거 | 성공률·비용·judge·실패 사례 |
+
+#### 발표 자료 구성
+
+권장 발표 구조는 15분이다.
+
+| 시간 | 내용 | 증거 |
+|------|------|------|
+| 2분 | 문제 정의 (Situation) | 사용자/반복 업무/위험 경계 |
+| 3분 | 아키텍처 (Task + Action) | agent diagram + runtime layers |
+| 5분 | 라이브 데모 (Action) | happy path + failure recovery |
+| 3분 | 결과 (Result) | 성공률, 비용, latency, judge 결과 |
+| 2분 | 회고 | 실패와 scope cut, 다음 개선 |
+
+<Aside type="tip" title="데모 준비">
+라이브 데모는 네트워크, API, GPU queue, time limit 때문에 실패할 수 있다. 반드시 90초 내 녹화본과 주요 스크린샷을 백업으로 준비한다.
+</Aside>
+
+### Demo 안정화 기법
+
+| 기법 | 설명 | 적용 시점 |
+|------|------|----------|
+| Pre-warm | 발표 1시간 전 모델 로딩과 cache 채우기 | 라이브 데모 |
+| Recorded fallback | 90초 안에 끝나는 녹화본 준비 | 라이브 실패 시 즉시 재생 |
+| Frozen task packet | 데모용 task packet을 git tag로 고정 | 발표 직전 |
+| Hardcoded inputs | 외부 API 응답을 미리 캡처해 fixture로 사용 | chaos 시나리오 |
+| Watchdog timer | 라이브 데모 90초 timer로 자동 fallback | 발표 모드 |
+
+### 최종 보고서 구조
+
+```markdown
+# Final Report
+
+## 1. Problem and User
+## 2. System Architecture
+## 3. Runtime and Harness Design
+## 4. Evaluation Gates
+## 5. Telemetry Results
+## 6. Failure Cases and Fixes
+## 7. Cost and Performance
+## 8. Limitations
+## 9. What We Would Do Next
+```
+
+### 발표 리허설 체크리스트
+
+<Steps>
+1. **cold start rehearsal**
+
+   아무 것도 켜지 않은 상태에서 발표 환경을 시작해 본다.
+
+2. **time-box rehearsal**
+
+   15분 제한으로 발표하고, 12분 지점에서 demo가 끝나도록 조정한다.
+
+3. **failure injection**
+
+   일부러 실패 task를 넣고 시스템이 안전하게 멈추는 장면을 확인한다.
+
+4. **evidence check**
+
+   모든 수치가 run id, event log, dashboard screenshot과 연결되는지 확인한다.
+
+5. **speaker handoff**
+
+   팀원 간 발표 전환 문장을 정하고, 한 명이 빠져도 발표가 이어지도록 한다.
+</Steps>
+
+### 최종 제출물 목록
 
 | 항목 | 위치 | 마감 |
 |------|------|------|
-| 소스 코드 | `capstone/projects/[학번]/src/` | 6/17 |
-| README | `capstone/projects/[학번]/README.md` | 6/17 |
-| 발표 자료 링크 | `capstone/projects/[학번]/links.md` (외부 URL) | 6/17 |
-| 최종 보고서 | `capstone/projects/[학번]/report.md` | 6/17 |
-| 데모 영상 링크 | `capstone/projects/[학번]/links.md` (외부 URL) | 6/17 |
+| 소스 코드 | `capstone/teams/[팀명]/runtime/` | 6/16 |
+| README | `capstone/teams/[팀명]/README.md` | 6/16 |
+| 설계 문서 | `capstone/teams/[팀명]/design.md` | 6/16 |
+| 최종 보고서 | `capstone/teams/[팀명]/reports/final-report.md` | 6/16 |
+| 발표 자료 | `capstone/teams/[팀명]/presentation.pdf` | 6/16 |
+| 데모 영상 | `capstone/teams/[팀명]/demo.mp4` | 6/16 |
+| 실행 로그 | `capstone/teams/[팀명]/runs/*.events.jsonl` | 6/16 |
+| replay snapshot | `capstone/teams/[팀명]/reports/replay_snapshot.json` | 6/16 |
+| freeze.md | `capstone/teams/[팀명]/freeze.md` | 6/16 |
+
+### 평가 루브릭
+
+| 항목 | 비중 | 평가 포인트 |
+|------|-----:|------------|
+| 문제 정의와 범위 | 15% | 실제 반복 업무, 위험 경계, scope cut |
+| 하네스 설계 | 25% | task packet, gate, retry, replay |
+| 구현 완성도 | 25% | E2E 실행, 테스트, 안정성 |
+| 관측성과 평가 | 20% | telemetry, judge, 비용/성능 지표 |
+| 발표와 회고 | 15% | 명확성, 실패 공유, 다음 개선 |
+
+## 실습 (Practicum)
+
+<Steps>
+1. **freeze.md 작성**
+
+   demo path / recovery path / frozen features / allowed fixes / explicit cuts 5항목을 채운다.
+
+2. **통합 테스트 매트릭스 실행**
+
+   smoke / integration / soak / chaos 4종을 각각 1회 이상 실행하고 run id를 기록한다.
+
+3. **Release Gate 6개 통과**
+
+   build/test, E2E 3회, replay, evaluation, security, demo 항목을 evidence와 함께 체크한다.
+
+4. **성능·비용 표 작성**
+
+   3-5회 평균과 분포를 기록하고 commercial vs local 비용 비교를 첨부한다.
+
+5. **STAR 발표 자료 v1**
+
+   Situation/Task/Action/Result 4구간을 슬라이드 골격으로 만든다.
+
+6. **3회 리허설**
+
+   cold start, time-box, failure injection을 연달아 진행한다.
+</Steps>
 
 ## 과제 (Assignment)
 
@@ -73,6 +359,38 @@ import { Aside, Steps, Badge } from '@astrojs/starlight/components';
 
 **제출 마감**: 2026-06-16 23:59
 
-**요구사항**: 위 제출물 목록 전체 완성
+**요구사항**:
+1. 최종 제출물 목록 전체 완성
+2. release gate 체크리스트 포함
+3. run id가 연결된 성능/비용/품질 수치 포함
+4. 15분 발표 자료와 90초 백업 데모 영상 포함
+5. freeze.md 와 통합 테스트 매트릭스 결과 첨부
 
 </div>
+
+## 핵심 정리
+
+1. **15주차는 통합·안정화 주간**: 새 기능보다 demo path 신뢰도가 우선이다.
+2. **Release Gate는 단일 테스트가 아니다**: deterministic·probabilistic·approval gate를 묶은 정책이다.
+3. **freeze.md가 결정 도구**: 무엇을 더 이상 바꾸지 않을지 명시해야 fix와 feature가 구분된다.
+4. **통합 테스트는 4종 매트릭스**: smoke / integration / soak / chaos를 균형 있게 실행한다.
+5. **수치는 source run id에 연결**: 슬라이드의 모든 숫자는 evidence(run id, event log, dashboard)에서 추적 가능해야 한다.
+6. **STAR 구조로 발표**: Situation·Task·Action·Result를 따라가면 데모가 운이 아닌 설계로 보인다.
+7. **데모는 항상 두 트랙**: 라이브 + 90초 녹화본 fallback. watchdog timer로 자동 전환.
+
+## 더 읽을거리
+
+**핵심 문서**
+- [Agent OS Runtime — Replay & Snapshots](/reference/agent-os-runtime/#7-layer-architecture)
+- [캡스톤 평가 기준](/capstone/evaluation/)
+- [캡스톤 제출 안내](/capstone/submissions/)
+
+**테스트 / 신뢰성**
+- Google SRE Book — Testing for Reliability
+- Netflix Tech Blog — Chaos Engineering 101
+- Will Larson, "Test types and trade-offs"
+
+**발표 / 보고**
+- Cole Nussbaumer Knaflic, _Storytelling with Data_
+- Amazon 6-pager / 1-pager 작성법
+- Andy Matuschak, "Evergreen notes" — 발표 자료 재사용 관점

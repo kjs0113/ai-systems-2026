@@ -45,7 +45,7 @@ MCP is a protocol that allows AI coding agents to communicate with external tool
 <Aside type="caution" title="MCP Support Status">
 - **Claude Code**: Full support (`~/.claude/settings.json`)
 - **Gemini CLI**: Supported (`~/.gemini/settings.json`)
-- **Codex CLI**: Not supported — use Claude Code or Gemini CLI for MCP labs
+- **Codex CLI**: Experimental support (`~/.codex/config.toml`) — required validation for this lab still uses Claude Code or Gemini CLI
 - **OpenCode**: Limited support
 </Aside>
 
@@ -62,6 +62,9 @@ Add built-in servers to your AI coding CLI's configuration file.
   <TabItem label="Gemini CLI">
     Config file: `~/.gemini/settings.json`
   </TabItem>
+  <TabItem label="Codex CLI">
+    Config file: `~/.codex/config.toml`. Codex MCP support varies by version, so first confirm registration with `codex mcp list`.
+  </TabItem>
 </Tabs>
 
 ```json
@@ -76,10 +79,9 @@ Add built-in servers to your AI coding CLI's configuration file.
       ]
     },
     "git": {
-      "command": "npx",
+      "command": "uvx",
       "args": [
-        "-y",
-        "@modelcontextprotocol/server-git",
+        "mcp-server-git",
         "--repository",
         "/home/[student-id]/lab-03"
       ]
@@ -103,10 +105,12 @@ The agent cannot access files outside the path registered with the `filesystem` 
    source .venv/bin/activate
 
    # Using uv (recommended)
-   uv add "mcp[cli]" fastmcp
+   uv pip install "mcp[cli]" fastmcp
 
    # Using pip
    pip install fastmcp
+
+   fastmcp version
    ```
 
    ```
@@ -121,7 +125,7 @@ The agent cannot access files outside the path registered with the `filesystem` 
    ```bash
    claude mcp list
    # filesystem  npx -y @modelcontextprotocol/server-filesystem ...
-   # git         npx -y @modelcontextprotocol/server-git ...
+   # git         uvx mcp-server-git --repository ...
    ```
 
 3. **Test the Filesystem Server**
@@ -159,7 +163,7 @@ ALLOWED_BASE = os.path.realpath(os.path.dirname(__file__))
 def _validate_path(path: str) -> str:
     """Defends against path traversal attacks. Blocks access outside the allowed directory."""
     real_path = os.path.realpath(path)
-    if not real_path.startswith(ALLOWED_BASE):
+    if os.path.commonpath([ALLOWED_BASE, real_path]) != ALLOWED_BASE:
         raise ValueError(
             f"Access denied: {path} — outside allowed scope ({ALLOWED_BASE})"
         )
@@ -286,7 +290,7 @@ Add the custom server to `settings.json`.
 
 ```bash
 # Run Inspector
-npx @modelcontextprotocol/inspector python custom_server.py
+npx -y @modelcontextprotocol/inspector python custom_server.py
 
 # Go to http://localhost:6274 in your browser, then:
 # 1. tools/list → verify run_pytest, count_lines

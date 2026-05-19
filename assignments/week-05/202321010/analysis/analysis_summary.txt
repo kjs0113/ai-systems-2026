@@ -1,0 +1,22 @@
+
+=== Context Rot Analysis Summary ===
+
+Token Statistics:
+- Average tokens: 1910.45
+- Max tokens: 3841
+- Min tokens: 429
+- Token growth rate: 166.05 per iteration
+
+Context Statistics:
+- Average context length: 5265.00 chars
+- Max context length: 10450 chars
+- Final context length: 10450 chars
+
+Quality Statistics:
+- Average quality: 0.955
+- Quality degradation: 0.045
+- Min quality: 0.900
+
+Context Resets Detected:
+- Reset at iterations: 8, 15
+- Total resets: 2

@@ -1,0 +1,22 @@
+{
+  "log_path": "harness.log",
+  "generated_report": "error_report.md",
+  "winner": "prompt_v2",
+  "results": [
+    {
+      "variant": "prompt_v1",
+      "iterations": 5,
+      "success": false,
+      "duration_sec": 2.15,
+      "final_test_output": "1 failed, 2 passed in 0.05s"
+    },
+    {
+      "variant": "prompt_v2",
+      "iterations": 2,
+      "success": true,
+      "duration_sec": 1.36,
+      "final_test_output": "3 passed, 1 warning in 0.05s"
+    }
+  ],
+  "winner_reason": "prompt_v2 wins because it succeeds with fewer iterations and a shorter simulated repair duration while preserving the required completion steps."
+}

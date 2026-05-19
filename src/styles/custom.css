@@ -816,6 +816,125 @@ body {
   text-align: center;
 }
 
+/* Artifact chain — Week 9 */
+.artifact-chain__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(13rem, 0.45fr);
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.artifact-chain__flow {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.artifact-chain__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 4rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid transparent;
+  border-radius: 0.625rem;
+}
+
+.artifact-chain__meta {
+  color: #94a3b8;
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.sl-markdown-content .artifact-chain__item code,
+.sl-markdown-content .artifact-chain__state code {
+  flex: 0 0 auto;
+  color: #F0F0F0;
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 0.35rem;
+  font-family: var(--sl-font-mono);
+  font-size: 0.78rem;
+  padding: 0.18rem 0.45rem;
+  white-space: nowrap;
+}
+
+:root[data-theme='dark'] .sl-markdown-content .artifact-chain__item code,
+:root[data-theme='dark'] .sl-markdown-content .artifact-chain__state code {
+  color: #F0F0F0;
+  background: rgba(15, 23, 42, 0.55);
+  border-color: rgba(148, 163, 184, 0.22);
+}
+
+.artifact-chain__arrow {
+  color: #3B82F6;
+  font-size: 1rem;
+  line-height: 1;
+  opacity: 0.8;
+  padding: 0.28rem 0;
+  text-align: center;
+}
+
+.artifact-chain__state {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1.5px dashed rgba(59, 130, 246, 0.35);
+  border-radius: 0.75rem;
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.artifact-chain__state-label {
+  color: #60A5FA;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.artifact-chain__state p {
+  color: #cbd5e1;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.artifact-chain__item--blue   { background: rgba(37, 99, 235, 0.10); border-color: rgba(37, 99, 235, 0.28); }
+.artifact-chain__item--purple { background: rgba(124, 58, 237, 0.09); border-color: rgba(124, 58, 237, 0.28); }
+.artifact-chain__item--cyan   { background: rgba(34, 211, 238, 0.08); border-color: rgba(34, 211, 238, 0.25); }
+.artifact-chain__item--orange { background: rgba(249, 115, 22, 0.08); border-color: rgba(249, 115, 22, 0.25); }
+.artifact-chain__item--green  { background: rgba(34, 197, 94, 0.08); border-color: rgba(34, 197, 94, 0.25); }
+.artifact-chain__item--gray   { background: rgba(255, 255, 255, 0.04); border-color: rgba(148, 163, 184, 0.18); }
+
+:root[data-theme='light'] .sl-markdown-content .artifact-chain__item code,
+:root[data-theme='light'] .sl-markdown-content .artifact-chain__state code {
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.75);
+  border-color: rgba(148, 163, 184, 0.3);
+}
+:root[data-theme='light'] .artifact-chain__state {
+  background: rgba(255, 255, 255, 0.6);
+  border-color: rgba(37, 99, 235, 0.25);
+}
+:root[data-theme='light'] .artifact-chain__state p { color: #475569; }
+:root[data-theme='light'] .artifact-chain__meta { color: #475569; }
+:root[data-theme='light'] .artifact-chain__item--blue   { background: #dbeafe; border-color: rgba(37, 99, 235, 0.25); }
+:root[data-theme='light'] .artifact-chain__item--purple { background: #f5f3ff; border-color: rgba(124, 58, 237, 0.3); }
+:root[data-theme='light'] .artifact-chain__item--cyan   { background: #ecfeff; border-color: rgba(6, 182, 212, 0.3); }
+:root[data-theme='light'] .artifact-chain__item--orange { background: #fff7ed; border-color: rgba(249, 115, 22, 0.3); }
+:root[data-theme='light'] .artifact-chain__item--green  { background: #f0fdf4; border-color: rgba(34, 197, 94, 0.3); }
+:root[data-theme='light'] .artifact-chain__item--gray   { background: #f8fafc; border-color: rgba(100, 116, 139, 0.22); }
+
+@media (max-width: 760px) {
+  .artifact-chain__layout { grid-template-columns: 1fr; }
+  .artifact-chain__item { align-items: flex-start; flex-direction: column; gap: 0.4rem; }
+  .sl-markdown-content .artifact-chain__item code,
+  .sl-markdown-content .artifact-chain__state code { white-space: normal; }
+}
+
 /* ─── Harness Diagram ────────────────────────────────────────────────────── */
 
 .harness-diagram {
@@ -1275,9 +1394,10 @@ body {
 }
 .sdlc-panel__feedback code {
   font-family: var(--sl-font-mono); color: #a78bfa; font-size: 0.8rem;
+  display: inline-flex; flex: 0 0 auto; white-space: nowrap;
 }
 :root[data-theme='light'] .sdlc-panel__feedback code { color: #6d28d9; }
-.sdlc-panel__feedback span { font-size: 0.75rem; }
+.sdlc-panel__feedback span { font-size: 0.75rem; min-width: 0; }
 
 /* ─── Bottom: Command cards ───────────────────────────────────────────── */
 .sdlc-commands {

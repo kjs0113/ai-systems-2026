@@ -153,6 +153,7 @@ class TestRunner:
 # code_reviewer.py
 import subprocess
 import anthropic
+import os
 from dataclasses import dataclass
 
 @dataclass
@@ -185,13 +186,14 @@ Respond in JSON:
 class CodeReviewer:
     def __init__(self):
         self.client = anthropic.Anthropic()
+        self.model = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-6")
 
     def review_diff(self, diff: str) -> ReviewResult:
         if not diff.strip():
             return ReviewResult("pass", [], [], 100)
 
         response = self.client.messages.create(
-            model="claude-sonnet-4-6",
+            model=self.model,
             max_tokens=1024,
             system=REVIEW_SYSTEM,
             messages=[{

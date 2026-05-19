@@ -36,13 +36,13 @@ import { Aside, Steps, Tabs, TabItem, Card, CardGrid, Badge } from '@astrojs/sta
   <Card title="Conceptual Perspective" icon="open-book">
     Explain the difference between AI models and AI systems using the EU AI Act definition, and apply the "engine vs. automobile" analogy.
   </Card>
-  <Card title="Governance Perspective" icon="seti:shield">
+  <Card title="Governance Perspective" icon="seti:lock">
     Distinguish between the three stages of HITL → HOTL → HIC architecture using real-world examples.
   </Card>
   <Card title="Industry Perspective" icon="rocket">
     Understand the landscape of the 2025–2026 agentic AI tools ecosystem and the key benchmarks.
   </Card>
-  <Card title="Methodology Perspective" icon="seti:code">
+  <Card title="Methodology Perspective" icon="pencil">
     Grasp the core principles of harness engineering and survey the full arc of the 15-week course.
   </Card>
 </CardGrid>
@@ -66,7 +66,7 @@ The AI industry reached a fundamental inflection point in 2025–2026. The era o
     - LLM = autonomous execution agent
     - Humans as strategic supervisors
     - AI directly modifies files, runs tests, and deploys
-    - SWE-bench Verified success rate 79.2% (Claude Opus 4.6 Thinking)
+    - SWE-bench Verified success rate in the 79% range (frontier reasoning model + agent harness)
   </Card>
 </CardGrid>
 
@@ -166,7 +166,7 @@ South Korea's **AI Framework Act** (effective January 2026) is more innovation-f
 
 Let's look at the need for governance not through abstract principles, but through data.
 
-**METR Study (July 2025, arXiv 2507.09089)**: A randomized controlled experiment with 16 skilled developers completing 246 real-world tasks. The results were surprising.
+**METR Study (July 2025, arXiv 2507.09089)**: A randomized controlled experiment with 16 skilled developers completing 246 real-world tasks. The results show that AI tool impact needs careful interpretation.
 
 - Using AI tools made task completion **19% slower** (while participants perceived themselves as 20% faster)
 - A **39 percentage point gap** existed between developers' self-assessments and actual performance
@@ -210,7 +210,7 @@ Knowing the benchmarks for actual agent capabilities helps you distinguish real 
 **SWE-bench Verified** — benchmark for autonomously resolving real GitHub issues:
 - Early 2024: top systems ~15%
 - Late 2025: surpassing 50%
-- Early 2026: 79.2% (Claude Opus 4.6 Thinking)
+- Early 2026: frontier systems reported in the 79% range
 
 Real-world data is also accumulating:
 - **Devin**: Initial 15% success rate (Answer.AI test) → 67% PR merge rate by late 2025
@@ -221,10 +221,10 @@ Real-world data is also accumulating:
 
 A notable 2026 development is that open-source models have approached commercial-level quality. Of the 204 AI coding tools currently tracked, 95% are open-source.
 
-Key open-source coding models:
-- **Qwen3-Coder** (235B MoE, 22B active) — approaches commercial models on SWE-bench, Apache 2.0
-- **DeepSeek V3** (685B MoE, 37B active) — top-tier for math, reasoning, and coding with maximum cost efficiency
-- **GLM-4.7** (32B Dense) — can run on a single GPU, Interleaved Thinking
+Key open-weight coding models:
+- **Qwen3-Coder-Next** — 80B total / 3B active, 256K context, designed for coding agents and local development
+- **DeepSeek-V4-Pro / Flash** — 1.6T/284B MoE, 1M context, focused on long-context reasoning and agentic tasks
+- **GLM-5.1 / MiniMax-M2.7** — candidates for agentic engineering, terminal tasks, and long tool-use workflows
 
 Why we deploy open-source models in this course: **cost**, **privacy** (campus data stays local), and **customizability** (tuned to our learning environment). In Weeks 10–11 we deploy these models on the DGX H100 server.
 
@@ -255,7 +255,7 @@ The required skills are also shifting:
 
 Geoffrey Huntley's core insight: **"Build a stronger harness, not a stronger model."**
 
-The Ralph Loop prototype is surprisingly simple:
+The Ralph Loop prototype is simple:
 
 ```bash
 while :; do cat PROMPT.md | <ai-coding-cli>; done
@@ -286,7 +286,7 @@ In Phase 1 we build the safety systems first, then in Phase 2 we add the engine.
 
 #### What We Build in This Course
 
-After 15 weeks, you will have fully implemented the following system:
+After 15 weeks, you will have implemented and validated the following system:
 
 <div class="diagram">
   <div class="diagram__title">AGENTIC SDLC PIPELINE</div>
@@ -498,11 +498,11 @@ If the connection is refused, first check that Cloudflare WARP is in **Connected
 ## Key Takeaways
 
 1. **AI system ≠ AI model**: The model is the engine, the system is the automobile. Tool use, memory, planning, execution environment, safety guardrails, and observability make up the system.
-2. **SWE-bench 5% → 79%**: Agent capability has grown explosively in three years. The problem is not capability — it's control.
+2. **SWE-bench 5% → 79%**: Agent capability has improved substantially in three years. The core problem is control, not capability alone.
 3. **HITL → HOTL → HIC**: From manual transmission to self-driving. The human role shifts from "approving every step" to "setting strategy."
 4. **19% slower**: AI tools speed up individual tasks, but review costs (Babysitting Tax) cancel out the gains. The harness resolves this bottleneck.
 5. **Harness engineering**: A stronger harness, not a stronger model. Backpressure and garbage collection make non-deterministic AI deterministic.
-6. **The 15-week arc**: Governance → Infrastructure → Loops → Multi-agent → MLOps → Ralphthon. This course builds a complete agentic SDLC pipeline.
+6. **The 15-week arc**: Governance → Infrastructure → Loops → Multi-agent → MLOps → Ralphthon. This course builds an agentic SDLC pipeline step by step.
 
 ## Further Reading
 

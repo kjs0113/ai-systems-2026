@@ -1,24 +1,25 @@
 ---
 title: "12주차: 텔레메트리와 LLM-as-Judge"
-description: 에이전트 시스템 품질 측정 — OpenTelemetry 통합과 자동 평가 프레임워크
+description: 에이전트 시스템 품질 측정 — OpenTelemetry, event store, 자동 평가 게이트, replay 가능한 운영
 week: 12
 phase: 4
 phase_title: 오픈소스 모델 & MLOps
 date: "2026-05-19"
 theory_topics:
-  - 텔레메트리 설계 원칙
-  - LLM-as-Judge 평가 방법론
-  - 비용 최적화 전략
+  - 에이전트 텔레메트리 설계
+  - OpenTelemetry와 append-only event log
+  - LLM-as-Judge 평가 게이트와 한계
 lab_topics:
   - OpenTelemetry 통합
-  - LLM-as-Judge 구현
+  - Agent OS Runtime event trace 작성
+  - LLM-as-Judge 구현 및 상관관계 분석
 assignment: "Lab 11 + Lab 12"
 assignment_due: "2026-05-26"
 difficulty: 고급
 estimated_time: 8시간
 ---
 
-import { Aside, Steps, Badge } from '@astrojs/starlight/components';
+import { Aside, Steps, Badge, Card, CardGrid, Tabs, TabItem } from '@astrojs/starlight/components';
 
 <div class="week-meta">
   <span class="phase-tag">Phase 4</span>
@@ -29,21 +30,146 @@ import { Aside, Steps, Badge } from '@astrojs/starlight/components';
 
 ## 이론 (Theory)
 
-### 텔레메트리: HOTL의 눈과 귀
+### 오늘의 학습 목표
 
-HOTL 아키텍처에서 인간 감독자가 에이전트를 신뢰하려면 **실시간 텔레메트리**가 필수다.
+<CardGrid>
+  <Card title="개념 관점" icon="open-book">
+    텔레메트리(trace/metrics/logs)와 append-only event store가 왜 별개의 축인지 설명하고, HOTL 운영에서 둘이 각각 어떤 질문에 답하는지 구분한다.
+  </Card>
+  <Card title="설계 관점" icon="seti:config">
+    span 구조와 event schema를 직접 설계하고, run·task·agent·model·tool·gate를 연결하는 7개 attribute를 정의한다.
+  </Card>
+  <Card title="구현 관점" icon="pencil">
+    OpenTelemetry SDK로 span을 emit하고 `.events.jsonl`을 작성하며, LLM-as-Judge가 strict JSON으로 점수를 내고 deterministic gate와 결합되는 코드를 짠다.
+  </Card>
+  <Card title="운영 관점" icon="rocket">
+    judge calibration 파이프라인을 굴리며 Spearman/Pearson correlation으로 신뢰 구간을 모니터링하고, judge bias가 의심될 때 gate policy를 어떻게 보강할지 결정한다.
+  </Card>
+</CardGrid>
 
-<Aside type="tip" title="Claude Code 내부에서는...">
-Claude Code의 관측 설계가 텔레메트리 원칙의 실제 구현이다:
+---
 
-- **토큰 추적 4종**: `input_tokens`, `cache_creation_input_tokens`, `cache_read_input_tokens`, `output_tokens` — 매 API 호출마다 기록
-- **스트리밍 이벤트 6종**: `message_start`, `command_match`, `tool_match`, `permission_denial`, `message_delta`, `message_stop` — 턴 단위 관측
-- **TurnResult 7요소**: input, response, tools, permissions, tokens, termination reason — 구조화된 턴 결과 캡처
-- **비용 계산**: 모델별 가격(Sonnet $3/$15, Haiku $1/$5, Opus $5/$25 per 1M) × 토큰 수. `/cost` 명령으로 실시간 확인
-- **장애 분류**: MCP 서버 실패를 startup/handshake/config/partial로 구조화 — 텍스트 로그가 아닌 타입화된 이벤트
+### 관측성은 HOTL의 감각 기관이다
 
-→ 상세: [참고자료 > Claude Code 내부 구조](/reference/claude-code-internals)
+Human-on-the-Loop 시스템에서 인간 감독자는 모든 tool call을 실시간 승인하지 않는다. 대신 시스템이 안전한 범위 안에서 자율 실행하도록 두고, **텔레메트리와 평가 게이트**를 통해 이상 징후를 본다.
+
+| 관측 대상 | 질문 | 예시 |
+|-----------|------|------|
+| Trace | 어디서 시간이 걸렸는가? | agent_loop → model_call → tool_call → test |
+| Metrics | 정상 범위인가? | success_rate, token_usage, ttft_ms, error_rate |
+| Logs | 무슨 일이 있었는가? | permission denied, tool timeout, pytest failure |
+| Event store | 같은 결과를 재구성할 수 있는가? | `.events.jsonl`, replay snapshot |
+| Evaluation | 결과가 쓸 만한가? | tests, lint, LLM-as-Judge, human review |
+
+<Aside type="note" title="Span과 Event Log의 차이">
+OpenTelemetry span은 "지금 무엇이 느린가"를 보여주고, Agent OS Runtime의 `.events.jsonl`은 "그 세션에서 실제로 무엇이 일어났는가"를 재구성한다. Week 12의 관측성은 두 축을 함께 다룬다: live monitoring은 OTel, audit/replay는 [append-only event store](/reference/agent-os-runtime/#7-layer-architecture)가 담당한다. L8 workflow plane을 쓰는 팀은 `workflow.started`, `workflow.phase_advanced`, `workflow.policy_gated` event와 current cycle/phase/verdict replay까지 함께 증명한다.
 </Aside>
+
+#### 텔레메트리 흐름 한눈에 보기
+
+<div class="diagram">
+  <div class="diagram__title">Telemetry Flow — Live Monitoring + Audit</div>
+  <div class="diagram__flow">
+    <div class="diagram__node diagram__node--blue diagram__node--full">
+      <span class="diagram__node__label">User / HOTL</span>
+      <span class="diagram__node__sub">task packet 제출</span>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--purple diagram__node--full">
+      <span class="diagram__node__label">Agent Runtime</span>
+      <span class="diagram__node__sub">span agent.run 시작 · run.started 이벤트 append</span>
+    </div>
+    <div class="diagram__arrow">▼  실행 단계</div>
+    <div class="diagram__cols diagram__cols--2">
+      <div class="diagram__node diagram__node--orange diagram__node--full">
+        <span class="diagram__node__label">Tool / Test</span>
+        <span class="diagram__node__sub">tool.invoke → tool.result</span>
+      </div>
+      <div class="diagram__node diagram__node--green diagram__node--full">
+        <span class="diagram__node__label">LLM Judge</span>
+        <span class="diagram__node__sub">scores + verdict</span>
+      </div>
+    </div>
+    <div class="diagram__arrow">▼  관측·기록 두 축으로 분기</div>
+    <div class="diagram__cols diagram__cols--2">
+      <div class="diagram__node diagram__node--cyan diagram__node--full">
+        <span class="diagram__node__label">OTel Collector</span>
+        <span class="diagram__node__sub">spans · metrics (live)</span>
+      </div>
+      <div class="diagram__node diagram__node--gray diagram__node--full">
+        <span class="diagram__node__label">Event Store</span>
+        <span class="diagram__node__sub">.events.jsonl · replay snapshot</span>
+      </div>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--blue diagram__node--full">
+      <span class="diagram__node__label">Dashboard</span>
+      <span class="diagram__node__sub">live traces·metrics + audit·replay 한 화면</span>
+    </div>
+  </div>
+</div>
+
+같은 `run_id`를 OTel span attribute와 event log line 둘 다에 박아 두면, dashboard에서 한 클릭으로 audit log까지 내려갈 수 있다.
+
+### Agent run을 span으로 쪼개기
+
+에이전트 실행을 하나의 로그 문자열로 남기면 나중에 분석하기 어렵다. 최소한 다음 span 구조를 권장한다.
+
+<div class="diagram">
+  <div class="diagram__title">Recommended Span Tree for an Agent Run</div>
+  <div class="diagram__stack">
+    <div class="diagram__node diagram__node--blue">
+      <span class="diagram__node__label">agent.run</span>
+      <span class="diagram__node__sub">루트 — run_id 공유, 최종 gate.result 기록</span>
+    </div>
+    <div class="diagram__node diagram__node--cyan" style="padding-left: 2rem;">
+      <span class="diagram__node__label">└ planner.step</span>
+      <span class="diagram__node__sub">spec/plan 생성 단계</span>
+    </div>
+    <div class="diagram__node diagram__node--cyan" style="padding-left: 2rem;">
+      <span class="diagram__node__label">└ model.call</span>
+      <span class="diagram__node__sub">prompt → completion (model.name attr)</span>
+    </div>
+    <div class="diagram__node diagram__node--orange" style="padding-left: 2rem;">
+      <span class="diagram__node__label">└ tool.invoke</span>
+      <span class="diagram__node__sub">tool.name, input attr</span>
+    </div>
+    <div class="diagram__node diagram__node--orange" style="padding-left: 2rem;">
+      <span class="diagram__node__label">└ tool.result</span>
+      <span class="diagram__node__sub">status, latency_ms</span>
+    </div>
+    <div class="diagram__node diagram__node--purple" style="padding-left: 2rem;">
+      <span class="diagram__node__label">└ acceptance.test</span>
+      <span class="diagram__node__sub">deterministic gate 결과</span>
+    </div>
+    <div class="diagram__node diagram__node--green" style="padding-left: 2rem;">
+      <span class="diagram__node__label">└ judge.evaluate</span>
+      <span class="diagram__node__sub">probabilistic gate 결과</span>
+    </div>
+    <div class="diagram__node diagram__node--gray" style="padding-left: 2rem;">
+      <span class="diagram__node__label">└ artifact.write</span>
+      <span class="diagram__node__sub">artifact.path attr</span>
+    </div>
+  </div>
+</div>
+
+각 span은 같은 `run_id`, `task_id`, `agent_role`, `model`, `repository`, `commit_sha`를 공유한다. 이렇게 해야 Grafana에서 "어떤 모델이 어떤 역할에서 실패했는가"를 볼 수 있다.
+
+#### 최소 span attribute
+
+에이전트 텔레메트리는 "로그를 많이 남기는 것"이 아니라 분석 가능한 공통 키를 유지하는 것이다.
+
+| Attribute | 예시 | 이유 |
+|-----------|------|------|
+| `run.id` | `run-20260519-001` | event log, dashboard, report를 연결 |
+| `task.id` | `capstone-017` | 같은 작업의 반복 실행 비교 |
+| `agent.role` | `worker` | planner/reviewer/worker별 실패율 비교 |
+| `model.name` | `local-coder` | 모델별 비용/품질 비교 |
+| `tool.name` | `run_tests` | 느리거나 위험한 도구 식별 |
+| `gate.result` | `pass`, `revise`, `fail` | release readiness 판단 |
+| `artifact.path` | `artifacts/run-001.patch` | 최종 산출물 추적 |
+
+이 키가 없으면 15주차 최종 보고서에서 "수치가 있다"와 "증거가 연결된다" 사이의 차이가 생긴다.
 
 ```python
 # telemetry.py — OpenTelemetry 기반 에이전트 모니터링
@@ -51,89 +177,346 @@ from opentelemetry import trace, metrics
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.metrics import MeterProvider
 
-tracer = trace.get_tracer("ralph-loop")
-meter = metrics.get_meter("ralph-loop")
+tracer = trace.get_tracer("agent-runtime")
+meter = metrics.get_meter("agent-runtime")
 
-# 주요 메트릭
-loop_counter = meter.create_counter("ralph.loop.count")
-token_usage = meter.create_histogram("ralph.tokens.used")
-success_rate = meter.create_gauge("ralph.success.rate")
+loop_counter = meter.create_counter("agent.loop.count")
+token_usage = meter.create_histogram("agent.tokens.used")
+judge_score = meter.create_histogram("agent.judge.score")
+ttft_ms = meter.create_histogram("agent.model.ttft_ms")
 
-def traced_agent_loop(task: str):
-    with tracer.start_as_current_span("agent_loop") as span:
-        span.set_attribute("task.description", task)
+def traced_agent_loop(task: dict):
+    with tracer.start_as_current_span("agent.run") as span:
+        span.set_attribute("run.id", task["run_id"])
+        span.set_attribute("task.id", task["id"])
+        span.set_attribute("task.objective", task["objective"])
+        span.set_attribute("agent.role", task.get("role", "worker"))
+        span.set_attribute("model.name", task.get("model", "local-coder"))
 
-        # 루프 실행
-        result = run_ralph_loop(task)
+        result = run_agent(task)
 
-        # 메트릭 기록
         loop_counter.add(1, {"status": "success" if result.passed else "failure"})
-        token_usage.record(result.tokens_used)
-
+        token_usage.record(result.tokens_used, {"model": result.model})
+        judge_score.record(result.judge_overall, {"task": task["id"]})
+        ttft_ms.record(result.ttft_ms, {"model": result.model})
         span.set_attribute("result.passed", result.passed)
         span.set_attribute("tokens.used", result.tokens_used)
-
+        span.set_attribute("tests.failed", result.tests_failed)
+        span.set_attribute("gate.result", result.gate_result)
         return result
 ```
 
-### LLM-as-Judge 평가 프레임워크
+<Aside type="tip" title="Claude Code 내부에서는...">
+Claude Code의 관측 설계가 텔레메트리 원칙의 실제 구현이다. 토큰 사용량, tool call, permission denial, stop reason을 구조화해서 기록하기 때문에 `/cost`, 세션 resume, permission audit가 가능하다. 이 강의에서는 특정 제품 내부 구현을 외우기보다, 그 설계 원칙을 우리 하네스에 이식한다.
+</Aside>
 
-자동 테스트로 검증하기 어려운 **코드 품질, 가독성, 설계 패턴**을 LLM으로 자동 평가한다.
+### Event store: replay 가능한 운영 기록
 
-```python
-# llm_judge.py
-import anthropic
+OpenTelemetry는 실시간 관측에 강하지만, 에이전트 실행을 완전히 재구성하는 source of truth로는 부족하다. Agent OS Runtime 방식의 append-only event store는 다음 이벤트를 순서대로 남긴다.
 
-JUDGE_SYSTEM_PROMPT = """당신은 10년 경력의 시니어 소프트웨어 엔지니어입니다.
-주어진 코드를 다음 기준으로 1-10점 평가하세요:
-
-1. 정확성 (Correctness): 요구사항을 올바르게 구현했는가?
-2. 가독성 (Readability): 코드가 읽기 쉬운가?
-3. 효율성 (Efficiency): 불필요한 연산이 없는가?
-4. 견고성 (Robustness): 엣지 케이스를 처리하는가?
-5. 유지보수성 (Maintainability): 향후 수정이 쉬운가?
-
-출력 형식:
-{
-  "scores": {"correctness": 8, "readability": 7, ...},
-  "overall": 7.5,
-  "strengths": ["...", "..."],
-  "improvements": ["...", "..."]
-}"""
-
-class LLMJudge:
-    def __init__(self):
-        self.client = anthropic.Anthropic()
-
-    def evaluate(self, code: str, requirement: str) -> dict:
-        import json
-        response = self.client.messages.create(
-            model="claude-opus-4-6",
-            max_tokens=1024,
-            system=JUDGE_SYSTEM_PROMPT,
-            messages=[{
-                "role": "user",
-                "content": f"요구사항: {requirement}\n\n코드:\n```python\n{code}\n```"
-            }]
-        )
-        return json.loads(response.content[0].text)
+```json
+{"type":"run.started","run_id":"r-001","task_id":"t-017","model":"local-coder","ts":"2026-05-19T09:00:00Z"}
+{"type":"tool.invoke","run_id":"r-001","tool":"read_file","input":{"path":"src/app.py"}}
+{"type":"tool.result","run_id":"r-001","tool":"read_file","status":"ok","bytes":1842}
+{"type":"test.result","run_id":"r-001","command":"pytest","passed":false,"failed":2}
+{"type":"judge.result","run_id":"r-001","overall":7.2,"verdict":"revise"}
+{"type":"run.closed","run_id":"r-001","status":"failed","reason":"tests_failed"}
 ```
 
-<Aside type="caution" title="LLM-as-Judge의 한계">
-LLM Judge는 논리적 정확성보다 표면적 코드 품질에 편향될 수 있다.
-자동화된 테스트(pytest)와 병행하여 사용해야 신뢰할 수 있다.
+캡스톤 단계에서 다루는 8가지 이벤트 타입은 다음과 같다.
+
+| 이벤트 타입 | 발생 시점 | 필수 필드 | replay 의미 |
+|------------|----------|----------|-------------|
+| `run.started` | task가 worker에 전달된 직후 | run_id, task_id, model, ts | 새 run의 시작점 |
+| `plan.created` | planner가 spec/plan 산출 | run_id, plan_path | 후속 단계의 입력 고정 |
+| `tool.invoke` | tool 호출 직전 | run_id, tool, input | 사이드 이펙트 직전 기록 |
+| `tool.result` | tool 호출 응답 | run_id, tool, status | 실패 시 이 줄만 보면 즉시 진단 가능 |
+| `test.result` | deterministic gate 실행 결과 | run_id, command, passed | release gate의 입력 |
+| `judge.result` | LLM-as-Judge 출력 | run_id, scores, verdict | probabilistic gate의 입력 |
+| `human.override` | 사람이 verdict를 뒤집음 | run_id, from, to, approver, reason | audit trail의 핵심 |
+| `run.closed` | run이 종료될 때 | run_id, status, reason | replay 종결 신호 |
+
+replay 함수는 이 이벤트를 다시 읽어서 최종 상태를 계산한다.
+
+```python
+def replay(events: list[dict]) -> dict:
+    state = {
+        "closed": False,
+        "tools": [],
+        "tests": [],
+        "judge": None,
+        "overrides": [],
+    }
+    for event in events:
+        match event["type"]:
+            case "tool.result":
+                state["tools"].append(event)
+            case "test.result":
+                state["tests"].append(event)
+            case "judge.result":
+                state["judge"] = event
+            case "human.override":
+                state["overrides"].append(event)
+            case "run.closed":
+                state["closed"] = True
+                state["status"] = event["status"]
+                state["reason"] = event.get("reason")
+    return state
+```
+
+#### Append-only가 만드는 운영 효과
+
+| 운영 시나리오 | event store 없는 경우 | event store가 있는 경우 |
+|--------------|---------------------|-----------------------|
+| "왜 실패했지?" | 로그를 grep, 추측 | run_id로 한 줄씩 읽으면 시퀀스가 그대로 보임 |
+| "이 run을 다시 돌릴 수 있나?" | 환경이 바뀌면 불가 | `replay()`로 결정적 재구성 |
+| "이 모델이 기존보다 나아졌나?" | 비교 baseline 부재 | 같은 task_id 모음을 다른 model로 재실행 |
+| "감사관에게 어떻게 증명?" | 자연어 보고만 | 이벤트 시퀀스 + override 기록 |
+
+### LLM-as-Judge는 평가자이지 테스트가 아니다
+
+LLM-as-Judge는 자동 테스트가 잡기 어려운 품질을 평가한다. 하지만 논리적 정답성, 보안, 실행 가능성은 여전히 deterministic gate가 우선이다.
+
+| 게이트 | 성격 | 예시 |
+|--------|------|------|
+| Static | deterministic | ruff, mypy, eslint, schema validation |
+| Runtime | deterministic | pytest, integration test, smoke test |
+| Policy | deterministic/approval | secret scan, permission boundary, CUD approval |
+| Judge | probabilistic | readability, maintainability, design fit |
+| Human | final authority | capstone acceptance, production release |
+
+<Aside type="caution" title="Judge bias">
+LLM Judge는 길고 그럴듯한 답변, 익숙한 스타일, 자기 모델 계열의 표현을 과대평가할 수 있다. 따라서 judge 결과는 단독 pass/fail이 아니라 tests, telemetry, human review와 함께 해석한다.
 </Aside>
+
+#### Judge bias 카탈로그
+
+연구에서 반복적으로 관찰된 LLM Judge의 5가지 bias를 알면 prompt와 gate를 더 안전하게 설계할 수 있다.
+
+| Bias | 설명 | 신호 | 대응 |
+|------|------|------|------|
+| Length bias | 더 긴 답변을 더 좋게 평가 | gold set에서 짧은 정답이 낮게 채점됨 | rubric에 "간결성" 명시, 길이 정규화 |
+| Position bias | 비교 시 먼저/나중 위치를 선호 | A/B 순서를 바꿨을 때 점수 역전 | 양방향 평가 후 평균 |
+| Self-preference | 자기 모델 계열 출력에 후함 | 다른 모델 평가에 비해 자기 출력 점수 높음 | 다른 가족 모델 judge 교차 검증 |
+| Style bias | 익숙한 포맷(번호, 헤딩)에 후함 | 동일 내용을 plain text로 주면 낮게 채점 | rubric에 포맷이 아니라 내용 기준 명시 |
+| Refusal asymmetry | refusal/error를 과소평가 | 안전한 거부보다 잘못된 답을 더 후하게 줌 | safety는 별도 deterministic gate |
+
+### Judge 캘리브레이션
+
+Judge prompt는 한 번 쓰고 끝나는 문서가 아니다. 팀은 작은 gold set으로 judge가 어떤 실수를 하는지 확인해야 한다.
+
+<div class="diagram">
+  <div class="diagram__title">Judge Calibration Loop</div>
+  <div class="diagram__flow">
+    <div class="diagram__cols diagram__cols--2">
+      <div class="diagram__node diagram__node--blue diagram__node--full">
+        <span class="diagram__node__label">Gold Set (10-30)</span>
+        <span class="diagram__node__sub">사람이 사전 점수화한 샘플</span>
+      </div>
+      <div class="diagram__node diagram__node--orange diagram__node--full">
+        <span class="diagram__node__label">Human Score</span>
+        <span class="diagram__node__sub">기준 점수</span>
+      </div>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--purple diagram__node--full">
+      <span class="diagram__node__label">Blind Score</span>
+      <span class="diagram__node__sub">judge가 사람 점수 없이 평가</span>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--cyan diagram__node--full">
+      <span class="diagram__node__label">Correlation 계산</span>
+      <span class="diagram__node__sub">Spearman / Pearson, p-value</span>
+    </div>
+    <div class="diagram__branch">
+      <div style="background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); color: #EF4444;">
+        <span class="diagram__branch__icon">low</span>
+        <span class="diagram__branch__desc">Rubric/Prompt 업데이트 → Blind Score로 회귀</span>
+      </div>
+      <div style="background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.25); color: #22C55E;">
+        <span class="diagram__branch__icon">stable</span>
+        <span class="diagram__branch__desc">Calibrated Judge → Production Gate</span>
+      </div>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--gray diagram__node--full">
+      <span class="diagram__node__label">Override Log</span>
+      <span class="diagram__node__sub">human override → Gold Set 보강 자료로 회귀</span>
+    </div>
+  </div>
+</div>
+
+| 단계 | 해야 할 일 | 실패 신호 |
+|------|------------|----------|
+| Gold set 작성 | 사람이 이미 평가한 샘플 10개 준비 | 좋은/나쁜 예시가 한쪽으로 치우침 |
+| Blind scoring | judge가 사람 점수 없이 평가 | 점수가 전부 7-9점에 몰림 |
+| Correlation 계산 | 사람 점수와 judge 점수 비교 | 상관이 낮거나 특정 항목만 과대평가 |
+| Error analysis | false pass/false fail 사례 분류 | 이유가 prompt에 반영되지 않음 |
+| Rubric update | 항목 정의와 예시 수정 | 점수 기준이 여전히 모호함 |
+
+캡스톤에서는 완벽한 judge가 목표가 아니다. 목표는 **judge가 어디서 틀리는지 알고 gate policy가 그 한계를 흡수**하게 만드는 것이다.
+
+#### Spearman/Pearson 상관관계 계산
+
+```python
+# correlate.py — 사람 vs judge 점수 상관관계
+from scipy.stats import spearmanr, pearsonr
+
+def correlate(human: list[float], judge: list[float]) -> dict:
+    rho, rho_p = spearmanr(human, judge)
+    r, r_p = pearsonr(human, judge)
+    return {
+        "spearman_rho": rho,
+        "spearman_p": rho_p,
+        "pearson_r": r,
+        "pearson_p": r_p,
+        "n": len(human),
+    }
+
+# 예시: gold set 12개를 평가한 결과
+human  = [9, 8, 7, 6, 5, 9, 8, 4, 3, 7, 6, 8]
+judge  = [8.5, 8.0, 7.2, 6.8, 6.0, 8.7, 7.6, 5.5, 4.2, 7.0, 6.5, 7.9]
+print(correlate(human, judge))
+# 권장 임계값:
+#   spearman_rho >= 0.7 + p < 0.05 → calibrated
+#   0.4 <= spearman_rho < 0.7      → judge는 보조용으로만 사용
+#   spearman_rho < 0.4             → rubric 또는 prompt 재작성
+```
+
+### Judge prompt와 JSON 출력
+
+```python
+JUDGE_SYSTEM_PROMPT = """You are a senior software engineering evaluator.
+Score the submitted change from 1 to 10 for each criterion.
+Return strict JSON only.
+
+Criteria:
+1. correctness: Does it satisfy the requested behavior?
+2. test_quality: Are meaningful tests included?
+3. maintainability: Is the code simple and local to the task?
+4. robustness: Are edge cases handled?
+5. observability: Can failures be diagnosed?
+"""
+
+JUDGE_SCHEMA = {
+    "type": "object",
+    "required": ["scores", "overall", "verdict", "rationale"],
+    "properties": {
+        "scores": {"type": "object"},
+        "overall": {"type": "number"},
+        "verdict": {"enum": ["pass", "revise", "fail"]},
+        "rationale": {"type": "string"},
+    },
+}
+```
+
+평가 결과는 사람이 읽는 코멘트가 아니라 게이트 입력이다.
+
+```python
+def gate(judge: dict, tests_passed: bool) -> str:
+    if not tests_passed:
+        return "fail"
+    if judge["overall"] < 7.0:
+        return "revise"
+    if judge["scores"].get("correctness", 0) < 7:
+        return "revise"
+    return "pass"
+```
+
+### Human override 기록
+
+사람이 judge나 test 결과를 뒤집을 수 있어야 한다. 다만 override는 조용히 덮어쓰면 안 된다.
+
+```json
+{"type":"human.override","run_id":"r-001","from":"revise","to":"pass","reason":"known flaky integration test; deterministic unit tests passed","approver":"instructor"}
+```
+
+override는 최종 권한을 사람에게 돌려주는 장치이면서, 다음 주 개선해야 할 gate 품질 데이터를 만든다.
+
+### 평가 데이터셋 만들기
+
+Judge 품질은 prompt보다 **평가 데이터셋**에 더 좌우된다. 각 팀은 최소 10개 샘플을 만든다.
+
+| 샘플 유형 | 포함 이유 |
+|----------|----------|
+| 명백히 좋은 코드 | false negative 확인 |
+| 명백히 나쁜 코드 | false positive 확인 |
+| 테스트는 통과하지만 설계가 나쁜 코드 | judge의 보완 가치 확인 |
+| 보기에는 좋아도 동작이 틀린 코드 | judge 과신 방지 |
+| 보안/권한 문제가 있는 코드 | policy gate 필요성 확인 |
+
+### 대시보드 최소 구성
+
+<CardGrid>
+  <Card title="Execution Health" icon="information">
+    run_count, success_rate, retry_count, failure_reason을 본다. 수업에서는 팀별 run_id로 필터링한다.
+  </Card>
+  <Card title="Cost and Latency" icon="seti:clock">
+    prompt_tokens, completion_tokens, cache_read_tokens, ttft_ms, total_latency_ms를 모델별로 비교한다.
+  </Card>
+  <Card title="Quality Gates" icon="approve-check-circle">
+    tests_passed, judge_overall, human_override, final_verdict를 한 화면에서 본다.
+  </Card>
+</CardGrid>
+
+#### 대시보드 패널 PromQL 예시
+
+OpenTelemetry collector가 메트릭을 Prometheus로 내보낸다고 가정한 패널 정의다.
+
+```promql
+# Panel 1: 모델별 run 성공률 (15분 윈도우)
+sum by (model) (rate(agent_loop_count{status="success"}[15m]))
+  /
+sum by (model) (rate(agent_loop_count[15m]))
+
+# Panel 2: 역할별 토큰 사용량 p95
+histogram_quantile(0.95, sum by (le, agent_role)
+  (rate(agent_tokens_used_bucket[5m])))
+
+# Panel 3: judge.overall 평균 vs deterministic pass rate
+avg by (task_id) (agent_judge_score)
+```
+
+```sql
+-- Panel 4: 최근 24시간 실패 원인 Top 5 (event store DuckDB 뷰)
+SELECT reason, COUNT(*) AS n
+FROM events
+WHERE type = 'run.closed'
+  AND status = 'failed'
+  AND ts > now() - INTERVAL 1 DAY
+GROUP BY reason
+ORDER BY n DESC
+LIMIT 5;
+```
+
+이 4개 패널이 캡스톤 발표용 "수치 슬라이드"의 최소 골격이 된다.
 
 ## 실습 (Practicum)
 
 <Steps>
-1. **OpenTelemetry 통합** — Ralph 루프에 추적 및 메트릭 추가
+1. **trace wrapper 작성**
 
-2. **대시보드 구성** — Grafana + Prometheus로 실시간 모니터링
+   `agent.run`, `model.call`, `tool.invoke`, `acceptance.test`, `judge.evaluate` span을 만든다. `run.id`, `task.id`, `agent.role`, `model.name`, `gate.result` 5개 attribute는 모든 span에 일관되게 박는다.
 
-3. **LLM-as-Judge 구현** — `LLMJudge` 클래스 완성 및 실제 코드 평가
+2. **event writer 작성**
 
-4. **비용 최적화 분석** — 토큰 사용량 vs 코드 품질 트레이드오프 분석
+   append-only `.events.jsonl`에 `run.started`, `tool.invoke`, `tool.result`, `test.result`, `judge.result`, `run.closed`를 기록한다. 동시 실행을 고려해 file lock 또는 한 줄 단위 flush 전략을 명시한다.
+
+3. **replay snapshot 생성**
+
+   event log에서 `replay_snapshot.json`을 생성하고, run이 closed 되었는지 검증한다. snapshot에는 최종 verdict, override 여부, 사용 토큰 합계가 들어가야 한다.
+
+4. **LLM Judge 구현**
+
+   10개 코드 샘플에 대해 JSON 점수를 생성하고, deterministic test 결과와 비교한다. JSON schema 위반 시 retry 로직과 fail-safe(예: `verdict=revise`로 강등)를 명시한다.
+
+5. **상관관계 분석**
+
+   인간 평가자 점수와 judge 점수의 Spearman 또는 Pearson correlation을 계산한다. 상관관계가 낮은 항목은 prompt나 rubric을 수정한다. correlation, n, p-value를 보고서에 포함한다.
+
+6. **대시보드 4-패널 구성**
+
+   Grafana 또는 단순 CSV/Streamlit으로 (1) success rate, (2) token p95, (3) judge.overall vs tests_passed, (4) 실패 원인 Top 5를 만든다. 각 패널은 어떤 의사결정에 쓰이는지 캡션으로 1줄 설명한다.
 </Steps>
 
 ## 과제 (Assignment)
@@ -145,12 +528,46 @@ LLM Judge는 논리적 정확성보다 표면적 코드 품질에 편향될 수 
 **제출 마감**: 2026-05-26 23:59
 
 **Lab 11 요구사항**:
-1. OpenTelemetry 통합된 Ralph 루프
-2. Grafana 대시보드 스크린샷 (loop_count, token_usage, success_rate)
+1. OpenTelemetry trace가 포함된 Ralph loop 또는 agent harness
+2. Grafana/Prometheus 또는 CSV 기반 대시보드 스크린샷 (4 패널 이상)
+3. Agent OS Runtime 형식의 `.events.jsonl`
+4. `replay_snapshot.json` — event log에서 재계산한 output, cost, closed 상태
+5. span attribute 표준 7개(run.id, task.id, agent.role, model.name, tool.name, gate.result, artifact.path)가 모두 박혀 있다는 증거
 
 **Lab 12 요구사항**:
-1. `LLMJudge` 완전 구현
+1. strict JSON을 반환하는 `LLMJudge`
 2. 10개 코드 샘플 자동 평가 결과
-3. LLM Judge vs 인간 평가자 상관관계 분석
+3. deterministic tests vs LLM Judge vs 인간 평가 비교표
+4. Spearman/Pearson 상관계수와 n, p-value 보고
+5. judge를 pass/fail로 직접 쓰지 않고 gate policy로 통합한 근거
+6. 관찰된 judge bias 1개 이상과 그에 대한 mitigation 설명
 
 </div>
+
+## 핵심 정리
+
+1. **텔레메트리는 두 축이다**: live monitoring(OTel)과 audit/replay(append-only event store)는 서로를 대체하지 않는다.
+2. **공통 attribute 7개가 분석을 만든다**: `run.id`, `task.id`, `agent.role`, `model.name`, `tool.name`, `gate.result`, `artifact.path`가 모든 span과 이벤트에 박혀야 dashboard와 audit이 연결된다.
+3. **event store는 append-only**: 동일 run을 결정적으로 재구성할 수 있는 source of truth이며, override조차 별도 이벤트로 기록한다.
+4. **LLM Judge는 evaluator이지 test가 아니다**: deterministic gate가 우선이고, Judge는 readability/maintainability/design처럼 테스트가 못 잡는 영역을 담당한다.
+5. **Judge bias 5종을 의식한다**: length, position, self-preference, style, refusal asymmetry에 대응하는 prompt와 gate 설계가 필요하다.
+6. **Calibration은 일회성이 아니다**: gold set → blind score → correlation → error analysis → rubric update 루프를 캡스톤 동안 최소 1회 돈다.
+7. **대시보드는 의사결정 도구**: 4개 핵심 패널(success rate, token p95, judge vs tests, 실패 원인 Top 5)이 최종 보고서의 골격이 된다.
+
+## 더 읽을거리
+
+**핵심 문서**
+- [OpenTelemetry Specification](https://opentelemetry.io/docs/specs/otel/)
+- [Agent OS Runtime — core architecture + L8 workflow plane](/reference/agent-os-runtime/#7-layer-architecture)
+- [OpenAI Evals best practices](https://platform.openai.com/docs/guides/evals)
+
+**도구**
+- [OpenAI Agents SDK Tracing](https://openai.github.io/openai-agents-python/tracing/)
+- [vLLM Prometheus and Grafana 통합](https://docs.vllm.ai/en/latest/examples/observability/prometheus_grafana/)
+- [Langfuse — open-source LLM observability](https://langfuse.com/)
+- [Phoenix by Arize — LLM tracing](https://github.com/Arize-ai/phoenix)
+
+**논문 / 리포트**
+- Zheng et al., "Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena" (NeurIPS 2023)
+- Chen et al., "Humans or LLMs as the Judge? A Study on Judgement Biases" (ACL 2024)
+- Liu et al., "G-Eval: NLG Evaluation using GPT-4 with Better Human Alignment" (EMNLP 2023)

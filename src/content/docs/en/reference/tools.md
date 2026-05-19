@@ -129,7 +129,7 @@ claude /loop --stop
 
 ### Gemini CLI (Google)
 
-Google's AI coding CLI with a free tier. 1M token context window, MCP support.
+Google's AI coding CLI with a free tier. It supports a 1M token context window, Google Search grounding, MCP, and extensions.
 
 ```bash
 # Install
@@ -147,12 +147,14 @@ cat PROMPT.md | gemini
 - `GEMINI.md` per-project instruction file
 - Free tier: 1,000 req/day
 - 1M token context window
+- Google Search grounding
+- Extensions for tool integration
 
 ---
 
 ### Codex CLI (OpenAI)
 
-OpenAI's terminal-based coding agent. Built-in sandbox for safe automated execution.
+OpenAI's terminal-based coding agent. Supports built-in sandboxing, `AGENTS.md`, MCP, skills, hooks, and subagents. Codex App/Web is a separate cloud-sandboxed surface for asynchronous coding work.
 
 ```bash
 # Install
@@ -168,7 +170,9 @@ codex --approval-mode full-auto "$(cat PROMPT.md)"
 **Key features**:
 - Built-in sandbox (safest automated execution)
 - `AGENTS.md` per-project instruction file
-- No MCP support
+- MCP server integration (`~/.codex/config.toml` or `.codex/config.toml`)
+- skills, hooks, subagents
+- Workflow across CLI, IDE extension, App/Web
 - Requires ChatGPT Plus or API key
 
 ---
@@ -218,55 +222,6 @@ client = OpenAI(base_url="http://localhost:8000/v1", api_key="token")
 
 ---
 
-### Graphify
-
-An AI coding assistant skill that transforms codebases and documents into queryable knowledge graphs. Analyzes code structure using tree-sitter AST extraction (23 languages, no LLM calls needed), then builds community detection and interactive visualizations with NetworkX + Leiden clustering.
-
-```bash
-# Install
-pip install graphify-ai
-
-# Build codebase graph
-graphify build ./src --output graph.json
-
-# Generate interactive visualization
-graphify visualize graph.json --output graph.html
-```
-
-**Key features**:
-- tree-sitter based local AST analysis (code never leaves your machine)
-- **71.5x** token reduction on mixed corpora vs raw file reading
-- Confidence tagging: EXTRACTED / INFERRED / AMBIGUOUS
-- SHA256 cache-based incremental updates
-- Integration with Claude Code, Gemini CLI, Codex, OpenCode, and more
-
-> For usage in context management, see [Week 5 lecture](/en/weeks/week-05).
-
----
-
-### Ollama
-
-Local and cloud LLM deployment tool. Run models with a single command, with NVIDIA cloud GPU remote inference support.
-
-```bash
-# Install (macOS)
-brew install ollama
-
-# Install (Linux)
-curl -fsSL https://ollama.com/install.sh | sh
-
-# Run local model
-ollama run gemma4:31b
-
-# Run cloud model (no GPU required)
-ollama launch claude --model gemma4:31b-cloud
-
-# Connect to AI coding CLI
-ollama launch claude --model glm-5.1:cloud
-```
-
----
-
 ### Model Context Protocol (MCP)
 
 The standard protocol for connecting agents to external tools.
@@ -283,6 +238,7 @@ The standard protocol for connecting agents to external tools.
 ```json
 // Claude Code: ~/.claude/settings.json
 // Gemini CLI: ~/.gemini/settings.json
+// Codex CLI: ~/.codex/config.toml or .codex/config.toml
 {
   "mcpServers": {
     "filesystem": {
@@ -309,22 +265,28 @@ pip install opentelemetry-sdk opentelemetry-exporter-prometheus
 
 ---
 
-### Open-Source Coding LLMs
+### Open-Weight Coding LLMs
 
-Major coding models that can be deployed locally. Served via vLLM or SGLang with an OpenAI-compatible API.
+Major coding models that can be deployed locally. Serve them via vLLM or SGLang with an OpenAI-compatible API. This table reflects representative models as of 2026-05.
 
 | Model | Parameters | Active | Context | HuggingFace |
 |-------|-----------|--------|---------|-------------|
-| **Gemma 4** | 31B (Dense) | Full | 256K | `google/gemma-4-31b-it` |
-| **GLM-5.1** | Undisclosed | Undisclosed | 198K | API-only (current) |
-| **Qwen3-Coder** | 235B (MoE) | 22B | 128K | `Qwen/Qwen3-Coder-32B-Instruct` |
-| **DeepSeek V3** | 685B (MoE) | 37B | 128K | `deepseek-ai/DeepSeek-V3` |
-| **GLM-4.7** | ~32B (Dense) | Full | 128K | `THUDM/glm-4-9b-chat` |
-| **MiniMax M2.1** | 230B (MoE) | 10B | 128K | `MiniMax/MiniMax-M2.1` |
+| **Qwen3-Coder-Next** | 80B (MoE) | 3B | 256K | `Qwen/Qwen3-Coder-Next` |
+| **DeepSeek-V4-Pro** | 1.6T (MoE) | 49B | 1M | `deepseek-ai/DeepSeek-V4-Pro` |
+| **DeepSeek-V4-Flash** | 284B (MoE) | 13B | 1M | `deepseek-ai/DeepSeek-V4-Flash` |
+| **GLM-5.1** | 754B | see model card | long-context agent work | `zai-org/GLM-5.1` |
+| **MiniMax-M2.7** | 229B | MoE family, see model card | long agentic workflows | `MiniMaxAI/MiniMax-M2.7` |
 | **DeepSeek-Coder-V2** | 236B (MoE) | 21B | 128K | `deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct` |
-| **Qwen3 14B/8B** | 14B/8B | Full | 128K | `Qwen/Qwen3-14B`, `Qwen/Qwen3-8B` |
+| **Qwen3 lightweight family** | 30B-A3B/14B/8B, etc. | varies | varies | `Qwen/*` |
 
-> For detailed per-model comparisons and hardware requirements, see [Week 10 lecture](/weeks/week-10).
+**Current model cards**:
+- [Qwen3-Coder-Next](https://huggingface.co/Qwen/Qwen3-Coder-Next)
+- [DeepSeek-V4-Pro](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro)
+- [DeepSeek-V4-Flash](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash)
+- [GLM-5.1](https://huggingface.co/zai-org/GLM-5.1)
+- [MiniMax-M2.7](https://huggingface.co/MiniMaxAI/MiniMax-M2.7)
+
+> For detailed per-model comparisons and hardware requirements, see [Week 10 lecture](/en/weeks/week-10).
 
 ---
 

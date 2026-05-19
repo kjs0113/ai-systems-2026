@@ -1,24 +1,25 @@
 ---
-title: "Week 11: High-Throughput Inference Optimization with vLLM"
-description: CUDA optimization, PagedAttention, batch processing — operating a production LLM server
+title: "Week 11: vLLM High-Throughput Inference Optimization"
+description: Beyond PagedAttention — prefix caching, speculative decoding, disaggregated prefill, observable LLM serving operations
 week: 11
 phase: 4
 phase_title: Open-Source Models & MLOps
 date: "2026-05-12"
 theory_topics:
-  - PagedAttention algorithm
-  - CUDA memory optimization
-  - Batch processing and scheduling
+  - vLLM V1 serving architecture
+  - KV cache, prefix caching, speculative decoding
+  - Disaggregated prefill and production observability
 lab_topics:
-  - vLLM configuration optimization
-  - Multi-model serving
-assignment: "Ongoing practicum (Lab 11 preparation)"
+  - vLLM configuration tuning
+  - Multi-model and multi-tenant serving
+  - Prometheus/Grafana observability
+assignment: "Concurrent practicum (Lab 11 prep)"
 assignment_due: "2026-05-19"
 difficulty: advanced
-estimated_time: "6 hours"
+estimated_time: 6 hours
 ---
 
-import { Aside, Steps, Badge } from '@astrojs/starlight/components';
+import { Aside, Steps, Badge, Card, CardGrid, Tabs, TabItem } from '@astrojs/starlight/components';
 
 <div class="week-meta">
   <span class="phase-tag">Phase 4</span>
@@ -29,92 +30,494 @@ import { Aside, Steps, Badge } from '@astrojs/starlight/components';
 
 ## Theory
 
-### PagedAttention: vLLM's Core Innovation
+### Learning Objectives
 
-Traditional LLM inference allocates the KV cache (Key-Value Cache) as contiguous memory blocks, resulting in severe memory waste. vLLM's **PagedAttention** applies the OS virtual memory paging concept to the KV cache.
+<CardGrid>
+  <Card title="Concepts" icon="open-book">
+    Explain in one sentence the bottleneck each optimization solves: PagedAttention, prefix caching, chunked prefill, speculative decoding, and disaggregated prefill.
+  </Card>
+  <Card title="Design" icon="seti:config">
+    Diagnose a workload (chat / batch / RAG / agent) and decide, in a decision table, which option to enable first and why.
+  </Card>
+  <Card title="Implementation" icon="pencil">
+    Bring up single-GPU, multi-GPU, and MIG-isolated servers with `vllm serve`, capture latency and throughput from an OpenAI-compatible client, and implement an admission-control queue in code.
+  </Card>
+  <Card title="Operations" icon="rocket">
+    Expose the five core indicators (TTFT, TPOT, queue time, cache hit ratio, error rate) to Prometheus/Grafana and report quantitative differences before and after each tuning change.
+  </Card>
+</CardGrid>
+
+---
+
+### The inference server is the OS of the model
+
+Deploying an LLM is not the same as starting the model file. The serving layer is what actually defines the user-visible quality.
+
+| Operational problem | What the inference server does |
+|--------------------|-------------------------------|
+| GPU memory pressure | KV cache management, quantization, tensor parallelism |
+| Request latency | continuous batching, chunked prefill, speculative decoding |
+| Repeated prompt cost | automatic prefix caching |
+| Long-input flooding | prefill/decode separation, max-context policy |
+| Failure analysis | metrics, traces, request logs, token accounting |
+
+vLLM wraps these problems behind an OpenAI-compatible API so the agent harness keeps the same interface even when models are swapped.
+
+### PagedAttention: vLLM's starting point
+
+Traditional inference reserves a large contiguous block of KV cache. When request lengths differ, the unused regions become dead memory; when long inputs mix with short ones, fragmentation grows quickly. vLLM's **PagedAttention** treats KV cache like OS virtual memory: it splits the cache into blocks and links them as needed.
 
 <div class="diagram">
   <div class="diagram__compare">
     <div class="diagram__node--red" style="padding:0.875rem 1rem;border-radius:0.625rem;border:1px solid rgba(239,68,68,0.25);">
-      <span class="diagram__compare__label" style="color:#EF4444;">Traditional Approach</span>
-      <span class="diagram__node__label" style="font-size:0.85rem;">[KV Cache: 100% reserved]</span>
-      <span class="diagram__node__sub">Actual usage: 30% &#x2192; Wasted: 70%</span>
+      <span class="diagram__compare__label" style="color:#EF4444;">Traditional</span>
+      <span class="diagram__node__label" style="font-size:0.85rem;">[KV cache: reserve max length]</span>
+      <span class="diagram__node__sub">short requests still pay full cost</span>
     </div>
     <div class="diagram__node--green" style="padding:0.875rem 1rem;border-radius:0.625rem;border:1px solid rgba(34,197,94,0.25);">
       <span class="diagram__compare__label" style="color:#22C55E;">PagedAttention</span>
-      <span class="diagram__node__label" style="font-size:0.85rem;">[Block 1] [Block 2] [Block 3]</span>
-      <span class="diagram__node__sub">Dynamic allocation as needed &#x2192; Wasted: ~4%</span>
+      <span class="diagram__node__label" style="font-size:0.85rem;">[block] [block] [block]</span>
+      <span class="diagram__node__sub">link only the blocks you need</span>
     </div>
   </div>
 </div>
 
-### vLLM Optimization Configuration
+#### Memory mapping at a glance
 
-```python
-# Production vLLM configuration
-from vllm import LLM, SamplingParams
+<div class="diagram">
+  <div class="diagram__title">PagedAttention KV Cache Mapping</div>
+  <div class="diagram__cols diagram__cols--2">
+    <div>
+      <div class="diagram__col-title diagram__col-title--blue">Logical KV cache (per-sequence)</div>
+      <div class="diagram__node diagram__node--blue diagram__node--full">
+        <span class="diagram__node__label">seq A — t0..t511</span>
+        <span class="diagram__node__sub">two blocks (block 0, 1)</span>
+      </div>
+      <div class="diagram__node diagram__node--blue diagram__node--full" style="margin-top: 0.5rem;">
+        <span class="diagram__node__label">seq B — t0..t1023</span>
+        <span class="diagram__node__sub">three blocks (block 2, 3, 4)</span>
+      </div>
+      <div class="diagram__node diagram__node--blue diagram__node--full" style="margin-top: 0.5rem;">
+        <span class="diagram__node__label">seq C — t0..t127</span>
+        <span class="diagram__node__sub">one block (block 5)</span>
+      </div>
+    </div>
+    <div>
+      <div class="diagram__col-title diagram__col-title--purple">Physical GPU memory blocks (16-token pages)</div>
+      <div class="diagram__cols diagram__cols--3" style="gap: 0.4rem;">
+        <div class="diagram__node diagram__node--purple"><span class="diagram__node__label">block 0</span><span class="diagram__node__sub">→ seq A</span></div>
+        <div class="diagram__node diagram__node--purple"><span class="diagram__node__label">block 1</span><span class="diagram__node__sub">→ seq A</span></div>
+        <div class="diagram__node diagram__node--purple"><span class="diagram__node__label">block 2</span><span class="diagram__node__sub">→ seq B</span></div>
+        <div class="diagram__node diagram__node--purple"><span class="diagram__node__label">block 3</span><span class="diagram__node__sub">→ seq B</span></div>
+        <div class="diagram__node diagram__node--purple"><span class="diagram__node__label">block 4</span><span class="diagram__node__sub">→ seq B</span></div>
+        <div class="diagram__node diagram__node--purple"><span class="diagram__node__label">block 5</span><span class="diagram__node__sub">→ seq C</span></div>
+        <div class="diagram__node diagram__node--gray"><span class="diagram__node__label">block 6</span><span class="diagram__node__sub">free</span></div>
+      </div>
+    </div>
+  </div>
+</div>
 
-llm = LLM(
-    model="deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct",
-    # Memory settings
-    gpu_memory_utilization=0.90,  # Use 90% of GPU memory
-    max_model_len=32768,
-    # Performance optimization
-    enable_prefix_caching=True,   # Cache repeated prompts
-    enable_chunked_prefill=True,  # Chunked prefill
-    # MIG environment
-    tensor_parallel_size=1,       # 1 MIG slice
-)
+A page table maps logical sequences to whichever physical blocks are free. Fragmentation effectively disappears because new requests can grab any free block.
 
-# Batch processing
-requests = [
-    "Implement quicksort in Python",
-    "Implement binary search in JavaScript",
-    "Implement an HTTP server in Go",
-]
+PagedAttention is the foundation. The 2026 operations question is not "do we use PagedAttention" but **which optimization to enable for which workload**.
 
-sampling_params = SamplingParams(
-    temperature=0.1,  # Low temperature for code generation
-    top_p=0.9,
-    max_tokens=1024,
-)
+### Five operational levers
 
-outputs = llm.generate(requests, sampling_params)
-```
+<CardGrid>
+  <Card title="Automatic Prefix Caching" icon="seti:config">
+    Reuses the KV cache of repeated system prompts, tool schemas, and AGENTS.md/CLAUDE.md prefixes. Effective for workloads with long static prefixes such as Ralph loops.
+  </Card>
+  <Card title="Chunked Prefill" icon="seti:clock">
+    Splits long prefills into small chunks and interleaves them with decode requests, preventing one long input from blocking the queue.
+  </Card>
+  <Card title="Speculative Decoding" icon="rocket">
+    A small draft model or n-gram speculation proposes candidate tokens that the large model verifies. Goal is reduced latency.
+  </Card>
+  <Card title="Disaggregated Prefill" icon="seti:db">
+    Separates prefill and decode into different workers/GPUs. Helpful for production workloads mixing long inputs with short outputs.
+  </Card>
+  <Card title="Structured Outputs" icon="seti:json">
+    Enforces JSON schema, tool calls, and reasoning outputs at the serving layer, reducing parser failures in the agent harness.
+  </Card>
+</CardGrid>
 
-<Aside type="tip" title="Leveraging Prefix Caching">
-In the Ralph Loop, the system prompt (PROMPT.md) is identical on every loop iteration.
-Setting `enable_prefix_caching=True` reuses the system prompt KV cache, improving throughput by 2–5x.
+#### A comparison of the five levers
+
+| Lever | Primary effect | Biggest risk | Indicator |
+|-------|----------------|--------------|-----------|
+| Prefix Caching | lower TTFT, less prefill cost | hit rate ~0% if prompts vary slightly | cache hit ratio, TTFT |
+| Chunked Prefill | mitigates head-of-line blocking from long inputs | overhead grows with overly small chunks | p95 latency, queue time |
+| Speculative Decoding | lower average TPOT | weak draft model causes rejects and slowdown | acceptance rate, TPOT |
+| Disaggregated Prefill | higher throughput on mixed long/short workloads | extra inter-node communication cost | throughput, network util |
+| Structured Outputs | fewer parser failures | some schemas hurt sampling quality | invalid JSON rate, score |
+
+#### Prefix caching scenarios
+
+| Scenario | Static prefix | Dynamic part | Expected hit | TTFT impact |
+|---------|--------------|--------------|--------------|-------------|
+| Ralph loop with the same PROMPT.md | long (3-8K) | small turn diff | 70-95% | very large |
+| Multi-tenant chatbot with shared system prompt | medium (500-2K) | per-user message | 30-60% | moderate |
+| RAG with new chunks each time | tiny | most of the prompt | 0-15% | almost none |
+| Repeated analysis on the same codebase | very long (10K+) | only the diff | 80-99% | very large |
+
+<Aside type="tip" title="Ralph loop and prefix caching">
+A Ralph loop reuses PROMPT.md, project instructions, and tool schemas every turn. The longer this static prefix, the more value automatic prefix caching delivers. Conversely, rebuilding prompts from scratch every turn drives the cache hit rate to zero.
 </Aside>
 
-### Multi-Model Serving Across MIG Slices
+#### Speculative decoding sequence diagram
+
+<div class="diagram">
+  <div class="diagram__title">Speculative Decoding Sequence</div>
+  <div class="diagram__cols diagram__cols--3">
+    <div class="diagram__col-title diagram__col-title--blue">Client</div>
+    <div class="diagram__col-title diagram__col-title--purple">Target (large)</div>
+    <div class="diagram__col-title diagram__col-title--green">Draft (small)</div>
+  </div>
+  <div class="diagram__flow" style="margin-top: 0.5rem;">
+    <div class="diagram__node diagram__node--blue diagram__node--full">
+      <span class="diagram__node__label">① Client → Target: prompt</span>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__loop">
+      <div class="diagram__loop__label">until stop token</div>
+      <div class="diagram__node diagram__node--purple diagram__node--full">
+        <span class="diagram__node__label">② Target → Draft: speculate next k tokens</span>
+      </div>
+      <div class="diagram__arrow">▼</div>
+      <div class="diagram__node diagram__node--green diagram__node--full">
+        <span class="diagram__node__label">③ Draft → Target: candidate tokens [t1..tk]</span>
+      </div>
+      <div class="diagram__arrow">▼</div>
+      <div class="diagram__node diagram__node--purple diagram__node--full">
+        <span class="diagram__node__label">④ Target verifies all k tokens (one forward pass)</span>
+      </div>
+      <div class="diagram__arrow">▼</div>
+      <div class="diagram__branch">
+        <div style="background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.25); color: #22C55E;">
+          <span class="diagram__branch__icon">accept all k</span>
+          <span class="diagram__branch__desc">Target → Client: emit k tokens</span>
+        </div>
+        <div style="background: rgba(249,115,22,0.07); border: 1px solid rgba(249,115,22,0.25); color: #F97316;">
+          <span class="diagram__branch__icon">reject at j</span>
+          <span class="diagram__branch__desc">emit [t1..tj] + 1 corrected</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+The more accurate the draft, the more tokens are accepted at once and the lower the TPOT. A poor draft turns verification into pure overhead and can make things slower.
+
+#### Disaggregated prefill architecture
+
+<div class="diagram">
+  <div class="diagram__title">Disaggregated Prefill Architecture</div>
+  <div class="diagram__flow">
+    <div class="diagram__node diagram__node--blue diagram__node--full">
+      <span class="diagram__node__label">Frontend — Load Balancer</span>
+      <span class="diagram__node__sub">request ingress, response egress</span>
+    </div>
+    <div class="diagram__arrow">▼  fan out to prefill</div>
+    <div class="diagram__cols diagram__cols--2">
+      <div class="diagram__node diagram__node--orange diagram__node--full">
+        <span class="diagram__node__label">Prefill Worker 1</span>
+        <span class="diagram__node__sub">long-input KV generation</span>
+      </div>
+      <div class="diagram__node diagram__node--orange diagram__node--full">
+        <span class="diagram__node__label">Prefill Worker 2</span>
+        <span class="diagram__node__sub">long-input KV generation</span>
+      </div>
+    </div>
+    <div class="diagram__arrow">▼  KV cache handoff</div>
+    <div class="diagram__node diagram__node--gray diagram__node--full">
+      <span class="diagram__node__label">KV Cache Store</span>
+      <span class="diagram__node__sub">short-lived cache, fast lookup for decode workers</span>
+    </div>
+    <div class="diagram__arrow">▼  route to decode</div>
+    <div class="diagram__cols diagram__cols--3">
+      <div class="diagram__node diagram__node--green diagram__node--full">
+        <span class="diagram__node__label">Decode Worker 1</span>
+        <span class="diagram__node__sub">short-output token generation</span>
+      </div>
+      <div class="diagram__node diagram__node--green diagram__node--full">
+        <span class="diagram__node__label">Decode Worker 2</span>
+        <span class="diagram__node__sub">short-output token generation</span>
+      </div>
+      <div class="diagram__node diagram__node--green diagram__node--full">
+        <span class="diagram__node__label">Decode Worker 3</span>
+        <span class="diagram__node__sub">short-output token generation</span>
+      </div>
+    </div>
+    <div class="diagram__arrow">▲  responses back to LB</div>
+  </div>
+</div>
+
+Long inputs land on prefill workers; only the KV cache is forwarded to decode workers. This raises utilization in production where long inputs and short outputs mix.
+
+### Choosing optimizations by workload
+
+Turning everything on at once is not optimization. Diagnose the bottleneck first, then enable one lever at a time.
+
+| Workload | Primary bottleneck | First lever to enable | What to measure |
+|----------|------------------|---------------------|-----------------|
+| Long repository context + small edits | prefill cost | prefix caching, chunked prefill | TTFT, cache hit ratio |
+| Many short queries | batching efficiency | continuous batching, tuned max_num_seqs | throughput, queue time |
+| Mixed long-doc summarization and short coding | long prefill blocking | chunked prefill, disaggregated prefill | p95 latency, queue time |
+| Interactive coding assistant | first-token delay | speculative decoding, smaller max_tokens | TTFT, perceived latency |
+| Strict JSON / tool output | parser failure | structured outputs, tool parser settings | invalid JSON rate |
+| Ralph-loop capstone | repeated prefill | prefix caching + chunked prefill | TTFT, cache hit |
+
+Lab reports must capture not "we enabled X" but **how the bottleneck indicator changed before and after**.
+
+### Example vLLM server configurations
+
+<Tabs>
+  <TabItem label="Single GPU Lab">
+    ```bash
+    vllm serve deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct \
+      --served-model-name local-coder \
+      --max-model-len 32768 \
+      --gpu-memory-utilization 0.90 \
+      --enable-prefix-caching \
+      --port 8000
+    ```
+  </TabItem>
+  <TabItem label="Multi GPU Qwen">
+    ```bash
+    vllm serve Qwen/Qwen3-Coder-Next \
+      --served-model-name qwen3-coder \
+      --tensor-parallel-size 2 \
+      --max-model-len 65536 \
+      --enable-prefix-caching \
+      --enable-chunked-prefill \
+      --port 8000
+    ```
+  </TabItem>
+  <TabItem label="GLM Tool Calling">
+    ```bash
+    vllm serve zai-org/GLM-5.1 \
+      --served-model-name glm-5.1 \
+      --tensor-parallel-size 4 \
+      --enable-auto-tool-choice \
+      --port 8000
+    ```
+  </TabItem>
+  <TabItem label="Speculative Decoding">
+    ```bash
+    vllm serve Qwen/Qwen3-Coder-Next \
+      --served-model-name qwen3-coder \
+      --speculative-model deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct \
+      --num-speculative-tokens 5 \
+      --port 8000
+    ```
+  </TabItem>
+</Tabs>
+
+### Throughput and latency are read together
+
+A common tuning mistake is to look only at tokens/sec. Agent systems require the following indicators side by side.
+
+| Indicator | Meaning | Bad signal |
+|-----------|---------|-----------|
+| TTFT (Time to First Token) | latency to the first response token | long prefills blocking the queue |
+| TPOT (Time per Output Token) | inter-token interval | low decode-stage GPU utilization |
+| Throughput | tokens generated per second | poor batching or memory fragmentation |
+| Queue time | how long requests waited | excess concurrency, missing admission control |
+| Cache hit ratio | prefix reuse rate | prompt assembly differs each turn |
+| Error rate | timeouts or failures | max_model_len, OOM, parser failure |
+
+#### Prometheus/Grafana panel examples
+
+vLLM exposes `/metrics` by default. Build the headline panels for the capstone with the following PromQL.
+
+```promql
+# Panel 1: TTFT p95 by model
+histogram_quantile(0.95,
+  sum by (le, model_name) (rate(vllm:time_to_first_token_seconds_bucket[5m])))
+
+# Panel 2: throughput (tokens/sec)
+sum by (model_name) (rate(vllm:generation_tokens_total[1m]))
+
+# Panel 3: prefix cache hit ratio
+sum(rate(vllm:cache_hit_tokens_total[5m]))
+  /
+sum(rate(vllm:prompt_tokens_total[5m]))
+
+# Panel 4: queue depth (active vs waiting)
+vllm:num_requests_running
+vllm:num_requests_waiting
+```
+
+Annotate each option-flip event on the panel so reviewers can see the before/after directly.
+
+### Admission control and context budget
+
+Accepting more requests when the server slows down breaks every team's lab. Production serving makes a decision before each request is admitted.
+
+| Control | Example policy |
+|--------|---------------|
+| Max input length | course-level cap below `max_model_len` |
+| Concurrent requests | per-team queue plus a global queue |
+| Priority | demo and replay outrank experimental batches |
+| Timeout | log prefill timeout and decode timeout separately |
+| Fallback | reroute to a commercial API or a smaller model on failure |
+
+```python
+# admission.py — per-team queue and token budget
+import asyncio, time
+from dataclasses import dataclass
+
+@dataclass
+class Budget:
+    max_concurrent: int = 4
+    max_prompt_tokens: int = 16000
+    timeout_s: float = 60.0
+
+team_locks: dict[str, asyncio.Semaphore] = {}
+
+async def admit(team: str, prompt_tokens: int, budget: Budget) -> bool:
+    if prompt_tokens > budget.max_prompt_tokens:
+        return False
+    sem = team_locks.setdefault(team, asyncio.Semaphore(budget.max_concurrent))
+    try:
+        await asyncio.wait_for(sem.acquire(), timeout=budget.timeout_s)
+        return True
+    except asyncio.TimeoutError:
+        return False
+
+async def release(team: str):
+    team_locks[team].release()
+```
+
+In Agent OS Runtime terms, admission control is also a policy gate. A rejection is not always a failure — it can be a successful boundary-protection event.
+
+### Multi-tenant serving design
+
+In a DGX H100 lab shared by student teams, isolating resources beats a single shared model.
 
 ```bash
-# Student A: Qwen3-Coder (MIG slice 1, 3g.40gb)
-CUDA_VISIBLE_DEVICES=MIG-GPU-xxx python -m vllm.entrypoints.openai.api_server \
-  --model Qwen/Qwen3-Coder-32B-Instruct --port 8001
+# Team A: 1g.10gb slice, training-grade model
+CUDA_VISIBLE_DEVICES=MIG-GPU-a vllm serve deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct \
+  --served-model-name team-a-coder \
+  --max-model-len 16384 \
+  --port 8001
 
-# Student B: GLM-4.7 (MIG slice 2, 3g.40gb)
-CUDA_VISIBLE_DEVICES=MIG-GPU-yyy python -m vllm.entrypoints.openai.api_server \
-  --model THUDM/glm-4-9b-chat --port 8002
-
-# Student C: DeepSeek-Coder-V2-Lite (MIG slice 3, 2g.20gb)
-CUDA_VISIBLE_DEVICES=MIG-GPU-zzz python -m vllm.entrypoints.openai.api_server \
-  --model deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct --port 8003
+# Team B: 3g.40gb slice, larger model
+CUDA_VISIBLE_DEVICES=MIG-GPU-b vllm serve Qwen/Qwen3-Coder-30B-A3B-Instruct \
+  --served-model-name team-b-coder \
+  --max-model-len 32768 \
+  --port 8002
 ```
+
+<Aside type="caution" title="MIG and tensor parallelism">
+MIG slices are great for hardware isolation but not for tying tensor-parallel workers together. For a model that needs multiple GPUs, prefer a full GPU or an explicit multi-GPU configuration over MIG.
+</Aside>
+
+### Observability first
+
+vLLM ships Prometheus/Grafana and OpenTelemetry examples. Week 12 covers them in depth, but Week 11 labs should already log at minimum:
+
+```json
+{
+  "request_id": "run-20260512-001",
+  "model": "local-coder",
+  "prompt_tokens": 1842,
+  "completion_tokens": 419,
+  "ttft_ms": 820,
+  "tpot_ms": 34,
+  "cache_hit": true,
+  "finish_reason": "stop"
+}
+```
+
+This format aligns with the Agent OS Runtime `.events.jsonl`. The serving layer records tokens and latency; the agent runtime records tool calls, approvals, test results, and replay state.
 
 ## Practicum
 
 <Steps>
-1. **Apply vLLM Optimization Settings** — Compare configurations for `gpu_memory_utilization` and `enable_prefix_caching`
+1. **Bring up the baseline server**
 
-2. **Implement Batch Processing** — Handle concurrent requests and measure throughput
+   ```bash
+   vllm serve deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct \
+     --served-model-name local-coder \
+     --max-model-len 32768 \
+     --port 8000
+   ```
 
-3. **Verify Prefix Caching Effect** — Measure cache hit rate using a Ralph Loop simulation
+2. **Compare prefix caching on/off**
 
-4. **Performance Profiling** — Monitor GPU utilization with `nvidia-smi dmon`
+   Run 20 requests sharing the same system prompt and repository summary. Compare TTFT, throughput, and cache hit between `--enable-prefix-caching` off and on.
+
+3. **Compare chunked prefill on/off**
+
+   Mix long file summarization (20K+ tokens) with short code-generation requests. Measure how much the long requests delay the short ones.
+
+4. **Write an OpenAI-compatible client**
+
+   ```python
+   from openai import OpenAI
+   import time
+
+   client = OpenAI(base_url="http://localhost:8000/v1", api_key="local")
+
+   started = time.perf_counter()
+   response = client.chat.completions.create(
+       model="local-coder",
+       messages=[{"role": "user", "content": "Write a sample pytest fixture."}],
+       temperature=0.2,
+   )
+   elapsed = time.perf_counter() - started
+   print(elapsed, response.choices[0].message.content[:200])
+   ```
+
+5. **Add an admission-control queue**
+
+   Apply the `admission.py` pattern to limit per-team concurrency. Count rejected requests in a separate metric (`admission.rejected`).
+
+6. **Prepare the dashboard**
+
+   Log `ttft_ms`, `tokens/sec`, `error_rate`, and `cache_hit` to Prometheus/Grafana or a simple CSV. Week 12 wires these values to OpenTelemetry traces.
 </Steps>
 
-## Preview of Next Week
+## Operations checklist
 
-In Week 12, we will build a **telemetry system** on top of this vLLM server and implement an **LLM-as-Judge** evaluation framework.
+| Item | Pass criterion |
+|------|----------------|
+| Model loading | cold start and warm restart times recorded |
+| API compatibility | OpenAI client can complete a chat call |
+| Stability | 0-2 timeouts/OOMs out of 100 requests |
+| Cost | comparison table of GPU-hour cost vs. API cost |
+| Observability | at least request_id, model, tokens, latency logged |
+| Security | external network/file access permissions separated |
+| Admission control | per-team queue isolated, rejection events logged |
+
+## Looking ahead
+
+Week 12 builds **telemetry, an event store, and the LLM-as-Judge gate** on top of this vLLM server. Week 11 is "how to generate fast." Week 12 is "how to run the generated results so you can trust them."
+
+## Key Takeaways
+
+1. **The inference server is the model's OS**: model weights alone do not produce a service. KV cache, batching, queues, and observability must be co-designed.
+2. **PagedAttention is the floor**: it nearly eliminates fragmentation, but the real operational decision is which optimization sits on top.
+3. **Evaluate the five levers separately**: prefix caching, chunked prefill, speculative decoding, disaggregated prefill, and structured outputs each address a different bottleneck.
+4. **Diagnose the workload first**: do not flip switches blindly — measure TTFT, TPOT, queue time, and cache hit before tuning.
+5. **Throughput alone is a trap**: the agent UX is governed by TTFT, p95 latency, and queue time.
+6. **Admission control is a policy gate**: a rejected request is a boundary-protection event, not a failure.
+7. **Multi-tenancy is solved by boundaries**: MIG slices, separate ports, and per-team model names keep one team's mistake from breaking the lab.
+
+## Further Reading
+
+**Foundational**
+- [vLLM Automatic Prefix Caching](https://docs.vllm.ai/en/latest/features/automatic_prefix_caching/)
+- [vLLM Speculative Decoding](https://docs.vllm.ai/en/latest/features/speculative_decoding/)
+- [vLLM Disaggregated Prefill](https://docs.vllm.ai/en/latest/features/disagg_prefill/)
+- [vLLM Structured Outputs](https://docs.vllm.ai/en/latest/features/structured_outputs/)
+
+**Observability**
+- [vLLM Prometheus and Grafana example](https://docs.vllm.ai/en/latest/examples/observability/prometheus_grafana/)
+- [vLLM OpenTelemetry POC](https://docs.vllm.ai/en/latest/examples/observability/setup_opentelemetry_poc/)
+
+**Papers / reports**
+- Kwon et al., "Efficient Memory Management for Large Language Model Serving with PagedAttention" (SOSP 2023)
+- Leviathan et al., "Fast Inference from Transformers via Speculative Decoding" (ICML 2023)
+- Patel et al., "Splitwise: Efficient Generative LLM Inference Using Phase Splitting" (ISCA 2024)

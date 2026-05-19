@@ -11,6 +11,7 @@ This section collects tools, papers, terminology, and infrastructure guides rela
 
 - [Development Tools](/en/reference/tools) — Guides for core tools including Claude Code, Gemini CLI, Codex CLI, vLLM, and MCP
 - [AI Coding Tool Selection](/en/reference/tool-selection) — Comparison and selection guide for AI coding CLI tools
+- [Agent OS Runtime](/en/reference/agent-os-runtime) — Self-contained MCP-first, provider-agnostic, event-sourced runtime material
 - [Papers & Resources](/en/reference/papers) — Papers on agentic AI and harness engineering
 - [Glossary](/en/reference/glossary) — Definitions of key terms used in this course
 - [Infrastructure Guide](/en/reference/infrastructure) — DGX H100, MIG, and Kubernetes operations guide
@@ -28,3 +29,6 @@ This section collects tools, papers, terminology, and infrastructure guides rela
 
 ### Course Repository
 - [GitHub: halla-ai/ai-systems-2026](https://github.com/halla-ai/ai-systems-2026)
+
+### Internal Course Material
+- [Agent OS Runtime](/en/reference/agent-os-runtime) — single combined unit covering L1-L7 core architecture, optional L8 workflow plane, contracts, implementation guide, and runtime checklist

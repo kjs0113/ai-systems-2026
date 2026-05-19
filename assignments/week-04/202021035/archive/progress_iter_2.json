@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "title": "Implement fibonacci(n)",
+    "passes": true
+  },
+  {
+    "id": 2,
+    "title": "Implement is_prime(n)",
+    "passes": false
+  },
+  {
+    "id": 3,
+    "title": "Implement bubble_sort(arr)",
+    "passes": true
+  }
+]

@@ -8,21 +8,32 @@ import { Aside, Card, CardGrid, Badge } from '@astrojs/starlight/components';
 학생들이 GitHub PR로 제출한 과제 현황을 정리한 페이지입니다. 제출 방법은 [기여 가이드](/contribute)를 참조하세요.
 
 <Aside type="tip" title="과제 제출 경로">
-`assignments/week-XX/[학번]/` 또는 `assignments/lab-XX/[학번]/` 디렉토리에 파일을 추가하고, PR 제목은 `[제출] Lab XX - 학번 이름` 형식을 따릅니다.
+`assignments/week-XX/[학번]/` 또는 `assignments/lab-XX/[학번]/` 디렉토리에 파일을 추가하고, PR 제목은 `[제출] Lab XX - 학번 이름` 형식을 따릅니다. 캡스톤 제안서는 `assignments/capstone/projects/[학번]/proposal.md`에 제출합니다.
 </Aside>
 
 ---
 
 ## 제출 현황 요약
 
-| 학번 | Week 01 | Week 02 | Week 03 | Week 04 |
-|------|:-------:|:-------:|:-------:|:-------:|
-| 202021016 | | | | <Badge text="제출" variant="caution" /> |
-| 202021035 | <Badge text="제출" variant="success" /> | | | |
-| 202121014 | <Badge text="제출" variant="success" /> | | | <Badge text="제출" variant="success" /> |
-| 202321005 | <Badge text="제출" variant="success" /> | | <Badge text="제출" variant="success" /> | <Badge text="제출" variant="success" /> |
-| 202321006 | <Badge text="제출" variant="success" /> | <Badge text="제출" variant="success" /> | <Badge text="제출" variant="success" /> | <Badge text="제출" variant="success" /> |
-| 202321010 | <Badge text="제출" variant="success" /> | | <Badge text="제출" variant="success" /> | <Badge text="제출" variant="success" /> |
+### 주차별 과제 (Week 01–08)
+
+| 학번 | W01 | W02 | W03 | W04 | W05 | W06 | W07 | W08 |
+|------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| 202021016 | | | | <Badge text="제출" variant="caution" /> | | | | |
+| 202021035 | <Badge text="제출" variant="success" /> | | | <Badge text="제출" variant="success" /> | | | | |
+| 202121014 | <Badge text="제출" variant="success" /> | | | <Badge text="제출" variant="success" /> | | | | |
+| 202321005 | <Badge text="제출" variant="success" /> | | <Badge text="제출" variant="success" /> | <Badge text="제출" variant="success" /> | | | | |
+| 202321006 | <Badge text="제출" variant="success" /> | <Badge text="제출" variant="success" /> | <Badge text="제출" variant="success" /> | <Badge text="제출" variant="success" /> | <Badge text="제출" variant="success" /> | <Badge text="제출" variant="success" /> | <Badge text="제출" variant="success" /> | <Badge text="제출" variant="success" /> |
+| 202321010 | <Badge text="제출" variant="success" /> | | <Badge text="제출" variant="success" /> | <Badge text="제출" variant="success" /> | <Badge text="제출" variant="success" /> | <Badge text="제출" variant="success" /> | <Badge text="제출" variant="success" /> | |
+
+### Lab 및 캡스톤
+
+| 학번 | Lab 02 | Lab 03 | Lab 05 | Lab 06 | Lab 07 | Capstone |
+|------|:------:|:------:|:------:|:------:|:------:|:--------:|
+| 202121014 | <Badge text="제출" variant="success" /> | <Badge text="제출" variant="success" /> | <Badge text="제출" variant="success" /> | <Badge text="제출" variant="success" /> | <Badge text="제출" variant="success" /> | |
+| 202321005 | | | | | | <Badge text="제출" variant="success" /> |
+| 202321006 | | | | | | <Badge text="제출" variant="success" /> |
+| 202321010 | | | | | | <Badge text="제출" variant="success" /> |
 
 - <Badge text="제출" variant="success" /> 과제 요구사항 충족
 - <Badge text="제출" variant="caution" /> 제출했으나 내용 보완 필요
@@ -101,6 +112,9 @@ import { Aside, Card, CardGrid, Badge } from '@astrojs/starlight/components';
   <Card title="202021016" icon="warning">
     과제 내용 부족. README가 프로젝트 root README 복사본이며, AGENTS.md는 "CLAUDE.md" 한 줄만 포함. harness.sh 및 루프 구현 미제출. **보완 필요.**
   </Card>
+  <Card title="202021035">
+    harness.sh(159줄) + run_task.py 구현. tasks.json 기반 태스크 큐, 3회 반복 progress 아카이브, metrics.csv 수집. AGENTS.md + PROMPT.md 분리로 역할 명확화.
+  </Card>
   <Card title="202121014">
     harness.sh(103줄) 구현, backpressure.py, AGENTS.md(Learned Patterns + Anti-Patterns + Progress 체크리스트), PROMPT.md, 805줄 실행 로그. calculator 태스크에 대한 divide-by-zero 처리 학습 과정 기록.
   </Card>
@@ -117,12 +131,140 @@ import { Aside, Card, CardGrid, Badge } from '@astrojs/starlight/components';
 
 ---
 
+## Week 05: 컨텍스트 관리와 토큰 최적화
+
+**과제**: Context Manager, 토큰 카운터, Context Rot 측정 및 자동 초기화
+
+<CardGrid>
+  <Card title="202321006">
+    `context_manager.py` 동적 컨텍스트 프루닝 + 우선순위 기반 필터링. `token_counter.py` Claude 모델 토큰 정확 카운팅. Context Rot을 sliding window로 완화.
+  </Card>
+  <Card title="202321010">
+    토큰 카운터 통합 Ralph 루프, Context Rot 시뮬레이션 및 측정, Hybrid 자동 컨텍스트 초기화. `fix_plan.md` + `claude-progress.txt` 상태 추적. 분석 스크립트와 before/after 시각화 그래프(5종) 포함.
+  </Card>
+</CardGrid>
+
+---
+
+## Week 06: 인스트럭션 튜닝과 로그 분석
+
+**과제**: 프롬프트 개선 실험, 로그 분석, Instruction Tuning 효과 측정
+
+<CardGrid>
+  <Card title="202321006">
+    `PROMPT.md`에 아키텍처 제약 추가로 로직 오류 30% 감소. `log_analyzer.py` 에이전트 추론 경로 추적, 공통 실패 지점 식별. CLAUDE.md 명시 규칙의 안정화 효과 확인.
+  </Card>
+  <Card title="202321010">
+    Instruction Tuning 실험 — testset + before/after 출력 비교. 에러율 그래프, 메트릭 그래프, 에러 유형 분류 그래프 생성. lab06 하위 구조로 체계적 정리.
+  </Card>
+</CardGrid>
+
+---
+
+## Week 07: 멀티에이전트 SDLC 설계
+
+**과제**: 5단계 파이프라인형 멀티에이전트 아키텍처, JSON 아티팩트 기반 통신, 검증 게이트
+
+<CardGrid>
+  <Card title="202321006">
+    5-phase gated pipeline 아키텍처 다이어그램, DAG 기반 태스크 분해 + tiered parallelization 전략, 페이즈 전환 품질 체크리스트, 3가지 실패 시나리오별 복구 전략. 스키마 4종(`requirement.json`, `task.json`, `pipeline_state.json`, `lesson.json`).
+  </Card>
+  <Card title="202321010">
+    Planner → Context → Builder → Reviewer → Finalizer 5단계 파이프라인. 4개 이상 표준 JSON 스키마, DAG 의존성 그래프 + 병렬화 tier 분석, Phase별 5개 게이트 체크리스트, 3가지 시나리오 자동 복구 메커니즘.
+  </Card>
+</CardGrid>
+
+---
+
+## Week 08: 캡스톤 제안서
+
+**과제**: 캡스톤 프로젝트 제안서 — 문제 정의, 시스템 설계, 마일스톤
+
+<Aside type="note">
+캡스톤 제안서는 `assignments/capstone/projects/[학번]/proposal.md` 경로 권장. `assignments/week-08/` 경로 제출도 일부 포함.
+</Aside>
+
+<CardGrid>
+  <Card title="202321005 — 소크라테스 튜터">
+    학생의 버그 코드·오답을 정답 노출 없이 질문만으로 오개념 교정하도록 유도하는 **이중 루프 · 4-모듈 · 3-tier 방어** 교육용 에이전트. Analysis/Dialogue/Review/Logging 모듈, Q-Critic + Validator 병렬 AND 게이트.
+  </Card>
+  <Card title="202321006 — 협업 넛지 에이전트">
+    GitHub PR 발생 시 실시간 **버스 팩터** 계산으로 지식 독점 감지. AI 인터뷰로 설계 맥락 추출 후 적합한 팀원에게 지식 분산 유도. 퇴사 이후 발견되는 문제를 사전에 예방.
+  </Card>
+  <Card title="202321010 — Docs-Code Drift Detector">
+    README/docstring/API 문서의 타입·파라미터 정의를 **AST 기반으로 실제 코드와 비교**하여 불일치 탐지. 문서 수정 PR 자동 생성(코드 수정은 추천만 제공).
+  </Card>
+</CardGrid>
+
+---
+
+## Lab 02: HOTL 거버넌스 에이전트
+
+**과제**: Anthropic SDK 기반 에이전트에 HOTL 거버넌스 레이어 + 감사 로그 결합
+
+<CardGrid>
+  <Card title="202121014">
+    `governance.py` 4단계 위험 분류 + 승인 정책, `agent.py` Claude 제안/fallback 통과 처리, pytest 테스트, JSONL 감사 로그 예시. 설계 결정 문서화.
+  </Card>
+</CardGrid>
+
+---
+
+## Lab 03: FastMCP 서버 구현
+
+**과제**: FastMCP 기반 Tool + Resource + Prompt 3대 프리미티브, Path Traversal 방어, 안전한 subprocess 정책
+
+<CardGrid>
+  <Card title="202121014">
+    filesystem/git/custom 서버 등록 설정(`settings.json`), 사용자 정의 MCP 서버(`custom_server.py`), pytest 샘플 3종. 기본 보안 요구사항 반영.
+  </Card>
+</CardGrid>
+
+---
+
+## Lab 05: 컨텍스트 관리 실습
+
+**과제**: 토큰 추적, Rolling Window 기반 컨텍스트 압축, 상태 저장 및 복원
+
+<CardGrid>
+  <Card title="202121014">
+    `python main.py` 실행 시 전체 데모 자동 진행. 토큰 사용량 추적, Rolling Window 압축, 실행 상태 저장/복원, `claude-progress.txt` 자동 생성.
+  </Card>
+</CardGrid>
+
+---
+
+## Lab 06: 프롬프트 개선 및 A/B 테스트
+
+**과제**: `harness.log` 분석, 반복 실패 패턴 추출, 프롬프트 2버전 A/B 비교
+
+<CardGrid>
+  <Card title="202121014">
+    `log_analyzer.py` 반복 로그 에러 패턴 분류 + `error_report.md` 생성, 프롬프트 v1(기본)/v2(개선) 비교, `ab_test.py` 결과를 `ab_results.json`에 기록.
+  </Card>
+</CardGrid>
+
+---
+
+## Lab 07: 멀티에이전트 파이프라인
+
+**과제**: `Planner → Coder` 2단계 파이프라인, JSON 스키마 기반 구조화 출력
+
+<CardGrid>
+  <Card title="202121014">
+    Planner/Coder 출력 JSON 스키마, `base_agent.py` 공통 클래스, `planner_agent.py`(목표→서브태스크 분해), `coder_agent.py`(계획→변경 내역), `pipeline.py` 순차 연결 실행. 설계 문서 포함.
+  </Card>
+</CardGrid>
+
+---
+
 ## 공통 피드백
 
 <Aside type="caution" title="제출 시 주의사항">
-1. **`.pyc` 파일 제외** — `.gitignore`에 `__pycache__/`와 `*.pyc` 추가
+1. **최신 main 기준으로 작업** — PR 생성 전 반드시 `git pull origin main`. 오래된 base의 PR은 다른 학생 제출물을 대량 삭제하는 대재앙을 유발합니다
 2. **자기 학번 폴더만 변경** — fork에서 작업 시 다른 학생 파일이나 강의자료 수정 금지
-3. **한글 파일명 금지** — macOS NFD 분해 이슈. 영문 파일명 사용
-4. **`src/content/docs/`에 과제 파일 넣지 않기** — 강의 사이트 소스 디렉토리
-5. **PR 전 확인** — `git diff --stat origin/main`으로 변경 파일 목록 검토
+3. **`.pyc` 파일 제외** — `.gitignore`에 `__pycache__/`와 `*.pyc` 추가
+4. **한글 파일명 금지** — macOS NFD 분해 이슈. 영문 파일명 사용
+5. **`src/content/docs/`에 과제 파일 넣지 않기** — 강의 사이트 소스 디렉토리
+6. **PR 전 확인** — `git diff --stat origin/main`으로 변경 파일 목록 검토
 </Aside>

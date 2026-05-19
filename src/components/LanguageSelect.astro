@@ -5,9 +5,7 @@
  */
 import config from 'virtual:starlight/user-config';
 
-// Starlight returns `undefined` for the root (prefix-less) locale — treat it as 'root'
-// so the comparison against `Object.entries(config.locales)` keys works correctly.
-const currentLocale = Astro.locals.starlightRoute.locale ?? 'root';
+const currentLocale = Astro.locals.starlightRoute.locale;
 const pathname = Astro.url.pathname;
 
 function getLocalizedPath(code: string): string {
@@ -23,7 +21,8 @@ function getLocalizedPath(code: string): string {
   return `/${code}${pathname}`;
 }
 
-const localeEntries = Object.entries(config.locales);
+type LocaleConfig = NonNullable<typeof config.locales>[string];
+const localeEntries = Object.entries(config.locales ?? {}) as [string, LocaleConfig][];
 ---
 
 {
@@ -32,9 +31,7 @@ const localeEntries = Object.entries(config.locales);
       {localeEntries.map(([code, locale], i) => {
         const isCurrent = code === currentLocale;
         const href = getLocalizedPath(code);
-        // Use the `lang` attribute (e.g., "ko", "en") — never the display `label`,
-        // which varies, nor the locale key, which may be "root" for the default locale.
-        const shortLabel = locale!.lang.toUpperCase();
+        const shortLabel = locale.label === '한국어' ? 'KO' : code.toUpperCase();
         return (
           <>
             {i > 0 && <span class="lang-divider" aria-hidden="true" />}

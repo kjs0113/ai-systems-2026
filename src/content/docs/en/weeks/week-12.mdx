@@ -1,24 +1,25 @@
 ---
 title: "Week 12: Telemetry and LLM-as-Judge"
-description: Measuring agent system quality — OpenTelemetry integration and automated evaluation frameworks
+description: Measuring agent system quality with OpenTelemetry, event stores, automated evaluation gates, and replayable operations
 week: 12
 phase: 4
 phase_title: Open-Source Models & MLOps
 date: "2026-05-19"
 theory_topics:
-  - Telemetry design principles
-  - LLM-as-Judge evaluation methodology
-  - Cost optimization strategies
+  - Agent telemetry design
+  - OpenTelemetry and append-only event logs
+  - LLM-as-Judge quality gates and limitations
 lab_topics:
-  - OpenTelemetry integration
-  - LLM-as-Judge implementation
+  - Integrate OpenTelemetry
+  - Write Agent OS Runtime event traces
+  - Implement LLM-as-Judge and correlation analysis
 assignment: "Lab 11 + Lab 12"
 assignment_due: "2026-05-26"
 difficulty: advanced
-estimated_time: "8 hours"
+estimated_time: 8 hours
 ---
 
-import { Aside, Steps, Badge } from '@astrojs/starlight/components';
+import { Aside, Steps, Badge, Card, CardGrid, Tabs, TabItem } from '@astrojs/starlight/components';
 
 <div class="week-meta">
   <span class="phase-tag">Phase 4</span>
@@ -29,9 +30,146 @@ import { Aside, Steps, Badge } from '@astrojs/starlight/components';
 
 ## Theory
 
-### Telemetry: The Eyes and Ears of HOTL
+### Learning Objectives
 
-In the HOTL architecture, **real-time telemetry** is essential for a human supervisor to trust the agents.
+<CardGrid>
+  <Card title="Concepts" icon="open-book">
+    Explain why telemetry (trace/metrics/logs) and append-only event stores are separate axes, and articulate which question each one answers in HOTL operations.
+  </Card>
+  <Card title="Design" icon="seti:config">
+    Design span structures and event schemas, defining the seven attributes that connect run, task, agent, model, tool, and gate.
+  </Card>
+  <Card title="Implementation" icon="pencil">
+    Emit spans through the OpenTelemetry SDK, write `.events.jsonl`, and wire an LLM-as-Judge that returns strict JSON and combines with a deterministic gate.
+  </Card>
+  <Card title="Operations" icon="rocket">
+    Run a judge calibration pipeline using Spearman/Pearson correlation, monitor the trust band, and decide how to harden the gate policy when judge bias is suspected.
+  </Card>
+</CardGrid>
+
+---
+
+### Observability is the nervous system of HOTL
+
+In a human-on-the-loop system, the human does not approve every tool call. The system runs autonomously inside boundaries, while telemetry and gates expose abnormal behavior.
+
+| Observable | Question | Example |
+|------------|----------|---------|
+| Trace | Where did time go? | agent_loop -> model_call -> tool_call -> test |
+| Metrics | Is this within normal range? | success_rate, token_usage, ttft_ms |
+| Logs | What happened? | permission denied, tool timeout |
+| Event store | Can we reconstruct the run? | `.events.jsonl`, replay snapshot |
+| Evaluation | Is the result usable? | tests, lint, LLM-as-Judge, human review |
+
+<Aside type="note" title="Span vs. event log">
+OpenTelemetry spans answer "what is slow right now." Agent OS Runtime `.events.jsonl` answers "what exactly happened in this run." Week 12 uses both: OTel for live monitoring, and an [append-only event store](/en/reference/agent-os-runtime/#7-layer-architecture) for audit and replay. Teams using the L8 workflow plane also prove `workflow.started`, `workflow.phase_advanced`, and `workflow.policy_gated` events plus replay of the current cycle, phase, and verdict.
+</Aside>
+
+#### Telemetry flow at a glance
+
+<div class="diagram">
+  <div class="diagram__title">Telemetry Flow — Live Monitoring + Audit</div>
+  <div class="diagram__flow">
+    <div class="diagram__node diagram__node--blue diagram__node--full">
+      <span class="diagram__node__label">User / HOTL</span>
+      <span class="diagram__node__sub">submits task packet</span>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--purple diagram__node--full">
+      <span class="diagram__node__label">Agent Runtime</span>
+      <span class="diagram__node__sub">starts span agent.run · appends run.started</span>
+    </div>
+    <div class="diagram__arrow">▼  execution stage</div>
+    <div class="diagram__cols diagram__cols--2">
+      <div class="diagram__node diagram__node--orange diagram__node--full">
+        <span class="diagram__node__label">Tool / Test</span>
+        <span class="diagram__node__sub">tool.invoke → tool.result</span>
+      </div>
+      <div class="diagram__node diagram__node--green diagram__node--full">
+        <span class="diagram__node__label">LLM Judge</span>
+        <span class="diagram__node__sub">scores + verdict</span>
+      </div>
+    </div>
+    <div class="diagram__arrow">▼  fan out to observe + record</div>
+    <div class="diagram__cols diagram__cols--2">
+      <div class="diagram__node diagram__node--cyan diagram__node--full">
+        <span class="diagram__node__label">OTel Collector</span>
+        <span class="diagram__node__sub">spans · metrics (live)</span>
+      </div>
+      <div class="diagram__node diagram__node--gray diagram__node--full">
+        <span class="diagram__node__label">Event Store</span>
+        <span class="diagram__node__sub">.events.jsonl · replay snapshot</span>
+      </div>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--blue diagram__node--full">
+      <span class="diagram__node__label">Dashboard</span>
+      <span class="diagram__node__sub">live monitoring + audit / replay in one view</span>
+    </div>
+  </div>
+</div>
+
+Stamping the same `run_id` on both OTel span attributes and event-log lines lets a dashboard click through to the audit log in one step.
+
+### Break agent runs into spans
+
+Logging an entire run as one string makes analysis impossible. Use at minimum the following span structure.
+
+<div class="diagram">
+  <div class="diagram__title">Recommended Span Tree for an Agent Run</div>
+  <div class="diagram__stack">
+    <div class="diagram__node diagram__node--blue">
+      <span class="diagram__node__label">agent.run</span>
+      <span class="diagram__node__sub">root — shared run_id, final gate.result</span>
+    </div>
+    <div class="diagram__node diagram__node--cyan" style="padding-left: 2rem;">
+      <span class="diagram__node__label">└ planner.step</span>
+      <span class="diagram__node__sub">spec / plan generation</span>
+    </div>
+    <div class="diagram__node diagram__node--cyan" style="padding-left: 2rem;">
+      <span class="diagram__node__label">└ model.call</span>
+      <span class="diagram__node__sub">prompt → completion (model.name attribute)</span>
+    </div>
+    <div class="diagram__node diagram__node--orange" style="padding-left: 2rem;">
+      <span class="diagram__node__label">└ tool.invoke</span>
+      <span class="diagram__node__sub">tool.name, input attribute</span>
+    </div>
+    <div class="diagram__node diagram__node--orange" style="padding-left: 2rem;">
+      <span class="diagram__node__label">└ tool.result</span>
+      <span class="diagram__node__sub">status, latency_ms</span>
+    </div>
+    <div class="diagram__node diagram__node--purple" style="padding-left: 2rem;">
+      <span class="diagram__node__label">└ acceptance.test</span>
+      <span class="diagram__node__sub">deterministic gate result</span>
+    </div>
+    <div class="diagram__node diagram__node--green" style="padding-left: 2rem;">
+      <span class="diagram__node__label">└ judge.evaluate</span>
+      <span class="diagram__node__sub">probabilistic gate result</span>
+    </div>
+    <div class="diagram__node diagram__node--gray" style="padding-left: 2rem;">
+      <span class="diagram__node__label">└ artifact.write</span>
+      <span class="diagram__node__sub">artifact.path attribute</span>
+    </div>
+  </div>
+</div>
+
+Each span should share `run_id`, `task_id`, `agent_role`, `model`, `repository`, and `commit_sha`. This is what lets Grafana answer "which model failed in which role."
+
+#### Minimum span attributes
+
+Telemetry is not "more logs." It is a stable set of keys that make analysis possible.
+
+| Attribute | Example | Why it matters |
+|-----------|---------|----------------|
+| `run.id` | `run-20260519-001` | connects event log, dashboard, and report |
+| `task.id` | `capstone-017` | compares repeated runs of the same task |
+| `agent.role` | `worker` | separates planner, worker, and reviewer failures |
+| `model.name` | `local-coder` | compares model cost and quality |
+| `tool.name` | `run_tests` | identifies slow or risky tools |
+| `gate.result` | `pass`, `revise`, `fail` | supports release readiness decisions |
+| `artifact.path` | `artifacts/run-001.patch` | traces final outputs |
+
+Without these keys, Week 15 reports will have numbers but no connected evidence.
 
 ```python
 # telemetry.py — OpenTelemetry-based agent monitoring
@@ -39,89 +177,331 @@ from opentelemetry import trace, metrics
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.metrics import MeterProvider
 
-tracer = trace.get_tracer("ralph-loop")
-meter = metrics.get_meter("ralph-loop")
+tracer = trace.get_tracer("agent-runtime")
+meter = metrics.get_meter("agent-runtime")
 
-# Key metrics
-loop_counter = meter.create_counter("ralph.loop.count")
-token_usage = meter.create_histogram("ralph.tokens.used")
-success_rate = meter.create_gauge("ralph.success.rate")
+loop_counter = meter.create_counter("agent.loop.count")
+token_usage = meter.create_histogram("agent.tokens.used")
+judge_score = meter.create_histogram("agent.judge.score")
+ttft_ms = meter.create_histogram("agent.model.ttft_ms")
 
-def traced_agent_loop(task: str):
-    with tracer.start_as_current_span("agent_loop") as span:
-        span.set_attribute("task.description", task)
+def traced_agent_loop(task: dict):
+    with tracer.start_as_current_span("agent.run") as span:
+        span.set_attribute("run.id", task["run_id"])
+        span.set_attribute("task.id", task["id"])
+        span.set_attribute("task.objective", task["objective"])
+        span.set_attribute("agent.role", task.get("role", "worker"))
+        span.set_attribute("model.name", task.get("model", "local-coder"))
 
-        # Execute the loop
-        result = run_ralph_loop(task)
+        result = run_agent(task)
 
-        # Record metrics
         loop_counter.add(1, {"status": "success" if result.passed else "failure"})
-        token_usage.record(result.tokens_used)
-
+        token_usage.record(result.tokens_used, {"model": result.model})
+        judge_score.record(result.judge_overall, {"task": task["id"]})
+        ttft_ms.record(result.ttft_ms, {"model": result.model})
         span.set_attribute("result.passed", result.passed)
         span.set_attribute("tokens.used", result.tokens_used)
-
+        span.set_attribute("tests.failed", result.tests_failed)
+        span.set_attribute("gate.result", result.gate_result)
         return result
 ```
 
-### LLM-as-Judge Evaluation Framework
+<Aside type="tip" title="Inside Claude Code...">
+Claude Code's instrumentation is a real-world implementation of these telemetry principles. It records token usage, tool calls, permission denials, and stop reasons in a structured way, which is what makes `/cost`, session resume, and permission audit possible. We are not memorizing one product's internals — we are porting that design into our own harness.
+</Aside>
 
-Use an LLM to automatically evaluate **code quality, readability, and design patterns** that are difficult to verify with automated tests alone.
+### Event store: replayable operations
 
-```python
-# llm_judge.py
-import anthropic
+OpenTelemetry is excellent for live monitoring, but it is not the full source of truth for reconstructing an agent run. Agent OS Runtime style append-only event logs preserve the exact sequence.
 
-JUDGE_SYSTEM_PROMPT = """You are a senior software engineer with 10 years of experience.
-Evaluate the given code on the following criteria, scoring each from 1 to 10:
-
-1. Correctness: Does the code correctly implement the requirements?
-2. Readability: Is the code easy to read?
-3. Efficiency: Are there any unnecessary computations?
-4. Robustness: Are edge cases handled?
-5. Maintainability: Will the code be easy to modify in the future?
-
-Output format:
-{
-  "scores": {"correctness": 8, "readability": 7, ...},
-  "overall": 7.5,
-  "strengths": ["...", "..."],
-  "improvements": ["...", "..."]
-}"""
-
-class LLMJudge:
-    def __init__(self):
-        self.client = anthropic.Anthropic()
-
-    def evaluate(self, code: str, requirement: str) -> dict:
-        import json
-        response = self.client.messages.create(
-            model="claude-opus-4-6",
-            max_tokens=1024,
-            system=JUDGE_SYSTEM_PROMPT,
-            messages=[{
-                "role": "user",
-                "content": f"Requirement: {requirement}\n\nCode:\n```python\n{code}\n```"
-            }]
-        )
-        return json.loads(response.content[0].text)
+```json
+{"type":"run.started","run_id":"r-001","task_id":"t-017","model":"local-coder","ts":"2026-05-19T09:00:00Z"}
+{"type":"tool.invoke","run_id":"r-001","tool":"read_file","input":{"path":"src/app.py"}}
+{"type":"tool.result","run_id":"r-001","tool":"read_file","status":"ok","bytes":1842}
+{"type":"test.result","run_id":"r-001","command":"pytest","passed":false,"failed":2}
+{"type":"judge.result","run_id":"r-001","overall":7.2,"verdict":"revise"}
+{"type":"run.closed","run_id":"r-001","status":"failed","reason":"tests_failed"}
 ```
 
-<Aside type="caution" title="Limitations of LLM-as-Judge">
-An LLM Judge may be biased toward surface-level code style over logical correctness.
-It should be used in conjunction with automated tests (pytest) to be trustworthy.
+The eight event types you handle in the capstone are:
+
+| Event type | When it fires | Required fields | Replay meaning |
+|-----------|--------------|----------------|----------------|
+| `run.started` | task arrives at the worker | run_id, task_id, model, ts | start of a new run |
+| `plan.created` | planner produces spec/plan | run_id, plan_path | locks input for downstream steps |
+| `tool.invoke` | just before tool call | run_id, tool, input | records intent before side effects |
+| `tool.result` | after tool returns | run_id, tool, status | one line gives the diagnosis on failure |
+| `test.result` | deterministic gate output | run_id, command, passed | input to the release gate |
+| `judge.result` | LLM-as-Judge output | run_id, scores, verdict | input to the probabilistic gate |
+| `human.override` | human flips the verdict | run_id, from, to, approver, reason | core of the audit trail |
+| `run.closed` | run terminates | run_id, status, reason | replay terminator |
+
+The replay function reads these events and recomputes the final state.
+
+```python
+def replay(events: list[dict]) -> dict:
+    state = {
+        "closed": False,
+        "tools": [],
+        "tests": [],
+        "judge": None,
+        "overrides": [],
+    }
+    for event in events:
+        match event["type"]:
+            case "tool.result":
+                state["tools"].append(event)
+            case "test.result":
+                state["tests"].append(event)
+            case "judge.result":
+                state["judge"] = event
+            case "human.override":
+                state["overrides"].append(event)
+            case "run.closed":
+                state["closed"] = True
+                state["status"] = event["status"]
+                state["reason"] = event.get("reason")
+    return state
+```
+
+#### What append-only buys you in operations
+
+| Scenario | Without an event store | With an event store |
+|----------|----------------------|---------------------|
+| "Why did it fail?" | grep logs and guess | scroll the run_id; the sequence is right there |
+| "Can I rerun this?" | environment drift breaks it | `replay()` reconstructs deterministically |
+| "Did this model improve?" | no comparable baseline | rerun the same task_id set with another model |
+| "How do I prove this to an auditor?" | only narrative reports | event sequence plus override records |
+
+### LLM-as-Judge is an evaluator, not a test
+
+LLM-as-Judge evaluates qualities that deterministic tests miss, such as readability and design fit. It should not replace tests, policy checks, or human ownership.
+
+| Gate | Type | Example |
+|------|------|---------|
+| Static | deterministic | ruff, mypy, eslint, schema validation |
+| Runtime | deterministic | pytest, integration test, smoke test |
+| Policy | deterministic/approval | secret scan, permission boundary |
+| Judge | probabilistic | readability, maintainability, design fit |
+| Human | final authority | capstone acceptance, production release |
+
+<Aside type="caution" title="Judge bias">
+LLM judges can overrate long, polished, or familiar-looking answers. Interpret judge scores together with tests, telemetry, and human review.
 </Aside>
+
+#### A catalog of judge biases
+
+Five biases are repeatedly observed in research; recognizing them lets you design safer prompts and gates.
+
+| Bias | Description | Signal | Mitigation |
+|------|-------------|--------|-----------|
+| Length bias | longer answers score higher | short correct answers underrated on the gold set | rubric demands brevity, normalize by length |
+| Position bias | A/B order affects the score | scores flip when order is swapped | evaluate both orders and average |
+| Self-preference | judge prefers its own model family | judge rates its own outputs higher than peers' | cross-judge with another family |
+| Style bias | familiar formats (numbered lists, headings) win | identical content in plain text scores lower | rubric scores content, not format |
+| Refusal asymmetry | safe refusals are underrated | a wrong answer scores higher than a safe refusal | safety becomes a separate deterministic gate |
+
+### Judge calibration
+
+A judge prompt is not a one-time document. Teams need a small gold set to understand where the judge fails.
+
+<div class="diagram">
+  <div class="diagram__title">Judge Calibration Loop</div>
+  <div class="diagram__flow">
+    <div class="diagram__cols diagram__cols--2">
+      <div class="diagram__node diagram__node--blue diagram__node--full">
+        <span class="diagram__node__label">Gold Set (10-30)</span>
+        <span class="diagram__node__sub">human-scored samples</span>
+      </div>
+      <div class="diagram__node diagram__node--orange diagram__node--full">
+        <span class="diagram__node__label">Human Score</span>
+        <span class="diagram__node__sub">reference baseline</span>
+      </div>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--purple diagram__node--full">
+      <span class="diagram__node__label">Blind Score</span>
+      <span class="diagram__node__sub">judge scores without seeing the human score</span>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--cyan diagram__node--full">
+      <span class="diagram__node__label">Correlation</span>
+      <span class="diagram__node__sub">Spearman / Pearson + p-value</span>
+    </div>
+    <div class="diagram__branch">
+      <div style="background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); color: #EF4444;">
+        <span class="diagram__branch__icon">low</span>
+        <span class="diagram__branch__desc">Rubric / prompt update → retry blind score</span>
+      </div>
+      <div style="background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.25); color: #22C55E;">
+        <span class="diagram__branch__icon">stable</span>
+        <span class="diagram__branch__desc">Calibrated Judge → Production Gate</span>
+      </div>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--gray diagram__node--full">
+      <span class="diagram__node__label">Override Log</span>
+      <span class="diagram__node__sub">human overrides feed the next round of gold-set growth</span>
+    </div>
+  </div>
+</div>
+
+| Step | Action | Failure signal |
+|------|--------|----------------|
+| Build gold set | prepare 10 samples already scored by humans | examples are all too good or too bad |
+| Blind scoring | judge scores without seeing human scores | all scores cluster around 7-9 |
+| Correlation | compare human and judge scores | low correlation or one criterion overrated |
+| Error analysis | classify false pass and false fail cases | prompt changes do not address the errors |
+| Rubric update | clarify criteria and examples | scoring remains vague |
+
+The capstone goal is not a perfect judge. The goal is to know where the judge fails and make the gate policy absorb that limitation.
+
+#### Spearman / Pearson correlation
+
+```python
+# correlate.py — human vs judge correlation
+from scipy.stats import spearmanr, pearsonr
+
+def correlate(human: list[float], judge: list[float]) -> dict:
+    rho, rho_p = spearmanr(human, judge)
+    r, r_p = pearsonr(human, judge)
+    return {
+        "spearman_rho": rho,
+        "spearman_p": rho_p,
+        "pearson_r": r,
+        "pearson_p": r_p,
+        "n": len(human),
+    }
+
+# Example: a 12-sample gold set
+human = [9, 8, 7, 6, 5, 9, 8, 4, 3, 7, 6, 8]
+judge = [8.5, 8.0, 7.2, 6.8, 6.0, 8.7, 7.6, 5.5, 4.2, 7.0, 6.5, 7.9]
+print(correlate(human, judge))
+# Recommended thresholds:
+#   spearman_rho >= 0.7 with p < 0.05 -> calibrated
+#   0.4 <= spearman_rho < 0.7         -> use judge as advisory only
+#   spearman_rho < 0.4                -> rewrite rubric or prompt
+```
+
+### Judge prompt and JSON output
+
+```python
+JUDGE_SYSTEM_PROMPT = """You are a senior software engineering evaluator.
+Score the submitted change from 1 to 10 for each criterion.
+Return strict JSON only.
+
+Criteria:
+1. correctness
+2. test_quality
+3. maintainability
+4. robustness
+5. observability
+"""
+
+def gate(judge: dict, tests_passed: bool) -> str:
+    if not tests_passed:
+        return "fail"
+    if judge["overall"] < 7.0:
+        return "revise"
+    if judge["scores"].get("correctness", 0) < 7:
+        return "revise"
+    return "pass"
+```
+
+### Record human override
+
+Humans must be able to override tests or judge verdicts, but the override should become an auditable event rather than a silent overwrite.
+
+```json
+{"type":"human.override","run_id":"r-001","from":"revise","to":"pass","reason":"known flaky integration test; deterministic unit tests passed","approver":"instructor"}
+```
+
+Overrides preserve human authority and create data for improving next week's gates.
+
+### Build an evaluation set
+
+Each team needs at least 10 samples.
+
+| Sample type | Why it matters |
+|------------|----------------|
+| Clearly good code | checks false negatives |
+| Clearly bad code | checks false positives |
+| Tests pass but design is poor | shows judge value |
+| Looks good but behavior is wrong | prevents judge overtrust |
+| Security or permission issue | shows policy gate necessity |
+
+### Minimum dashboard layout
+
+<CardGrid>
+  <Card title="Execution Health" icon="information">
+    Watch run_count, success_rate, retry_count, and failure_reason. Filter by team run_id during class.
+  </Card>
+  <Card title="Cost and Latency" icon="seti:clock">
+    Compare prompt_tokens, completion_tokens, cache_read_tokens, ttft_ms, and total_latency_ms by model.
+  </Card>
+  <Card title="Quality Gates" icon="approve-check-circle">
+    Show tests_passed, judge_overall, human_override, and final_verdict on a single screen.
+  </Card>
+</CardGrid>
+
+#### Dashboard panel definitions (PromQL examples)
+
+Assume the OpenTelemetry collector exports metrics to Prometheus.
+
+```promql
+# Panel 1: model-by-model success rate (15-minute window)
+sum by (model) (rate(agent_loop_count{status="success"}[15m]))
+  /
+sum by (model) (rate(agent_loop_count[15m]))
+
+# Panel 2: token usage p95 by role
+histogram_quantile(0.95, sum by (le, agent_role)
+  (rate(agent_tokens_used_bucket[5m])))
+
+# Panel 3: judge.overall mean vs deterministic pass rate
+avg by (task_id) (agent_judge_score)
+```
+
+```sql
+-- Panel 4: top 5 failure reasons in the last 24 hours (DuckDB view over events)
+SELECT reason, COUNT(*) AS n
+FROM events
+WHERE type = 'run.closed'
+  AND status = 'failed'
+  AND ts > now() - INTERVAL 1 DAY
+GROUP BY reason
+ORDER BY n DESC
+LIMIT 5;
+```
+
+These four panels form the minimum skeleton of the "numbers slide" you will use in the capstone presentation.
 
 ## Practicum
 
 <Steps>
-1. **OpenTelemetry Integration** — Add tracing and metrics to the Ralph Loop
+1. **Write trace wrappers**
 
-2. **Dashboard Setup** — Real-time monitoring with Grafana + Prometheus
+   Create spans for `agent.run`, `model.call`, `tool.invoke`, `acceptance.test`, and `judge.evaluate`. Stamp the five attributes `run.id`, `task.id`, `agent.role`, `model.name`, `gate.result` consistently on every span.
 
-3. **LLM-as-Judge Implementation** — Complete the `LLMJudge` class and evaluate real code
+2. **Write an event writer**
 
-4. **Cost Optimization Analysis** — Analyze the token usage vs code quality trade-off
+   Append `run.started`, `tool.invoke`, `tool.result`, `test.result`, `judge.result`, and `run.closed` to `.events.jsonl`. Document the concurrency strategy (file lock or per-line flush).
+
+3. **Generate a replay snapshot**
+
+   Build `replay_snapshot.json` from the event log and verify that the run is closed. The snapshot must include the final verdict, override status, and total tokens used.
+
+4. **Implement LLM Judge**
+
+   Produce strict JSON scores for 10 code samples. Specify the retry logic and fail-safe (e.g., demote to `verdict=revise`) for schema violations.
+
+5. **Analyze correlation**
+
+   Compute Spearman or Pearson correlation between human and judge scores. Revise the rubric where correlation is weak. Report correlation, n, and p-value.
+
+6. **Build a four-panel dashboard**
+
+   Build (1) success rate, (2) token p95, (3) judge.overall vs tests_passed, (4) top 5 failure reasons in Grafana or a simple CSV/Streamlit. Each panel needs a one-line caption explaining which decision it supports.
 </Steps>
 
 ## Assignment
@@ -130,15 +510,49 @@ It should be used in conjunction with automated tests (pytest) to be trustworthy
 
 ### Lab 11: Telemetry & Lab 12: LLM-as-Judge
 
-**Submission deadline**: 2026-05-26 23:59
+**Due**: 2026-05-26 23:59
 
-**Lab 11 Requirements**:
-1. Ralph Loop with OpenTelemetry integration
-2. Grafana dashboard screenshot (loop_count, token_usage, success_rate)
+**Lab 11 requirements**:
+1. Ralph loop or agent harness with OpenTelemetry tracing.
+2. Grafana/Prometheus screenshot or CSV-based dashboard (4+ panels).
+3. Agent OS Runtime-style `.events.jsonl`.
+4. `replay_snapshot.json` recalculated from the event log.
+5. Evidence that the seven span attributes (run.id, task.id, agent.role, model.name, tool.name, gate.result, artifact.path) are consistently stamped.
 
-**Lab 12 Requirements**:
-1. Complete `LLMJudge` implementation
-2. Automated evaluation results for 10 code samples
-3. Correlation analysis between LLM Judge and human evaluator scores
+**Lab 12 requirements**:
+1. `LLMJudge` that returns strict JSON.
+2. Automated evaluation results for 10 code samples.
+3. Comparison table: deterministic tests vs. LLM Judge vs. human review.
+4. Spearman/Pearson correlation with n and p-value.
+5. Rationale for integrating judge results into a gate policy rather than using them alone.
+6. At least one observed judge bias and the corresponding mitigation.
 
 </div>
+
+## Key Takeaways
+
+1. **Telemetry has two axes**: live monitoring (OTel) and audit/replay (append-only event store) do not replace each other.
+2. **Seven shared attributes make analysis possible**: stamp `run.id`, `task.id`, `agent.role`, `model.name`, `tool.name`, `gate.result`, `artifact.path` on every span and event so dashboards link to the audit log.
+3. **The event store is append-only**: it is the source of truth for deterministic reconstruction of a run, and even overrides are recorded as events.
+4. **LLM Judge is an evaluator, not a test**: deterministic gates come first; the judge handles readability, maintainability, and design where tests cannot.
+5. **Be aware of five judge biases**: length, position, self-preference, style, and refusal asymmetry each demand a specific prompt or gate-design response.
+6. **Calibration is not a one-shot**: gold set → blind score → correlation → error analysis → rubric update is a loop that runs at least once during the capstone.
+7. **The dashboard is a decision tool**: four core panels (success rate, token p95, judge vs tests, top failure reasons) form the backbone of the final report.
+
+## Further Reading
+
+**Foundational**
+- [OpenTelemetry Specification](https://opentelemetry.io/docs/specs/otel/)
+- [Agent OS Runtime — core architecture + L8 workflow plane](/en/reference/agent-os-runtime/#7-layer-architecture)
+- [OpenAI Evals best practices](https://platform.openai.com/docs/guides/evals)
+
+**Tools**
+- [OpenAI Agents SDK Tracing](https://openai.github.io/openai-agents-python/tracing/)
+- [vLLM Prometheus and Grafana integration](https://docs.vllm.ai/en/latest/examples/observability/prometheus_grafana/)
+- [Langfuse — open-source LLM observability](https://langfuse.com/)
+- [Phoenix by Arize — LLM tracing](https://github.com/Arize-ai/phoenix)
+
+**Papers / reports**
+- Zheng et al., "Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena" (NeurIPS 2023)
+- Chen et al., "Humans or LLMs as the Judge? A Study on Judgement Biases" (ACL 2024)
+- Liu et al., "G-Eval: NLG Evaluation using GPT-4 with Better Human Alignment" (EMNLP 2023)

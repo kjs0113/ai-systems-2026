@@ -57,8 +57,8 @@ Upon completing this course, students will be able to:
 | Week | Theory | Lab |
 |------|--------|-----|
 | [Week 7](/en/weeks/week-07/) | Agent role division, traditional SDLC vs agentic SDLC | Multi-agent pipeline design (Lab 07) |
-| [Week 8](/en/weeks/week-08/) | **Project proposal presentation (midterm replacement)** | Individual capstone proposal presentation — no exam |
-| [Week 9](/en/weeks/week-09/) | Planner agent (2-phase separation), QA independence, automated test pipeline | Planner + QA agent implementation (Lab 09) |
+| [Week 8](/en/weeks/week-08/) | Planner agent design, automated spec generation, codebase analysis | Planner agent implementation (Lab 08) |
+| [Week 9](/en/weeks/week-09/) | QA agent, automated test pipeline, feedback loop | QA agent implementation (Lab 09) |
 
 ### Phase 4: Open-Source Models & MLOps (Weeks 10–12)
 
@@ -72,7 +72,7 @@ Upon completing this course, students will be able to:
 
 | Week | Content |
 |------|---------|
-| [Week 13](/en/weeks/week-13/) | Individual project kickoff, architecture design document (expanding the Week 8 proposal) |
+| [Week 13](/en/weeks/week-13/) | Team formation, project topic selection, system architecture design |
 | [Week 14](/en/weeks/week-14/) | Ralphthon execution — harness implementation, agent integration, iterative improvement |
 | [Week 15](/en/weeks/week-15/) | System integration, automated testing, presentation preparation |
 | [Week 16](/en/weeks/week-16/) | Final presentation and demo, peer evaluation, course wrap-up |
@@ -82,8 +82,8 @@ Upon completing this course, students will be able to:
 | Item | Weight | Description |
 |------|--------|-------------|
 | Lab Assignments (Lab 01–12) | 40% | Individual submission via GitHub PR |
-| Midterm Project | 20% | **Individual project proposal presentation (Week 8, midterm replacement)** |
-| Capstone Ralphthon | 30% | **Individual project** with final presentation |
+| Midterm Project | 20% | Integrated system covering Phases 1–3 |
+| Capstone Ralphthon | 30% | Team project with final presentation |
 | Contribution & Participation | 10% | GitHub PR contributions, class discussion |
 
 ## Textbooks and References

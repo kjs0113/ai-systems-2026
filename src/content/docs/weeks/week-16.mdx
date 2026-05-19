@@ -1,6 +1,6 @@
 ---
 title: "16주차: 최종 발표와 수업 마무리"
-description: Ralphthon 최종 발표 — 팀 데모, 동료 평가, AI 시스템 미래 전망
+description: Ralphthon 최종 발표 — 팀 데모, 동료 평가, 포트폴리오 정리, AI 시스템 미래 전망
 week: 16
 phase: 5
 phase_title: 캡스톤 Ralphthon
@@ -8,17 +8,18 @@ date: "2026-06-16"
 theory_topics:
   - AI 시스템 미래 전망
   - 에이전틱 시스템의 다음 단계
-  - 취업 준비 가이드
+  - 포트폴리오와 취업 준비
 lab_topics:
   - 최종 발표 및 데모
   - 동료 평가
+  - 개인 회고 작성
 assignment: "동료 평가 (Peer Review)"
 assignment_due: "2026-06-23"
 difficulty: 입문
 estimated_time: 4시간
 ---
 
-import { Aside, Badge, Card, CardGrid } from '@astrojs/starlight/components';
+import { Aside, Steps, Badge, Card, CardGrid } from '@astrojs/starlight/components';
 
 <div class="week-meta">
   <span class="phase-tag">Phase 5</span>
@@ -27,77 +28,364 @@ import { Aside, Badge, Card, CardGrid } from '@astrojs/starlight/components';
   <Badge text="강의일: 2026-06-16" variant="default" />
 </div>
 
-## 최종 발표 일정
+## 이론 (Theory)
 
-개인 프로젝트. 각 학생 **15분 발표 + 5분 Q&A = 20분**. 발표 슬롯은 참여 학생 수에 맞춰 조정된다.
-
-**시간표 예시** (실제 슬롯 수는 참여 학생 수에 맞춰 조정):
-
-| 시간 | 순번 | 비고 |
-|------|------|------|
-| 09:00–09:20 | 1번 | 발표 15분 + Q&A 5분 |
-| 09:20–09:40 | 2번 | |
-| 09:40–10:00 | 3번 | |
-| 10:00–10:15 | 휴식 | |
-| 10:15–10:35 | 4번 | |
-| 10:35–10:55 | 5번 | |
-| ... | ... | 학생 수에 맞춰 확장 |
-| 종료 30분 전 | 동료 평가 작성 | |
-| 종료 10분 전 | 수업 마무리 & 성적 안내 | |
-
-**발표 순서**: 8주차 발표 순서의 역순 (먼저 발표한 학생이 마지막에 발표).
-
-## 동료 평가 기준
-
-각 학생의 발표를 다음 5가지 항목으로 평가한다 (각 20점, 총 100점):
-
-1. **기술적 완성도** — 에이전트 파이프라인이 실제로 동작하는가?
-2. **문제 해결력** — 선택한 문제가 적절하고 해결책이 효과적인가?
-3. **발표의 명확성** — 복잡한 시스템을 이해하기 쉽게 설명했는가?
-4. **Ralph 루프 철학 적용** — 하네스 엔지니어링 원칙을 제대로 구현했는가?
-5. **학습 성찰** — 실패와 교훈을 솔직하게 공유했는가?
-
-## AI 시스템의 미래
+### 이 강의에서 얻은 역량
 
 <CardGrid>
-  <Card title="단기 (2026–2027)" icon="rocket">
-    - HOTL이 표준 개발 방법론으로 정착
-    - EU AI Act 완전 시행으로 Governance-as-Code 필수화
-    - 오픈소스 모델이 상용 API에 근접한 성능 달성
+  <Card title="시스템 사고" icon="open-book">
+    AI를 모델이 아니라 시스템(거버넌스, 도구 경계, 이벤트, 게이트, 사람)으로 다룰 수 있다.
   </Card>
-  <Card title="중기 (2027–2030)" icon="star">
-    - 완전 자율 SDLC — 인간은 요구사항만 제공
-    - 에이전트가 에이전트를 설계하는 메타-에이전틱 시스템
-    - AI 엔지니어 = 시스템 아키텍트 + 감독자 역할 통합
+  <Card title="설계 능력" icon="seti:config">
+    task packet · runtime layer · gate policy · escalation 경로를 직접 설계하고 ADR로 결정 흔적을 남긴다.
+  </Card>
+  <Card title="구현 능력" icon="pencil">
+    Ralph 루프, MCP, vLLM, OpenTelemetry, LLM-as-Judge를 묶어 closed-loop MVP를 만든다.
+  </Card>
+  <Card title="운영 능력" icon="rocket">
+    텔레메트리·replay·release gate·human override를 운영하고 비용·실패율을 정량적으로 보고한다.
   </Card>
 </CardGrid>
 
-<Aside type="note" title="이 수업을 마치며">
-여러분은 이제 단순히 코드를 작성하는 개발자가 아니라, **AI 에이전트를 지휘하는 시스템 엔지니어**다.
-Ralph 루프, HOTL 거버넌스, 멀티에이전트 SDLC — 이것들은 미래 소프트웨어 산업의 표준이 될 것이다.
-이 수업을 시작점으로, 계속 배우고 만들어 나가길 바란다.
+---
+
+### 최종 발표의 목표
+
+최종 발표는 멋진 데모를 보여주는 시간이 아니라, **AI 시스템을 엔지니어링 대상으로 다룰 수 있음을 증명하는 시간**이다. 평가자는 다음을 보고 싶어 한다.
+
+1. 어떤 반복 업무를 해결했는가?
+2. 에이전트가 어디까지 자율 실행했는가?
+3. 하네스가 어떻게 실패를 통제했는가?
+4. 결과 품질을 어떤 근거로 판단했는가?
+5. 다음 버전에서 무엇을 줄이거나 강화할 것인가?
+
+### 최종 발표 일정
+
+| 시간 | 팀 | 비고 |
+|------|-----|------|
+| 09:00-09:15 | 팀 1 | 발표 12분 + 질문 3분 |
+| 09:20-09:35 | 팀 2 | 발표 12분 + 질문 3분 |
+| 09:40-09:55 | 팀 3 | 발표 12분 + 질문 3분 |
+| 10:00-10:15 | 팀 4 | 발표 12분 + 질문 3분 |
+| 10:20-10:35 | 팀 5 | 발표 12분 + 질문 3분 |
+| 10:40-11:00 | 휴식 + 추가 Q&A | |
+| 11:00-11:30 | 동료 평가 작성 | |
+| 11:30-12:00 | 수업 마무리 | |
+
+### 발표 평가 기준
+
+각 팀의 발표는 100점 기준으로 평가한다.
+
+| 항목 | 점수 | 핵심 질문 |
+|------|-----:|----------|
+| 기술적 완성도 | 25 | closed loop가 실제로 동작하는가? |
+| 하네스 설계 | 25 | gate, retry, replay, policy가 구현되었는가? |
+| 문제 해결력 | 15 | 선택한 문제가 적절하고 반복 가능한가? |
+| 관측성과 평가 | 20 | 수치, event log, judge/test 결과가 연결되는가? |
+| 발표와 회고 | 15 | 실패와 scope cut을 솔직하게 설명하는가? |
+
+<Aside type="note" title="좋은 발표의 신호">
+"AI가 이렇게 답했습니다"가 아니라 "이 run id에서 이 task packet이 들어갔고, 이 gate를 통과했으며, 실패 시 이 이벤트가 남았습니다"라고 설명할 수 있어야 한다.
 </Aside>
 
-## 취업 준비 가이드
+#### 발표 증거 체크리스트
 
-이 수업에서 쌓은 역량을 이력서에 어떻게 표현할지:
+최종 발표 슬라이드에는 주장과 증거가 함께 있어야 한다.
+
+| 주장 | 필요한 증거 |
+|------|-------------|
+| 시스템이 동작한다 | live demo 또는 녹화본 + run id |
+| 반복 가능하다 | 같은 task packet 3회 실행 결과 |
+| 안전하게 실패한다 | failure path event log |
+| 품질을 평가했다 | deterministic test + judge + human review 표 |
+| 비용을 이해했다 | token/GPU/operator cost 계산식 |
+| 다음 개선을 안다 | failure reason 기반 backlog |
+
+증거가 없는 주장은 발표 시간에서 줄인다.
+
+### 동료 평가 기준
+
+동료 평가는 칭찬 투표가 아니라 engineering review다. 각 팀에 대해 다음 5가지를 작성한다.
+
+1. 가장 설득력 있었던 설계 결정
+2. 가장 위험해 보이는 failure mode
+3. 이 시스템을 실제로 쓰려면 추가해야 할 gate
+4. 발표에서 가장 명확했던 수치 또는 증거
+5. 한 문장 개선 제안
+
+#### 동료 평가 점수표
+
+| 영역 | 1점 | 3점 | 5점 |
+|------|----|----|----|
+| 문제 명확성 | "AI를 써보고 싶었다" | 한 사용자/한 업무 | 정량화된 반복 비용 |
+| 시스템 설계 | 단일 prompt | role 분리 | runtime layer 매핑 |
+| 증거 | 데모 영상만 | run 1회 결과 | 3회 + replay + judge |
+| 실패 공유 | 감춤 | 일부 인정 | failure log + 대응 명시 |
+| 다음 단계 | 모호 | 기능 추가 | gate/관측성 우선순위 |
+
+### AI 시스템의 미래
+
+Phase 4-5에서 만든 패턴은 2026년 이후의 흐름과 직결된다. 6가지 축을 기억해 두면 졸업 후 어떤 시스템을 만들든 출발점이 된다.
+
+<CardGrid>
+  <Card title="2026-2027: Harness가 제품" icon="rocket">
+    Codex, Claude Code, Gemini CLI, GitHub Agent HQ처럼 모델보다 실행 환경, 권한, sandbox, MCP, review workflow가 차별화 요소가 된다.
+  </Card>
+  <Card title="Agent Ops가 표준 업무" icon="seti:config">
+    MLOps가 모델 배포를 다뤘다면 Agent Ops는 tool boundary, memory, event log, policy gate, human override를 운영한다.
+  </Card>
+  <Card title="Eval-first 문화" icon="approve-check-circle">
+    LLM-as-Judge·human-in-the-loop·offline eval set이 모델 선택과 release 결정의 1차 기준이 된다.
+  </Card>
+  <Card title="Memory & 장기 컨텍스트" icon="open-book">
+    컨텍스트 1M 시대 이후, 어떤 기억을 무엇으로 어떻게 유지·요약·삭제할지가 새 설계 변수다.
+  </Card>
+  <Card title="Tool / Skill Marketplace" icon="puzzle">
+    MCP·skill·subagent가 OS 수준의 표준 인터페이스로 자리잡고, 보안·과금·평가가 함께 따라온다.
+  </Card>
+  <Card title="컴플라이언스 & 안전" icon="seti:lock">
+    EU AI Act, ISO 42001, NIST AI RMF 같은 규제와 governance-as-code가 엔지니어링 표준에 흡수된다.
+  </Card>
+</CardGrid>
+
+### 이 강의에서 이어지는 역량
+
+| 배운 것 | 포트폴리오 표현 |
+|---------|----------------|
+| HOTL 거버넌스 | human approval과 automated policy gate를 분리 설계 |
+| MCP와 tool boundary | agent tool surface를 제한하고 audit 가능한 형태로 구성 |
+| Ralph Loop | 반복 실행 + deterministic backpressure + rollback 구현 |
+| Context Engineering | instruction, task packet, memory, compaction 전략 설계 |
+| vLLM/MLOps | OpenAI-compatible local serving과 telemetry 구성 |
+| LLM-as-Judge | probabilistic evaluation을 deterministic gate와 통합 |
+
+### 수업 전체 일관성 복기
+
+16주차 발표는 1-15주차의 개념을 한 번에 연결하는 자리다.
+
+<div class="diagram">
+  <div class="diagram__title">From Phase 1 Concepts to Capstone Artifacts</div>
+  <div class="diagram__cols diagram__cols--2">
+    <div class="diagram__node diagram__node--blue diagram__node--full">
+      <span class="diagram__node__label">HOTL · MIG · MCP</span>
+      <span class="diagram__node__sub">Phase 1</span>
+      <span class="diagram__node__detail">→ approval / resource boundary / tool boundary</span>
+    </div>
+    <div class="diagram__node diagram__node--cyan diagram__node--full">
+      <span class="diagram__node__label">Ralph Loop · Context · Instruction</span>
+      <span class="diagram__node__sub">Phase 2</span>
+      <span class="diagram__node__detail">→ repeated run / state file / PROMPT.md</span>
+    </div>
+    <div class="diagram__node diagram__node--purple diagram__node--full">
+      <span class="diagram__node__label">Multi-agent SDLC</span>
+      <span class="diagram__node__sub">Phase 3</span>
+      <span class="diagram__node__detail">→ Lead / Planner / Worker / Reviewer</span>
+    </div>
+    <div class="diagram__node diagram__node--orange diagram__node--full">
+      <span class="diagram__node__label">vLLM · Telemetry · Judge</span>
+      <span class="diagram__node__sub">Phase 4</span>
+      <span class="diagram__node__detail">→ serving / OTel / event store / LLM-as-Judge</span>
+    </div>
+    <div class="diagram__node diagram__node--green diagram__node--full">
+      <span class="diagram__node__label">Ralphthon</span>
+      <span class="diagram__node__sub">Phase 5</span>
+      <span class="diagram__node__detail">→ closed-loop MVP / release gate / final demo</span>
+    </div>
+    <div class="diagram__node diagram__node--gray diagram__node--full">
+      <span class="diagram__node__label">Synthesis</span>
+      <span class="diagram__node__sub">Final presentation</span>
+      <span class="diagram__node__detail">→ engineering 대상으로서의 AI 시스템</span>
+    </div>
+  </div>
+</div>
+
+| 초반 개념 | 캡스톤에서 보이는 형태 |
+|----------|----------------------|
+| HOTL | human approval, override, peer review |
+| MIG / resource boundary | 모델 serving budget, 팀별 GPU/queue 분리 |
+| MCP / tool boundary | allowed tools, denied tools, audit log |
+| Ralph Loop | repeated run, deterministic backpressure |
+| Context engineering | task packet, instruction, compact replay state |
+| Multi-agent SDLC | Lead, Planner, Worker, Reviewer handoff |
+| MLOps / telemetry | vLLM metrics, OTel spans, event store |
+
+팀 발표가 이 연결을 설명하면 단순 데모가 아니라 강의 전체의 synthesis가 된다.
+
+### 캡스톤 case study (가상 팀)
+
+학생이 따라갈 수 있도록 가상 팀의 최종 발표 흐름을 1개 풀-텍스트로 제시한다.
+
+<div class="diagram">
+  <div class="diagram__title">Case Study — "Repo Doctor" Team Final Demo</div>
+  <div class="diagram__flow">
+    <div class="diagram__node diagram__node--blue diagram__node--full">
+      <span class="diagram__node__label">Situation</span>
+      <span class="diagram__node__sub">학과 GitHub PR이 매주 30+개. 리뷰어 피로로 평균 reaction time 38h.</span>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--cyan diagram__node--full">
+      <span class="diagram__node__label">Task</span>
+      <span class="diagram__node__sub">PR 변경 파일을 읽고 risk-ranked 리뷰 코멘트 3개를 자동 생성. 사람이 최종 승인.</span>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--purple diagram__node--full">
+      <span class="diagram__node__label">Action</span>
+      <span class="diagram__node__sub">task packet · MCP read-only tools · pytest gate · LLM Judge · OTel · replay snapshot.</span>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--green diagram__node--full">
+      <span class="diagram__node__label">Result</span>
+      <span class="diagram__node__sub">3-run avg reaction 38h → 11h. judge correlation Spearman 0.78. cost / PR $0.04 (local) vs $0.18 (api).</span>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--orange diagram__node--full">
+      <span class="diagram__node__label">Reflection</span>
+      <span class="diagram__node__sub">false-pass 1건 (override 1회). 다음 단계: secret-scan policy gate, 사람 리뷰어 페어링 모드.</span>
+    </div>
+  </div>
+</div>
+
+### 포트폴리오 narrative 설계
+
+최종 제출 후 개인 포트폴리오에는 "무엇을 만들었다"보다 "어떤 엔지니어링 판단을 했다"를 드러낸다.
 
 ```markdown
-## 프로젝트 경험
-- **Ralphthon 캡스톤**: 멀티에이전트 자율 SDLC 설계 및 구현
-  - 기술: Ralph Loop, HOTL, vLLM, DeepSeek-Coder-V2, MCP
-  - 성과: 코드 생성 → 테스트 → 배포 파이프라인 90% 자동화
-  - 인프라: NVIDIA DGX H100 (MIG), Kubernetes
+## Ralphthon Capstone: Agentic Code Review Harness
 
-## 기술 스택
-- AI 시스템: 에이전틱 워크플로우, 하네스 엔지니어링, LLM 운영
-- MLOps: vLLM, OpenTelemetry, LLM-as-Judge
-- 인프라: DGX H100, MIG, Docker, Kubernetes
+- Built a human-on-the-loop agent runtime for repeatable PR review tasks.
+- Designed task packets, scoped tool permissions, event-sourced run logs, and replay snapshots.
+- Integrated deterministic gates (pytest, schema validation) with an LLM-as-Judge quality rubric.
+- Served local coding models through a vLLM OpenAI-compatible API and compared cost/latency against commercial APIs.
+- Reported 3-run success rate, token cost, latency, and failure recovery behavior.
 ```
 
-## 수고했습니다!
+#### STAR + Engineering Decisions 구조
 
-16주 동안 함께 공부한 모든 학생 여러분, 정말 수고했습니다. 😊
-이 강의에서 만든 것들이 여러분의 커리어에 큰 자산이 되길 바랍니다.
+| 항목 | 권장 표현 |
+|------|----------|
+| Situation | "Y 사용자에게 X 문제가 있었고, 비용은 Z" |
+| Task | "우리가 푼 범위는 A, 범위 밖은 B" |
+| Action | "ADR 3개 + task packet + gate 정책" |
+| Result | "수치 + run id + 한계" |
+| Engineering decisions | "왜 이 모델/하네스/평가를 선택했는가" |
+| Next | "다음 버전에서 줄이거나 강화할 항목 1-2개" |
+
+### 지속 학습 로드맵
+
+졸업 직후가 가장 위험하다. 6개월 단위로 학습 목표를 미리 적어 두면 방향이 흔들리지 않는다.
+
+<CardGrid>
+  <Card title="다음 6개월" icon="rocket">
+    캡스톤 시스템에 새 모델·새 task type 1개 추가. SRE 입문서 1권. ADR 10편 누적.
+  </Card>
+  <Card title="다음 1년" icon="seti:config">
+    실제 사용자 5명에게 운영. failure mode 30개 카탈로그화. agent ops 컨퍼런스 톡 1회 시도.
+  </Card>
+  <Card title="다음 2년" icon="open-book">
+    팀 안에서 platform 역할로 이동. MLOps + LLMOps + Agent Ops 통합 사례 1편 발표.
+  </Card>
+</CardGrid>
+
+### 개인 회고 질문
+
+<Steps>
+1. **가장 크게 줄인 scope는 무엇인가?**
+
+   줄인 것이 실패가 아니라 engineering decision이었음을 설명한다.
+
+2. **AI가 반복해서 실패한 지점은 무엇인가?**
+
+   모델 탓으로 끝내지 말고, instruction/gate/context 중 무엇을 바꿨는지 쓴다.
+
+3. **하네스가 없었다면 위험했을 행동은 무엇인가?**
+
+   파일 쓰기, 외부 API, 비용, 보안, 잘못된 판단 중 하나를 구체적으로 쓴다.
+
+4. **다음 버전의 첫 개선은 무엇인가?**
+
+   새 기능보다 관측성, 평가, 안정성 개선을 우선 검토한다.
+</Steps>
+
+### 수업 마무리
+
+이 수업의 핵심 문장은 하나다.
+
+> 모델이 강해질수록, 모델을 둘러싼 하네스가 더 중요해진다.
+
+여러분이 만든 캡스톤은 완제품이 아닐 수 있다. 하지만 task packet, tool boundary, event log, policy gate, judge, telemetry를 직접 연결했다면 이미 AI 시스템을 "프롬프트"가 아니라 "엔지니어링 대상"으로 다룬 것이다.
+
+## 실습 (Practicum)
+
+<Steps>
+1. **최종 발표 수행**
+
+   STAR 흐름으로 15분 발표. live demo + 90초 fallback.
+
+2. **동료 평가 작성**
+
+   각 팀에 대해 5문항 + 1-3-5 점수표를 채운다.
+
+3. **개인 회고 4문항 답변**
+
+   scope cut, 반복 실패, 하네스 가치, 다음 개선을 1단락씩.
+
+4. **포트폴리오 narrative 1쪽 작성**
+
+   STAR + Engineering Decisions 구조로 5문장 + 핵심 수치.
+
+5. **지속 학습 로드맵 등록**
+
+   6개월/1년/2년 카드 3장을 자기 노트에 저장한다.
+</Steps>
+
+## 과제 (Assignment)
+
+<div class="assignment-box">
+
+### 동료 평가와 개인 회고
+
+**제출 마감**: 2026-06-23 23:59
+
+**동료 평가**:
+1. 각 팀에 대한 5문항 평가 제출
+2. 1-3-5 점수표 5영역 채점
+3. 가장 배울 점이 큰 설계 결정 1개 선정
+4. 가장 위험한 failure mode 1개 선정
+
+**개인 회고**:
+1. 본인이 맡은 역할과 실제 기여
+2. AI가 실패한 지점과 하네스로 보완한 방법
+3. 다음 프로젝트에서 유지할 원칙 3개
+4. 포트폴리오용 프로젝트 설명 5문장
+5. 6개월/1년/2년 학습 로드맵 카드 3장
+
+</div>
+
+## 핵심 정리
+
+1. **모델이 아니라 시스템**: AI는 모델이 아니라 거버넌스·도구·이벤트·게이트·사람을 묶은 시스템이다.
+2. **증거 없는 주장은 줄인다**: 슬라이드의 모든 문장에 run id·event log·dashboard가 따라붙어야 한다.
+3. **동료 평가는 칭찬이 아니라 review**: 가장 위험한 failure mode와 추가할 gate를 적시에 명명한다.
+4. **6가지 축으로 미래를 본다**: harness 제품화 / Agent Ops / Eval-first / Memory / Marketplace / Compliance.
+5. **포트폴리오는 결정의 흔적**: 무엇을 만들었는가가 아니라 무엇을 거절했는가가 더 강한 신호다.
+6. **지속 학습은 카드 3장**: 6개월/1년/2년 단위로 구체적 목표를 미리 적어 두면 흔들리지 않는다.
+7. **수업의 한 문장**: 모델이 강해질수록, 모델을 둘러싼 하네스가 더 중요해진다.
+
+## 더 읽을거리
+
+**커리어 / 학습 로드맵**
+- Will Larson, _Staff Engineer_
+- Tanya Reilly, _The Staff Engineer's Path_
+- Charity Majors, "The Engineer / Manager Pendulum"
+
+**미래 전망 / 정책**
+- Anthropic, "Building Anthropic" (정기 업데이트)
+- EU AI Act 본문 / 요약본
+- NIST AI RMF 1.0
+- Stanford HAI AI Index Report
+
+**커뮤니티**
+- LangChain · LlamaIndex · MCP 커뮤니티 채널
+- KAIST AI 시스템 세미나, 한국정보과학회 SW공학회
 
 **질문이나 피드백**: yj.lee@chu.ac.kr 또는 [GitHub Issue](https://github.com/halla-ai/ai-systems-2026/issues)

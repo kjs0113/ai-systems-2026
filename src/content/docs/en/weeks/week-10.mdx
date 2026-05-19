@@ -1,23 +1,22 @@
 ---
-title: "Week 10: Open-Source Coding LLMs and Local Deployment"
-description: Beyond commercial APIs — deploying open-source LLMs like Gemma 4, GLM-5.1, Qwen3-Coder, and DeepSeek V3 directly, with economic analysis
+title: "Week 10: Open-Weight Coding LLMs and Local Deployment"
+description: Beyond commercial APIs — open-weight model candidates, AI coding CLIs, and vLLM-based local inference operations
 week: 10
 phase: 4
 phase_title: Open-Source Models & MLOps
 date: "2026-05-05"
 theory_topics:
-  - The 2026 open-source coding LLM landscape (Gemma 4, GLM-5.1, Qwen3-Coder, DeepSeek V3, GLM-4.7)
-  - Open-source vs commercial API comparison
-  - Agentic coding tool ecosystem
+  - 2026 open-weight coding LLM landscape
+  - Selection criteria for commercial APIs, cloud agents, and local models
+  - vLLM/SGLang OpenAI-compatible inference servers
 lab_topics:
-  - Deploying open-source models with vLLM
-  - Deploying cloud/local models with Ollama
-  - Connecting local models in AI coding CLIs
-  - Inference server performance benchmarking
-assignment: "Lab 10: Open-Source Model Deployment (vLLM / Ollama)"
+  - Deploy open-weight models with vLLM
+  - Connect AI coding CLIs to local models
+  - Inference server performance / cost benchmarking
+assignment: "Lab 10: vLLM deployment practicum"
 assignment_due: "2026-05-12"
 difficulty: advanced
-estimated_time: "8 hours"
+estimated_time: 8 hours
 ---
 
 import { Aside, Steps, Badge, Card, CardGrid, Tabs, TabItem } from '@astrojs/starlight/components';
@@ -31,328 +30,521 @@ import { Aside, Steps, Badge, Card, CardGrid, Tabs, TabItem } from '@astrojs/sta
 
 ## Theory
 
-### The 2026 Open-Source Coding LLM Landscape
-
-Through 2025–2026, open-source coding models reached a level that matches or, on certain benchmarks, surpasses commercial models like Claude and GPT-4o. The MoE (Mixture-of-Experts) architecture has become mainstream, enabling efficient inference by activating only a small fraction of parameters relative to the total.
-
-#### Key Model Comparison
-
-| Model | Total Params | Active Params | Context | VRAM Requirement (FP16) | License |
-|-------|-------------|--------------|---------|------------------------|---------|
-| **Gemma 4** | 31B (Dense) | Full | 256K | ~20GB (Q4) | Apache 2.0 |
-| **GLM-5.1** | Undisclosed | Undisclosed | 198K | Cloud-only | MIT |
-| **Qwen3-Coder** | 235B (MoE) | 22B | 128K | ~48GB (Q4) | Apache 2.0 |
-| **DeepSeek V3** | 685B (MoE) | 37B | 128K | 350GB+ (Q4, multi-GPU) | DeepSeek |
-| **GLM-4.7** | ~32B | Full | 128K | ~24GB (Q4) | Apache 2.0 |
-| **MiniMax M2.1** | 230B (MoE) | 10B | 128K | ~80GB+ | Apache 2.0 |
-| **DeepSeek-Coder-V2** | 236B (MoE) | 21B | 128K | ~48GB (Q4) | DeepSeek |
-
-#### Qwen3-Coder (Alibaba)
-
-The latest MoE model specifically fine-tuned for coding and agentic tasks. It delivers performance approaching Claude Sonnet 4 on SWE-bench Verified and provides the strongest coding performance among 32B-class models. Smaller 14B/8B variants deliver practical performance on a single GPU.
-
-#### Gemma 4 (Google)
-
-A 31B dense model built on the same research behind Gemini 3, with a 256K token context window that allows processing entire codebases in a single prompt. It achieves 80% on LiveCodeBench v6, making it the top-performing open-source coding model, along with 89.2% on AIME 2026, 2150 Codeforces ELO, and 85.2% on MMLU Pro, demonstrating strong reasoning capabilities.
-
-Gemma 4 supports native function calling at the model level, simplifying integration with agentic tool-calling pipelines. Lighter variants include a 26B MoE model and E2B/E4B edge models (128K context). It can be deployed via Ollama on the cloud (NVIDIA Blackwell GPUs) or locally. Licensed under Apache 2.0 with no restrictions on commercial use or fine-tuning.
-
-<Aside type="tip" title="Native Function Calling and Agentic Workflows">
-Gemma 4 natively supports function calling at the model level. It can directly generate the structured output covered in [Week 5](/en/weeks/week-05/) without additional parsing, significantly reducing the complexity of agentic tool-calling pipelines.
-</Aside>
-
-#### GLM-5.1 (Z.AI)
-
-The successor to GLM-4.7, specifically designed for long-horizon agentic tasks. MIT licensed with 198K context support. It scores 58.4 on SWE-Bench Pro, surpassing GPT-5.4 (57.7) and Opus 4.6 (57.3), and achieves 69.0 on Terminal Bench 2.0 and 68.7 on cybersecurity benchmarks, both top-tier results.
-
-Its key differentiator is long-horizon execution capability. It can perform 600+ iterations and 6,000+ tool calls in a single session, with performance improving as runtime increases. Currently available via Ollama Cloud and the Z.AI API.
-
-<Aside type="caution" title="Long-Horizon Agent Capabilities and Limitations">
-Z.AI demonstrated GLM-5.1's long-horizon capabilities across three scenarios: vector DB optimization (21.5k QPS over 600 iterations — 6x the best single-session result), GPU kernel optimization (1,000+ turns), and Linux desktop build (8 hours of continuous self-review). These are extreme extensions of the Ralph loop concept from [Week 4](/en/weeks/week-04/), illustrating the current frontier of agent autonomy.
-</Aside>
-
-#### DeepSeek V3 (DeepSeek)
-
-685B MoE, top-tier in math, reasoning, and coding. However, even quantized it requires 350GB+ of VRAM, making an 8×H100-class cluster essentially mandatory. The strongest open model if you have datacenter-scale infrastructure.
-
-#### GLM-4.7 (Zhipu AI)
-
-Dense model with ~32B parameters, runnable on a single 48GB GPU. Its Interleaved Thinking feature delivers high reasoning quality, and it is evaluated at Claude-level on coding benchmarks. Weights are publicly available on HuggingFace/ModelScope. Its successor GLM-5.1 shows significant performance gains on long-horizon agentic tasks (see the GLM-5.1 section above).
-
-#### MiniMax M2.1
-
-230B MoE, 10B active. Specifically designed for coding agents and tool use. Fully open weights. While the active parameter count is small thanks to MoE, loading the full model requires 80GB+ of VRAM.
-
-<Aside type="tip" title="MoE Architecture Efficiency">
-Qwen3-Coder activates only 22B out of 235B parameters for inference. It can run on a single H100 (80GB), and with 4-bit quantization it can even operate at the RTX 4090 (24GB) level.
-</Aside>
-
-#### Hardware-Based Model Selection Guide
-
-| Environment | GPU VRAM | Recommended Models |
-|-------------|---------|-------------------|
-| Personal PC (RTX 4090) | 24GB | Gemma 4 E4B, Qwen3-Coder 14B/8B, GLM-4.7 (Q4) |
-| Workstation (A6000/H100 ×1) | 48–80GB | Gemma 4 31B, Qwen3-Coder 32B, GLM-4.7 (FP16) |
-| DGX H100 (MIG 2–4 slices) | 160–320GB | DeepSeek-Coder-V2, MiniMax M2.1 |
-| DGX H100 (full 8 GPUs) | 640GB | DeepSeek V3 (Q4) |
-
-> GLM-5.1 is currently available only via Ollama Cloud and the Z.AI API.
-
-### Open-Source vs Commercial API Comparison
+### Learning Objectives
 
 <CardGrid>
-  <Card title="Commercial API (Claude, GPT-4)" icon="external">
-    - Pros: Ready to use immediately, no maintenance required
-    - Cons: Data privacy concerns, unpredictable costs, API limits
-    - Cost: ~$15/1M tokens (input)
+  <Card title="Concepts" icon="open-book">
+    Distinguish open-weight from open-source, and place the major 2026 coding LLM families (Qwen3-Coder, DeepSeek-V4, GLM-5.1, MiniMax-M2.7, DeepSeek-Coder-V2-Lite) on the landscape.
   </Card>
-  <Card title="Open-Source (DeepSeek + vLLM)" icon="laptop">
-    - Pros: Full control, data kept in-house, predictable costs
-    - Cons: Initial setup cost, maintenance required
-    - Cost: H100 server costs only (~$0.001/token)
+  <Card title="Design" icon="seti:config">
+    Compare commercial API, cloud agent, and local inference along data-boundary, cost, and operational-complexity axes, and map the choices into a decision tree.
+  </Card>
+  <Card title="Implementation" icon="pencil">
+    Bring up an OpenAI-compatible server with `vllm serve` on single GPU, multi-GPU, and MIG configurations, and unify alias / tool parser / token accounting through a model adapter.
+  </Card>
+  <Card title="Operations" icon="rocket">
+    Run identical tasks on a commercial model and a local model under the same harness, and quantitatively compare throughput, latency, failure rate, and projected cost.
   </Card>
 </CardGrid>
 
-### Agentic Coding Tool Ecosystem (2026)
+---
+
+### 2026 open-weight coding LLM landscape
+
+The defining shift of 2026 is that open-weight models have become candidates that can be compared with commercial models inside real agent harnesses. Coding performance is no longer the only axis: tool calling, long context, inference-server compatibility, license, and operating cost are now compared together.
+
+<Aside type="note" title="Open-source vs open-weight">
+Many "open" releases are not open-source in the full sense — training code and data are typically not public, only the weights and inference rights. This course uses **open-weight model** as the default term for accuracy.
+</Aside>
+
+#### Family tree
+
+<div class="diagram">
+  <div class="diagram__title">Open-weight Coding LLM 2026</div>
+  <div class="diagram__flow">
+    <div class="diagram__node diagram__node--blue diagram__node--wide">
+      <span class="diagram__node__label">Open-weight Coding LLM (2026)</span>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__cols diagram__cols--4">
+      <div class="diagram__node diagram__node--cyan diagram__node--full">
+        <span class="diagram__node__label">Qwen</span>
+        <span class="diagram__node__sub">Qwen3-Coder-Next 80B MoE · 3B active · 256K</span>
+        <span class="diagram__node__detail">Qwen3-Coder-30B-A3B</span>
+      </div>
+      <div class="diagram__node diagram__node--purple diagram__node--full">
+        <span class="diagram__node__label">DeepSeek</span>
+        <span class="diagram__node__sub">V4-Pro 1.6T MoE · 1M ctx</span>
+        <span class="diagram__node__detail">V4-Flash 284B MoE · Coder-V2-Lite 16B</span>
+      </div>
+      <div class="diagram__node diagram__node--orange diagram__node--full">
+        <span class="diagram__node__label">GLM</span>
+        <span class="diagram__node__sub">GLM-5.1</span>
+        <span class="diagram__node__detail">agentic engineering</span>
+      </div>
+      <div class="diagram__node diagram__node--green diagram__node--full">
+        <span class="diagram__node__label">MiniMax</span>
+        <span class="diagram__node__sub">MiniMax-M2.7</span>
+        <span class="diagram__node__detail">agent + office</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+#### Major models compared (2026-05)
+
+| Model | Release form | Parameters | Context | Strengths | Operational notes |
+|------|--------------|------------|---------|-----------|------------------|
+| **Qwen3-Coder-Next** | Apache 2.0 | 80B MoE, 3B active | 256K | agentic coding, tool calling, local development | More lightweight coding-agent candidate than the larger previous generation |
+| **DeepSeek-V4-Pro / Flash** | Public model card | 1.6T / 284B MoE | 1M | long-context reasoning, coding, agentic tasks | Pro for quality, Flash for efficiency |
+| **GLM-5.1** | Public weights | public GLM family | long-context agent work | agentic engineering, coding, tool use | GLM-family comparison baseline |
+| **MiniMax-M2.7** | Public model card | 230B-class MoE | long agentic workflow | coding, search, office work, long-horizon agents | MiniMax-family agentic candidate |
+| **DeepSeek-Coder-V2-Lite** | DeepSeek | 16B / 236B family | 128K | single-GPU labs, code edit/completion | Suitable for teaching labs, but not for a high-performance baseline |
+
+#### Reading model cards in order
+
+Read operational constraints before benchmark tables. Evaluate candidates in this order.
+
+| Step | Question | Disqualifier |
+|------|----------|--------------|
+| License | Can it be used in class, research, and commercial PoCs? | Redistribution / service terms unclear |
+| Serving support | Is vLLM, SGLang, or Transformers officially supported? | Only community patches, no official examples |
+| Tool format | How are tool calls, JSON mode, and reasoning outputs represented? | Parser must be patched ad hoc each time |
+| Context policy | Do max context and recommended context differ? | "1M context" claim without GPU budget |
+| Failure behavior | How do OOM, invalid JSON, refusal, and timeout surface? | Failures unstructured, retry policy hard to design |
+
+The entries in the table are candidates as of the lecture date. The capstone selection criterion is not the model name but **the reproducible result of running the same task packet with the same harness**.
+
+#### Qwen3-Coder
+
+Qwen3-Coder-Next is an 80B-total / 3B-active MoE model with 256K context, foregrounding agentic coding and tool calling. It is a smaller and faster coding-agent candidate than its larger predecessors and serves as our Qwen-family baseline.
+
+Operationally, Qwen3-Coder is meaningful beyond raw coding performance because long repository context, function-calling format, and vLLM/SGLang deployment support combine to make it a viable candidate for **building agentic coding harnesses on local or institutional servers**.
+
+#### DeepSeek-V4
+
+DeepSeek-V4-Pro and DeepSeek-V4-Flash are comparison candidates from the DeepSeek V4-family model cards. With 1.6T/284B MoE and 1M context, V4-Pro targets quality and long-context reasoning; V4-Flash targets efficiency and throughput.
+
+| Family member | Course usage |
+|---------------|--------------|
+| DeepSeek-Coder-V2-Lite | Easy-to-run educational model |
+| DeepSeek-V4-Pro | DeepSeek high-capability comparison baseline |
+| DeepSeek-V4-Flash | Cost / throughput baseline |
+| Earlier DeepSeek generations | Long-context regression baseline |
+
+#### GLM-5.1
+
+GLM-5.1 is a public GLM-family candidate for comparing agentic engineering and coding workflows. The lesson is constant: changing the `model=` value is not sufficient — **the harness must understand each model's tool/reasoning parser and serving options**.
+
+#### MiniMax-M2.7
+
+MiniMax-M2.7 is a MiniMax-family agentic-workflow candidate, emphasizing search, office work, and long-horizon agentic tasks alongside coding. Provider benchmark numbers are treated as candidate signals, not as final rankings. The Week 10 lab compares them on the same task, harness, budget, and rubric.
+
+<Aside type="caution" title="Reading benchmark numbers">
+SWE-bench, Terminal-Bench, and BrowseComp scores depend heavily on harness, prompt, tool policy, and retry budget. Use model tables to choose what to test, but rely on lab-reproduced results for the final selection.
+</Aside>
+
+### Choosing a model is choosing a harness
+
+Adopting open-weight models is not limited to API cost reduction. There are three real options.
+
+<CardGrid>
+  <Card title="Commercial API" icon="external">
+    Use Claude, GPT, or Gemini APIs directly. High quality and easy to operate, but data boundary, cost predictability, and rate limits must be managed.
+  </Card>
+  <Card title="Cloud Agents" icon="rocket">
+    Use Codex Web/App, Claude Code on the Web, or GitHub Agent HQ — remote sandbox plus GitHub integration. Strong for asynchronous work and review flow.
+  </Card>
+  <Card title="Local Inference" icon="laptop">
+    Serve OpenAI-compatible APIs through vLLM/SGLang. Strong on data boundaries and predictable GPU cost; operational complexity is higher.
+  </Card>
+</CardGrid>
+
+#### Decision matrix
+
+| Criterion | Commercial API | Cloud Agent | Local Inference |
+|-----------|---------------|-------------|----------------|
+| Time-to-start | very fast | fast | slow |
+| Data control | low–medium | medium | high |
+| Long-term cost | usage-driven | seat / usage | GPU fixed cost |
+| Access to newly released models | fast | fast | after model release |
+| Operational difficulty | low | medium | high |
+| Educational value | API design | workflow design | MLOps / infra understanding |
+
+#### Model-selection decision tree
+
+<div class="diagram">
+  <div class="diagram__title">Model Selection Decision Tree</div>
+  <div class="diagram__flow">
+    <div class="diagram__node diagram__node--gray diagram__node--wide">
+      <span class="diagram__node__label">Q1. Can data leave our boundary?</span>
+    </div>
+    <div class="diagram__branch">
+      <div style="background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.25); color: #22C55E;">
+        <span class="diagram__branch__icon">✓ Yes</span>
+      </div>
+      <div style="background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); color: #EF4444;">
+        <span class="diagram__branch__icon">✗ No</span>
+        <span class="diagram__branch__desc">→ Local inference vLLM/SGLang</span>
+      </div>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--gray diagram__node--wide">
+      <span class="diagram__node__label">Q2. Need top-tier model quality?</span>
+    </div>
+    <div class="diagram__branch">
+      <div style="background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.25); color: #22C55E;">
+        <span class="diagram__branch__icon">✓ Yes</span>
+      </div>
+      <div style="background: rgba(249,115,22,0.07); border: 1px solid rgba(249,115,22,0.25); color: #F97316;">
+        <span class="diagram__branch__icon">✗ No</span>
+        <span class="diagram__branch__desc">→ Commercial API + cache + budget gate</span>
+      </div>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--gray diagram__node--wide">
+      <span class="diagram__node__label">Q3. Interactive IDE or async PR?</span>
+    </div>
+    <div class="diagram__branch">
+      <div style="background: rgba(37,99,235,0.10); border: 1px solid rgba(37,99,235,0.30); color: #3B82F6;">
+        <span class="diagram__branch__icon">Interactive</span>
+        <span class="diagram__branch__desc">Commercial API + Claude Code / Codex CLI</span>
+      </div>
+      <div style="background: rgba(124,58,237,0.08); border: 1px solid rgba(124,58,237,0.25); color: #7C3AED;">
+        <span class="diagram__branch__icon">Async PR</span>
+        <span class="diagram__branch__desc">Cloud agent — GitHub Agent HQ</span>
+      </div>
+    </div>
+    <div class="diagram__arrow">▼</div>
+    <div class="diagram__node diagram__node--gray diagram__node--wide">
+      <span class="diagram__node__label">Q4. (Local path) Is one model enough?</span>
+    </div>
+    <div class="diagram__branch">
+      <div style="background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.25); color: #22C55E;">
+        <span class="diagram__branch__icon">✓ Yes</span>
+        <span class="diagram__branch__desc">Single model + admission control</span>
+      </div>
+      <div style="background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); color: #EF4444;">
+        <span class="diagram__branch__icon">✗ No</span>
+        <span class="diagram__branch__desc">Routing gateway</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+The tree is not gospel — it is the **starting point for a written decision**. Capture the branch and a one-to-two-sentence rationale in the capstone ADR.
+
+### vLLM / SGLang / TGI compared
+
+Operating an open-weight model needs an inference server. The course uses vLLM by default, but you should be able to compare candidates.
+
+| Criterion | vLLM | SGLang | TGI (Hugging Face) |
+|----------|------|--------|--------------------|
+| OpenAI-compatible API | yes | yes | yes |
+| Continuous batching | ✓ | ✓ | ✓ |
+| Prefix caching | automatic | RadixAttention | partial |
+| Speculative decoding | ✓ | ✓ | some models |
+| Disaggregated prefill | ✓ | experimental | × |
+| Tool / structured output | ✓ (auto-tool, guided JSON) | ✓ (constrained decoding) | ✓ |
+| Operational complexity | mid | mid–high | low |
+| Community | very active | growing fast | stable |
+| Recommended use | default labs / capstone | RadixAttention study | quick PoC |
+
+### Cost worksheet
+
+To compare commercial APIs and local inference on the same axis, account for both token price and GPU amortization.
+
+| Item | Formula |
+|------|---------|
+| Per-call commercial cost | `(prompt_tokens × in_price) + (completion_tokens × out_price)` |
+| GPU hourly cost | `rental rate or (purchase / depreciation hours) + power` |
+| Per-call local cost | `GPU hourly cost × (run_latency_s / 3600) / concurrent calls` |
+| Break-even calls | `GPU hourly cost / average per-call API cost` |
+
+```text
+Example
+  - Commercial API example: $3/M in, $15/M out → ~$0.012 per call (3K in, 600 out)
+  - DGX H100 ~ $4.5/hr (instructional-rate assumption), 4 concurrent calls
+  - Local cost ≈ 4.5 / 4 / (3600/12) ≈ $0.0038
+  - Break-even: above ~375 calls per hour, local wins
+```
+
+This table can be used in the capstone slide titled "why we chose local."
+
+### Agentic coding tool ecosystem
 
 <div class="diagram">
   <div class="diagram__title">AGENTIC CODING TOOL ECOSYSTEM (2026)</div>
   <div class="diagram__cols diagram__cols--3">
     <div>
-      <div class="diagram__col-title diagram__col-title--blue">Commercial</div>
+      <div class="diagram__col-title diagram__col-title--blue">Agent Harness</div>
       <div class="diagram__node diagram__node--blue diagram__node--full">
         <ul>
-          <li>Claude Code (Anthropic)</li>
-          <li>Gemini CLI (Google, free)</li>
-          <li>Codex CLI (OpenAI)</li>
-          <li>Cursor (GPT-4o)</li>
-          <li>GitHub Copilot</li>
-          <li>Amazon Q</li>
+          <li>Claude Code: subagents, hooks, skills, MCP</li>
+          <li>Codex CLI/App/Web: sandbox, AGENTS.md, MCP, subagents</li>
+          <li>Gemini CLI: 1M context, Google Search grounding, MCP</li>
+          <li>GitHub Agent HQ: choose Claude or Codex inside GitHub</li>
         </ul>
       </div>
     </div>
     <div>
-      <div class="diagram__col-title diagram__col-title--green">Open Weights Models</div>
+      <div class="diagram__col-title diagram__col-title--green">Open-Weight Models</div>
       <div class="diagram__node diagram__node--green diagram__node--full">
         <ul>
-          <li>Gemma 4 (Google, 31B Dense, 256K)</li>
-          <li>GLM-5.1 (Z.AI, MIT, 198K)</li>
-          <li>Qwen3-Coder (Alibaba, 235B MoE)</li>
-          <li>DeepSeek V3 (685B MoE)</li>
-          <li>GLM-4.7 (Zhipu AI, ~32B Dense)</li>
-          <li>MiniMax M2.1 (230B MoE)</li>
-          <li>DeepSeek-Coder-V2 (236B MoE)</li>
-          <li>Qwen3 14B/8B (lightweight)</li>
+          <li>Qwen3-Coder-Next</li>
+          <li>DeepSeek-V4-Pro / Flash</li>
+          <li>GLM-5.1</li>
+          <li>MiniMax-M2.7</li>
+          <li>DeepSeek-Coder-V2-Lite</li>
         </ul>
       </div>
     </div>
     <div>
-      <div class="diagram__col-title diagram__col-title--purple">Open Tools</div>
+      <div class="diagram__col-title diagram__col-title--purple">Serving + Control Plane</div>
       <div class="diagram__node diagram__node--purple diagram__node--full">
         <ul>
-          <li>OpenCode (multi-backend TUI)</li>
-          <li>Roo Code / Cline (VS Code extensions)</li>
-          <li>vLLM / SGLang (inference servers)</li>
-          <li>Ollama (local/cloud deployment)</li>
+          <li>vLLM / SGLang: OpenAI-compatible serving</li>
+          <li>LiteLLM / gateway: routing, budget, policy</li>
+          <li>OpenTelemetry: trace, metrics, logs</li>
+          <li>Agent OS Runtime: event store, contracts, replay</li>
         </ul>
       </div>
     </div>
   </div>
 </div>
 
-<Aside type="note" title="Can Local LLMs Replace Claude Code?">
-Small teams are increasingly using local models to cut API costs of $2K+/month.
-Models like Gemma 4, Qwen3-Coder, and GLM-4.7 show results similar to commercial models for everyday coding tasks (code completion, bug fixing, PR summarization).
-However, for complex architectural design or large-scale refactoring, Opus/Sonnet-class models still hold the advantage.
-</Aside>
+> See the [AI coding tool selection guide](/en/reference/tool-selection) for terminal-based AI CLIs.
 
-> For a comparison of terminal-based AI coding CLI tools, see the [AI Coding Tool Selection Guide](/en/reference/tool-selection).
+### Why OpenAI-compatible APIs become the standard interface
+
+vLLM and SGLang both expose OpenAI-compatible `/v1/chat/completions` (or Responses-style) clients. Using this interface decouples the harness from any single model provider.
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="http://localhost:8000/v1",
+    api_key="local-dev-token",
+)
+
+response = client.chat.completions.create(
+    model="Qwen/Qwen3-Coder-Next",
+    messages=[
+        {"role": "system", "content": "You are a careful coding agent."},
+        {"role": "user", "content": "Add tests for the parser edge cases."},
+    ],
+    temperature=0.2,
+)
+```
+
+The point is the abstraction stack.
+
+| Layer | Responsibility |
+|-------|---------------|
+| Agent CLI | file I/O, command execution, user approval, workflow |
+| Gateway | model routing, budget, rate limits, audit |
+| Serving | batching, KV cache, speculative decoding, GPU scheduling |
+| Model | token generation, tool-call JSON, reasoning output |
+
+#### Model adapter checklist
+
+OpenAI compatibility is the starting line. To swap models in production, the adapter must absorb the following.
+
+| Item | Implementation criterion |
+|------|------------------------|
+| Model alias | Use stable course-level names like `local-coder`, `qwen3-coder`, `glm-5.1` |
+| Message template | system/developer/user/tool messages must not collide with the model's chat template |
+| Tool parser | Per-model parsing for tool-call JSON, XML-like blocks, and plain-text plans |
+| Retry policy | Distinguish timeout, invalid JSON, context overflow, and refusal as separate failure reasons |
+| Token accounting | Connect prompt/completion/cache tokens with run_id |
+| Evaluation hook | Same task packet must be runnable across commercial and local models |
+
+Without this checklist, "model interchangeable" is an unimplemented claim, not an operational property.
+
+```python
+# adapter.py — a thin layer that unifies alias, tool parsing, and token accounting
+from dataclasses import dataclass
+from typing import Callable, Any
+
+@dataclass
+class ModelSpec:
+    alias: str
+    backend_url: str
+    backend_model: str
+    tool_parser: Callable[[str], list[dict]]
+    chat_template: str | None = None
+
+REGISTRY: dict[str, ModelSpec] = {}
+
+def register(spec: ModelSpec) -> None:
+    REGISTRY[spec.alias] = spec
+
+def call(alias: str, messages: list[dict], **kw) -> dict:
+    spec = REGISTRY[alias]
+    from openai import OpenAI
+    client = OpenAI(base_url=spec.backend_url, api_key="local")
+    resp = client.chat.completions.create(
+        model=spec.backend_model, messages=messages, **kw
+    )
+    text = resp.choices[0].message.content
+    tools = spec.tool_parser(text)
+    return {
+        "alias": alias,
+        "text": text,
+        "tools": tools,
+        "usage": resp.usage.model_dump(),
+    }
+```
 
 ## Practicum
 
-### Deploying Open-Source Models with vLLM
+### Deploy open-weight models with vLLM
 
 <Steps>
-1. **Install vLLM on the DGX Server**
+1. **Verify the environment**
 
    ```bash
-   # Inside a MIG slice
-   pip install vllm
+   nvidia-smi
+   python --version
+   uv venv .venv
+   source .venv/bin/activate
+   uv pip install vllm openai
    ```
 
-2. **Select a Model and Start the Server**
+2. **Pick a lab model**
 
    <Tabs>
-     <TabItem label="Qwen3-Coder (Recommended)">
+     <TabItem label="Educational default">
        ```bash
-       python -m vllm.entrypoints.openai.api_server \
-         --model Qwen/Qwen3-Coder-32B-Instruct \
-         --tensor-parallel-size 1 \
+       vllm serve deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct \
+         --served-model-name local-coder \
          --max-model-len 32768 \
          --port 8000
        ```
      </TabItem>
-     <TabItem label="DeepSeek-Coder-V2">
+     <TabItem label="Qwen3-Coder-Next">
        ```bash
-       python -m vllm.entrypoints.openai.api_server \
-         --model deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct \
-         --tensor-parallel-size 1 \
-         --max-model-len 32768 \
-         --port 8000
-       ```
-     </TabItem>
-     <TabItem label="Gemma 4">
-       ```bash
-       python -m vllm.entrypoints.openai.api_server \
-         --model google/gemma-4-31b-it \
-         --tensor-parallel-size 1 \
+       vllm serve Qwen/Qwen3-Coder-Next \
+         --served-model-name qwen3-coder \
+         --tensor-parallel-size 2 \
          --max-model-len 65536 \
          --port 8000
        ```
      </TabItem>
-     <TabItem label="GLM-4.7">
+     <TabItem label="GLM-5.1">
        ```bash
-       python -m vllm.entrypoints.openai.api_server \
-         --model THUDM/glm-4-9b-chat \
-         --tensor-parallel-size 1 \
-         --max-model-len 32768 \
+       vllm serve zai-org/GLM-5.1 \
+         --served-model-name glm-5.1 \
+         --tensor-parallel-size 4 \
+         --enable-auto-tool-choice \
          --port 8000
        ```
      </TabItem>
+     <TabItem label="DGX MIG multi-model">
+       ```bash
+       # GPU 0 slice a: educational model
+       CUDA_VISIBLE_DEVICES=MIG-0/0 vllm serve \
+         deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct \
+         --served-model-name local-coder --port 8001 &
+
+       # GPU 0 slice b: evaluation model
+       CUDA_VISIBLE_DEVICES=MIG-0/1 vllm serve \
+         Qwen/Qwen3-Coder-Next \
+         --served-model-name qwen3-coder --port 8002 &
+       ```
+     </TabItem>
    </Tabs>
 
-3. **Test with the OpenAI-Compatible API**
-
-   ```python
-   import openai
-
-   client = openai.OpenAI(
-       base_url="http://localhost:8000/v1",
-       api_key="token-abc"
-   )
-
-   response = client.chat.completions.create(
-       model="Qwen/Qwen3-Coder-32B-Instruct",  # name of the running model
-       messages=[{"role": "user", "content": "Implement quicksort in Python"}]
-   )
-   print(response.choices[0].message.content)
-   ```
-
-4. **Use a Local Model in an AI Coding CLI**
-
-   vLLM's OpenAI-compatible API allows tools like Claude Code and OpenCode to use a local model as a backend.
+3. **Test the OpenAI-compatible API**
 
    ```bash
-   # Connect local vLLM in OpenCode
-   export OPENAI_API_BASE="http://localhost:8000/v1"
-   export OPENAI_API_KEY="token-abc"
-   opencode
+   curl http://localhost:8000/v1/chat/completions \
+     -H "Content-Type: application/json" \
+     -d '{
+       "model": "local-coder",
+       "messages": [
+         {"role": "user", "content": "Implement a stable topological sort in Python."}
+       ],
+       "temperature": 0.2
+     }'
    ```
 
-5. **Performance Benchmarking**
+4. **Run the same five tasks on two models**
+
+   Each team runs five identical tasks against one commercial API and one local model.
+
+   | Task | Evaluation criterion |
+   |------|---------------------|
+   | Bug fix | Tests pass |
+   | Refactoring | Behavior preserved + readability |
+   | Test generation | Coverage and edge cases |
+   | Documentation update | Faithful to the change |
+   | Add a CLI feature | Requirements met + UX |
+
+5. **Measure cost and throughput**
 
    ```bash
-   # Throughput benchmark
-   python -m vllm.benchmarks.benchmark_throughput \
-     --model Qwen/Qwen3-Coder-32B-Instruct \
+   python -m vllm.benchmarks.benchmark_serving \
+     --backend openai-chat \
+     --base-url http://localhost:8000 \
+     --model local-coder \
      --num-prompts 100 \
-     --input-len 512 \
-     --output-len 128
+     --request-rate 4
    ```
+
+6. **Register a model adapter**
+
+   Use the `adapter.py` pattern to register two or three aliases (e.g., local-coder, qwen3-coder, gpt-baseline) and run the same task packet by changing only the alias.
 </Steps>
 
-### Deploying with Ollama (Cloud/Local)
-
-While vLLM is suited for high-throughput production environments, Ollama offers a simpler setup for development and prototyping. Through its partnership with NVIDIA, Ollama can also run models on cloud GPUs, enabling access to large models without local hardware.
-
-<Steps>
-1. **Install Ollama**
-
-   ```bash
-   # macOS
-   brew install ollama
-
-   # Linux
-   curl -fsSL https://ollama.com/install.sh | sh
-
-   # Verify installation
-   ollama --version
-   ```
-
-2. **Run Cloud Models (No GPU Required)**
-
-   Ollama Cloud performs remote inference on NVIDIA Blackwell GPUs. You get full model performance without local GPU hardware.
-
-   <Tabs>
-     <TabItem label="Gemma 4">
-       ```bash
-       # Gemma 4 31B Cloud — 256K context auto-configured
-       ollama pull gemma4:31b-cloud
-       ollama launch claude --model gemma4:31b-cloud
-       ```
-     </TabItem>
-     <TabItem label="GLM-5.1">
-       ```bash
-       # GLM-5.1 Cloud — 198K context
-       ollama run glm-5.1:cloud
-       ollama launch claude --model glm-5.1:cloud
-       ```
-     </TabItem>
-   </Tabs>
-
-3. **Run Local Models**
-
-   Choose a model size that matches your hardware.
-
-   ```bash
-   # Edge model (10GB+ VRAM) — runs on laptops
-   ollama pull gemma4:e4b
-   ollama launch claude --model gemma4:e4b
-
-   # 26B MoE (18GB+ VRAM)
-   ollama pull gemma4:26b
-   ollama launch claude --model gemma4:26b
-
-   # 31B Dense (20GB+ VRAM) — maximum quality
-   ollama pull gemma4:31b
-   ollama launch claude --model gemma4:31b
-   ```
-
-4. **Connect to AI Coding CLIs**
-
-   Ollama provides an OpenAI-compatible API at `localhost:11434`.
-
-   ```bash
-   # Use Ollama backend in OpenCode
-   export OPENAI_API_BASE="http://127.0.0.1:11434/v1"
-   export OPENAI_API_KEY="ollama"
-   opencode
-   ```
-
-5. **vLLM vs Ollama Comparison**
-
-   | Aspect | vLLM | Ollama |
-   |--------|------|--------|
-   | Setup complexity | Requires CUDA/Python environment | Single command |
-   | Batch processing | High throughput (PagedAttention) | Single-request optimized |
-   | Cloud deployment | Manual server configuration | Ollama Cloud (NVIDIA partnership) |
-   | Model management | Manual download from HuggingFace | `ollama pull` auto-management |
-   | Best for | Production, high concurrency | Development, prototyping, personal use |
-</Steps>
+<Aside type="tip" title="What matters in the lab">
+Listing model names is less important than producing **a reproducible decision rationale in your own environment**: same task, same harness, same evaluation criteria.
+</Aside>
 
 ## Assignment
 
 <div class="assignment-box">
 
-### Lab 10: Open-Source Model Deployment
+### Lab 10: vLLM deployment practicum
 
-**Submission deadline**: 2026-05-12 23:59
+**Due**: 2026-05-12 23:59
 
 **Requirements**:
-1. Screenshot confirming successful deployment of at least one open-source model with vLLM **or** Ollama
-2. Coding performance comparison between an open-source model (Gemma 4, Qwen3-Coder, or your chosen model) and Claude (5 identical tasks)
-3. Throughput (tokens/sec) benchmark results
-4. Cost analysis: API cost vs DGX operating cost calculation
-5. (Optional) Compare vLLM and Ollama deployment experience — setup difficulty, performance, flexibility
+1. Logs of a vLLM server running on DGX or local GPU
+2. Three or more OpenAI-compatible API call results
+3. Five identical tasks compared between one commercial model and one open-weight model
+4. Tables for throughput (tokens/sec), latency, failure rate, and cost estimate
+5. Final selection: which model for which task, with rationale
+6. Model adapter code (`adapter.py`) with at least two registered aliases
 
 </div>
+
+## Key Takeaways
+
+1. **Open-weight ≠ open-source**: only weights are public; training data and code may not be. Read the license first.
+2. **Choosing a model is choosing a harness**: the same model performs differently across harnesses. Hold the task packet and rubric constant for fair comparison.
+3. **Three options coexist**: commercial API, cloud agent, and local inference each fit different work types.
+4. **vLLM, SGLang, and TGI are complementary**: vLLM as default, SGLang for RadixAttention study, TGI for fast PoC.
+5. **Cost lives at the break-even line**: do not look at token price alone — fold in GPU-hour cost and concurrency.
+6. **The model adapter is an operational asset**: aliases, tool parsers, token accounting, and retry policies decide whether "swap models" is real.
+7. **Reproducible rationale, not model names**: the capstone decision document is built from your lab evidence, not vendor benchmarks.
+
+## Further Reading
+
+**Model cards**
+- [Qwen3-Coder-Next](https://huggingface.co/Qwen/Qwen3-Coder-Next)
+- [DeepSeek-V4-Pro](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro)
+- [DeepSeek-V4-Flash](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash)
+- [GLM-5.1](https://huggingface.co/zai-org/GLM-5.1)
+- [MiniMax-M2.7](https://huggingface.co/MiniMaxAI/MiniMax-M2.7)
+
+**Serving infrastructure**
+- [vLLM OpenAI-compatible server](https://docs.vllm.ai/en/latest/serving/openai_compatible_server/)
+- [SGLang RadixAttention](https://docs.sglang.ai/)
+- [Hugging Face TGI](https://huggingface.co/docs/text-generation-inference/index)
+- [LiteLLM gateway](https://docs.litellm.ai/)
+
+**Agent tools**
+- [Codex MCP documentation](https://developers.openai.com/codex/mcp)
+- [AI coding tool selection guide](/en/reference/tool-selection)
+- [Agent OS Runtime](/en/reference/agent-os-runtime/)
